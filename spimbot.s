@@ -75,6 +75,7 @@ main:
 	bge	$t0, 100, infinite	# only test on one bot
 	
 	# testing puzzle generation and solving time
+	# note: marker doesn't have to start at A, and may increase by more than one
 	lw	$s0, TIMER
 	la	$t0, puzzle
         sw	$t0, REQUEST_PUZZLE
@@ -275,7 +276,7 @@ f_done:
 	jr      $ra
 
 # void islandfill(Puzzle* puzzle) {
-#       char marker = '#';
+#       char marker = 'A';
 #       for (int i = 0; i < puzzle->NUM_ROWS; i++) {
 #             for (int j = 0; j < puzzle->NUM_COLS; j++) {
 #                     marker = floodfill(puzzle,marker,i,j);
