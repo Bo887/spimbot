@@ -65,17 +65,61 @@ main:
 	mtc0        $t4, $12
 	
 	#Fill in your code here
-        li          $a0, 20
-        jal move_dist_time
-        li          $a0, 20
-        jal move_dist_time
+        li          $a0, 17
+        li          $a1, 50
+        jal move_point
+        li          $a0, 70
+        li          $a1, 80
+        jal move_point
         
 infinite:
 	j           infinite
 
 # -----------------------------------------------------------------------
+# move_point - moves the SPIMBot to a target (pixel) point on the grid.
+# This function assumes there is a direct path from the current location
+# to the target point.
+# $a0 - target_x
+# $a1 - target_y
+# -----------------------------------------------------------------------
+move_point:
+        sub         $sp, $sp, 16
+        sw          $ra, 0($sp)
+        sw          $s0, 4($sp)
+        sw          $s1, 8($sp)
+        sw          $s2, 12($sp)
+
+        lw          $a2, BOT_X
+        lw          $a3, BOT_Y
+
+        sub         $s0, $a0, $a2   # $s0 = current_x - target_x
+        sub         $s1, $a1, $a3   # $s1 = current_y - target_y
+
+        jal         euc_dist        
+        move        $s2, $v0        # s2 = distance
+
+        move        $a0, $s0
+        move        $a1, $s1
+        jal         sb_arctan       # $v0 = angle to rotate to.
+        
+        sw          $v0, ANGLE      # set target angle
+        li          $t0, 1
+        sw          $t0, ANGLE_CONTROL  # and set angle control to absolute
+
+        move        $a0, $s2
+        jal         move_dist_poll  # call move_dist
+
+        lw          $ra, 0($sp)     #cleanup
+        lw          $s0, 4($sp)
+        add         $sp, $sp, 8
+        jr $ra
+
+
+# -----------------------------------------------------------------------
 # move_dist_time - moves the SPIMBot a given distance by setting a 
-# timer interrupt
+# timer interrupt.
+# Returns right after the interrupt is set, not after when the bot has
+# reached the target distance
 # $a0 - dist
 # -----------------------------------------------------------------------
 move_dist_time:
@@ -95,7 +139,6 @@ _move_dist_go:
         sw          $t1, VELOCITY   # set bot to max speed
         sw          $t1, 0($t0)     # update the timer_int_active flag
         jr          $ra
-
 
 # -----------------------------------------------------------------------
 # move_dist_poll - moves the SPIMBot a given distance by constantly
@@ -123,7 +166,7 @@ _move_dist_loop:
         move        $a0, $s0
         move        $a1, $s1
         jal         euc_dist        # $v0 = dist
-        bge         $v0, $s2, _move_dist_ret
+        bge         $v0, $s2, _move_dist_ret        # did we hit the distance?
         j _move_dist_loop
 
 _move_dist_ret:
