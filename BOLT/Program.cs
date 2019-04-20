@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Text;
+using System.IO;
 
 namespace BOLT {
     class Program {
@@ -61,7 +62,12 @@ _________#_########__________##_####_";
             if (args.Length == 0) return;
             switch (args[0]) {
                 case "save":
-                    // TODO: Write tables
+                    string result = WriteTables();
+                    if (args.Length >= 2) {
+                        File.WriteAllText(args[1], result);
+                    } else {
+                        Console.WriteLine(result);
+                    }
                     break;
                 case "solve":
                     Puzzle puzzle = new Puzzle(TestPuzzle);
@@ -223,6 +229,26 @@ _________#_########__________##_####_";
                 Console.WriteLine("RCheck:  " + Convert.ToString(touchRight[test], 2).PadLeft(8, '0'));
                 Console.WriteLine();
             }
+        }
+
+        static string WriteTables() {
+            StringBuilder result = new StringBuilder();
+            void WriteArray(byte[] Array) {
+                foreach (byte b in Array) {
+                    result.Append(b);
+                    result.Append(' ');
+                }
+                result.AppendLine();
+            }
+            result.Append("puzzle_transition:\t");
+            WriteArray(transitions);
+            result.Append("puzzle_touch_vert:\t");
+            WriteArray(touchVert);
+            result.Append("puzzle_touch_left:\t");
+            WriteArray(touchLeft);
+            result.Append("puzzle_touch_right:\t");
+            WriteArray(touchRight);
+            return result.ToString();
         }
     }
     class Puzzle {
