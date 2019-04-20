@@ -63,14 +63,39 @@ main:
 	mtc0        $t4, $12
 	
 	#Fill in your code here
-        #testing the given atan2 function right now.....
-        li          $a0, 1
-        li          $a1, 2
-        jal         sb_arctan
-        move        $t9, $v0        #t9 should show around 63 (0x3F) degrees
+        li          $a0, 2
+        li          $a1, 1
+        li          $a2, 33
+        li          $a3, 15
+        jal euc_dist
+        move        $t7, $v0        # $t7 should be ~34
+
         
 infinite:
 	j           infinite
+
+# -----------------------------------------------------------------------
+# sq_euc_dist - computes the euclidean distance between (x1, y1) and (x2, y2)
+# $a0 - x1
+# $a1 - y1
+# $a2 - x2
+# $a3 - y2
+# returns the (integer casted) euclidean distance in $v0
+# -----------------------------------------------------------------------
+euc_dist:
+        sub         $a0, $a2, $a0   # $a0 = (x2 - x1)
+        mul         $a0, $a0, $a0   # $a0 = (x2 - x1)^2
+        sub         $a1, $a3, $a1   # $a1 = (y2 - y1)
+        mul         $a1, $a1, $a1   # $a1 = (y2 - y1)^2
+
+        add         $v0, $a0, $a1   # $v0 = (x2 - x1)^2 + (y2 - y1)^2
+
+        mtc1        $v0, $f12       # $f12 = $v0
+        cvt.s.w     $f12, $f12      # cast $f12 to a float
+        sqrt.s      $f12, $f12      # $f12 = sqrt($f12)
+        cvt.w.s     $f12, $f12      # cast $f12 to an int
+        mfc1        $v0, $f12       # $v0 = $f12
+        jr          $ra
 
 # -----------------------------------------------------------------------
 # sb_arctan - computes the arctangent of y / x
