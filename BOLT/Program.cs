@@ -3,6 +3,16 @@ using System.Text;
 
 namespace BOLT {
     class Program {
+        const string DebugPuzzle = @"
+________ _____
+________ _____
+________ ___##
+________ __###
+____##__ __##_
+____###_ __#_#
+_#___### ##_#_
+####___# _##__
+";
         const string TestPuzzle = @"
 ________________####_________________
 ______#_________######_______________
@@ -43,6 +53,7 @@ ______####_#######____#____#__##_____
 _________#_########__________##_####_";
 
         static byte[] transitions, touchVert, touchLeft, touchRight;
+        static uint[] maskA, maskB;
 
         static void Main(string[] args) {
             PrecomputeTables();
@@ -53,7 +64,8 @@ _________#_########__________##_####_";
                     // TODO: Write tables
                     break;
                 case "solve":
-                    TestSolving(new Puzzle(TestPuzzle));
+                    Puzzle puzzle = new Puzzle(TestPuzzle);
+                    TestSolving(puzzle);
                     break;
             }
         }
@@ -83,7 +95,7 @@ _________#_########__________##_####_";
                         bool thisHasBit = (curChunk & (1 << bit)) > 0;
                         bool touchingHasBit = (touchingOther & (1 << bit)) > 0;
                         if (thisHasBit && touchingHasBit) filling = true;
-                        if (!thisHasBit && !touchingHasBit) filling = false;
+                        if (!thisHasBit) filling = false;
                         if (filling) transitions[x] &= (byte) ~(1 << bit);
                     }
                     filling = false;
@@ -91,7 +103,7 @@ _________#_########__________##_####_";
                         bool thisHasBit = (curChunk & (1 << bit)) > 0;
                         bool touchingHasBit = (touchingOther & (1 << bit)) > 0;
                         if (thisHasBit && touchingHasBit) filling = true;
-                        if (!thisHasBit && !touchingHasBit) filling = false;
+                        if (!thisHasBit) filling = false;
                         if (filling) transitions[x] &= (byte) ~(1 << bit);
                     }
                 }
@@ -100,15 +112,109 @@ _________#_########__________##_####_";
                 if ((changed & 1) > 0) touchRight[x] = 0x80;
                 if ((changed & 0x80) > 0) touchLeft[x] = 1;
             }
+
+            maskA = new uint[256];
+            maskB = new uint[maskA.Length];
+            for (int x = 0; x < maskA.Length; x++) {
+                if ((x & 1) > 0) maskB[x] |= 0xFF000000;
+                if ((x & 2) > 0) maskB[x] |= 0x00FF0000;
+                if ((x & 4) > 0) maskB[x] |= 0x0000FF00;
+                if ((x & 8) > 0) maskB[x] |= 0x000000FF;
+                if ((x & 16) > 0) maskA[x] |= 0xFF000000;
+                if ((x & 32) > 0) maskA[x] |= 0x00FF0000;
+                if ((x & 64) > 0) maskA[x] |= 0x0000FF00;
+                if ((x & 128) > 0) maskA[x] |= 0x000000FF;
+            }
         }
 
         static void TestSolving(Puzzle Puzzle) {
-            
+            void StoreWord(byte[] Array, int Address, int Value) {
+                byte[] leBytes = BitConverter.GetBytes(Value);
+                for (int i = 0; i < 4; i++) {
+                    Array[Address + i] = leBytes[i];
+                }
+            }
+            int[] queue = new int[400];
+            int qStart, qEnd;
+            void Enqueue(int Position) {
+                queue[qEnd] = Position;
+                qEnd++;
+            }
+            byte scanStart = 0; // How many starting chunks are now empty and can be skipped
+            char marker = 'A';
+            while (scanStart < Puzzle.Bitmap.Length) {
+                byte[] contact = new byte[Puzzle.BytesWidth * Puzzle.Height];
+                byte chunk = Puzzle.Bitmap[scanStart];
+                if (chunk == 0) {
+                    scanStart++;
+                    continue;
+                }
+                qStart = 0;
+                qEnd = 1;
+                queue[0] = scanStart;
+                for (; qStart != qEnd; qStart++) {
+                    int position = queue[qStart];
+                    chunk = Puzzle.Bitmap[position];
+                    if (chunk == 0) continue;
+                    int touching = contact[position];
+                    int lookupId = chunk << 8 | touching;
+                    Puzzle.Bitmap[position] = transitions[lookupId];
+                    int changed = chunk & ~Puzzle.Bitmap[position];
+                    if (changed == 0) continue;
+                    int mapPos = (position % Puzzle.BytesWidth) * 8 + (position / Puzzle.BytesWidth) * Puzzle.Width;
+                    while (changed != 0) {
+                        if (changed >= 0x80) {
+                            Puzzle.Map[mapPos] = (byte) marker;
+                        }
+                        changed = (changed << 1) & 0xff;
+                        mapPos++;
+                    }
+                    int upPos = position - Puzzle.BytesWidth;
+                    if (upPos >= 0 && Puzzle.Bitmap[upPos] != 0) {
+                        contact[upPos] |= touchVert[lookupId];
+                        Enqueue(upPos);
+                    }
+                    int downPos = position + Puzzle.BytesWidth;
+                    if (downPos < Puzzle.Bitmap.Length && Puzzle.Bitmap[downPos] != 0) {
+                        contact[downPos] |= touchVert[lookupId];
+                        Enqueue(downPos);
+                    }
+                    if (position % Puzzle.BytesWidth != 0 && touchLeft[lookupId] != 0) {
+                        if (Puzzle.Bitmap[position - 1] != 0) {
+                            contact[position - 1] |= touchLeft[lookupId];
+                            Enqueue(position - 1);
+                        }
+                        if (downPos < Puzzle.Bitmap.Length && Puzzle.Bitmap[downPos - 1] != 0) {
+                            contact[downPos - 1] |= touchLeft[lookupId];
+                            Enqueue(downPos - 1);
+                        }
+                        if (upPos >= 0 && Puzzle.Bitmap[upPos - 1] != 0) {
+                            contact[upPos - 1] |= touchLeft[lookupId];
+                            Enqueue(upPos - 1);
+                        }
+                    }
+                    if ((position + 1) % Puzzle.BytesWidth != 0 && touchRight[lookupId] != 0) {
+                        if (Puzzle.Bitmap[position + 1] != 0) {
+                            contact[position + 1] |= touchRight[lookupId];
+                            Enqueue(position + 1);
+                        }
+                        if (downPos < Puzzle.Bitmap.Length && Puzzle.Bitmap[downPos + 1] != 0) {
+                            contact[downPos + 1] |= touchRight[lookupId];
+                            Enqueue(downPos + 1);
+                        }
+                        if (upPos >= 0 && Puzzle.Bitmap[upPos + 1] != 0) {
+                            contact[upPos + 1] |= touchRight[lookupId];
+                            Enqueue(upPos + 1);
+                        }
+                    }
+                }
+                marker++;
+            }
             Console.WriteLine(Puzzle);
         }
 
         static void TestTables() {
-            foreach (int test in new int[] { 0xDF_00, 0xDF_80, 0xDF_40, 0xFF_01, 0x83_02 }) {
+            foreach (int test in new int[] { 0xDF_00, 0xDF_80, 0xDF_40, 0xFF_01, 0x83_02, 0xC6_FC, 0xF1_0F }) {
                 Console.WriteLine("Chunk:   " + Convert.ToString(test >> 8, 2).PadLeft(8, '0'));
                 Console.WriteLine("Touches: " + Convert.ToString(test & 0xff, 2).PadLeft(8, '0'));
                 Console.WriteLine("Result:  " + Convert.ToString(transitions[test], 2).PadLeft(8, '0'));
@@ -121,20 +227,21 @@ _________#_########__________##_####_";
     }
     class Puzzle {
         public int Width;
+        public int BytesWidth;
         public int Height;
-        public char[] Map;
+        public byte[] Map;
         public byte[] Bitmap;
         public Puzzle(string Text) {
-            string[] lines = Text.Split("\r\n", StringSplitOptions.RemoveEmptyEntries);
+            string[] lines = Text.Replace(" ", "").Split("\r\n", StringSplitOptions.RemoveEmptyEntries);
             Height = lines.Length;
             Width = lines[0].Length;
-            Map = new char[Width * Height];
-            int bytesWidth = (Width % 8 == 0) ? (Width / 8) : (Width / 8) + 1;
-            Bitmap = new byte[bytesWidth * Height];
+            Map = new byte[Width * Height];
+            BytesWidth = (Width % 8 == 0) ? (Width / 8) : (Width / 8) + 1;
+            Bitmap = new byte[BytesWidth * Height];
             for (int y = 0; y < Height; y++) {
                 for (int x = 0; x < Width; x++) {
-                    Map[y * Width + x] = lines[y][x];
-                    if (Map[y * Width + x] == '#') Bitmap[y * bytesWidth + x / 8] |= (byte) (1 << (7 - (x % 8)));
+                    Map[y * Width + x] = (byte) lines[y][x];
+                    if (Map[y * Width + x] == (byte) '#') Bitmap[y * BytesWidth + x / 8] |= (byte) (1 << (7 - (x % 8)));
                 }
             }
         }
@@ -142,7 +249,7 @@ _________#_########__________##_####_";
             StringBuilder builder = new StringBuilder();
             for (int c = 0; c < Width * Height; c++) {
                 if (c % Width == 0 && c > 0) builder.AppendLine();
-                builder.Append(Map[c]);
+                builder.Append((char) Map[c]);
             }
             return builder.ToString();
         }
