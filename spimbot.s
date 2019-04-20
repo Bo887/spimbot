@@ -46,6 +46,7 @@ GET_BOOST 		= 0xffff0070
 GET_INGREDIENT_INSTANT 	= 0xffff0074
 FINISH_APPLIANCE_INSTANT= 0xffff0078
 
+timer_int_active:   .word 0     # global flag that is non-zero when the timer interrupt is being used for move_dist_time, otherwise false
 puzzle:             .word 0:452
 
 PI:                 .float 3.14
@@ -59,20 +60,46 @@ main:
 	li          $t4, 0
 	or          $t4, $t4, BONK_INT_MASK # request bonk
 	or          $t4, $t4, REQUEST_PUZZLE_INT_MASK	        # puzzle interrupt bit
+        or          $t4, $t4, TIMER_INT_MASK        #enable timer interrupts
 	or          $t4, $t4, 1 # global enable
 	mtc0        $t4, $12
 	
 	#Fill in your code here
-        li          $a0, 40
-        jal move_dist_poll
-
+        li          $a0, 20
+        jal move_dist_time
+        li          $a0, 20
+        jal move_dist_time
         
 infinite:
 	j           infinite
 
+# -----------------------------------------------------------------------
+# move_dist_time - moves the SPIMBot a given distance by setting a 
+# timer interrupt
+# $a0 - dist
+# -----------------------------------------------------------------------
+move_dist_time:
+
+_move_dist_wait:
+        la          $t0, timer_int_active
+        lw          $t1, 0($t0)
+        beq         $t1, 0, _move_dist_go   # check if the timer_int_active is true
+        j           _move_dist_wait # wait for the timer interrupt to finish before setting a new one
+
+_move_dist_go:
+        lw          $t1, TIMER      # $t0 = current time (cycles)
+        mul         $a0, $a0, 1000  # $a0 = # of cycles needed to travel "dist" (assumes bot is moving at max speed (10 mips))
+        add         $a0, $a0, $t1   # $a0 = cycle to stop moving
+        sw          $a0, TIMER      # request TIMER interrupt
+        li          $t1, 10
+        sw          $t1, VELOCITY   # set bot to max speed
+        sw          $t1, 0($t0)     # update the timer_int_active flag
+        jr          $ra
+
 
 # -----------------------------------------------------------------------
-# move_dist_poll - moves the SPIMBot a given distance by polling
+# move_dist_poll - moves the SPIMBot a given distance by constantly
+# polling the current position
 # $a0 - dist
 # -----------------------------------------------------------------------
 move_dist_poll:
@@ -82,8 +109,8 @@ move_dist_poll:
         sw          $s1, 8($sp)
         sw          $s2, 12($sp)
 
-        lw          $s0, BOT_X      # $a0 = start_x
-        lw          $s1, BOT_Y      # $a1 = start_y
+        lw          $s0, BOT_X      # $s0 = start_x
+        lw          $s1, BOT_Y      # $s1 = start_y
 
         move        $s2, $a0        # $s2 = dist
 
@@ -248,7 +275,9 @@ request_puzzle_interrupt:
 
 timer_interrupt:
 	sw 	    $0, TIMER_ACK
-	#Fill in your code here
+        sw          $0, VELOCITY        # stop moving
+        la          $t0, timer_int_active   
+        sw          $0, 0($t0)      # set timer_int_active to false
         j           interrupt_dispatch    # see if other interrupts are waiting
 
 non_intrpt:                # was some non-interrupt
