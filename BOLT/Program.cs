@@ -234,19 +234,26 @@ _________#_########__________##_####_";
         static string WriteTables() {
             StringBuilder result = new StringBuilder();
             void WriteArray(byte[] Array) {
+                int onThisLine = 0;
                 foreach (byte b in Array) {
+                    if (onThisLine == 2048) {
+                        result.AppendLine();
+                        result.Append("\t\t\t.byte ");
+                        onThisLine = 0;
+                    }
                     result.Append(b);
                     result.Append(' ');
+                    onThisLine++;
                 }
                 result.AppendLine();
             }
-            result.Append("puzzle_transition:\t");
+            result.Append("puzzle_transition:\t.byte ");
             WriteArray(transitions);
-            result.Append("puzzle_touch_vert:\t");
+            result.Append("puzzle_touch_vert:\t.byte ");
             WriteArray(touchVert);
-            result.Append("puzzle_touch_left:\t");
+            result.Append("puzzle_touch_left:\t.byte ");
             WriteArray(touchLeft);
-            result.Append("puzzle_touch_right:\t");
+            result.Append("puzzle_touch_right:\t.byte ");
             WriteArray(touchRight);
             return result.ToString();
         }
