@@ -93,6 +93,7 @@ infinite:
 	syscall
 	
 	sb	$zero, d_puzzle_pending
+	j	infinite
 	la	$a0, puzzle
 	jal	islandfill
 	la	$t0, puzzle
