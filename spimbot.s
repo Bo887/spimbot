@@ -63,19 +63,53 @@ main:
 	mtc0        $t4, $12
 	
 	#Fill in your code here
-        li          $a0, 2
-        li          $a1, 1
-        li          $a2, 33
-        li          $a3, 15
-        jal euc_dist
-        move        $t7, $v0        # $t7 should be ~34
+        li          $a0, 40
+        jal move_dist_poll
 
         
 infinite:
 	j           infinite
 
+
 # -----------------------------------------------------------------------
-# sq_euc_dist - computes the euclidean distance between (x1, y1) and (x2, y2)
+# move_dist_poll - moves the SPIMBot a given distance by polling
+# $a0 - dist
+# -----------------------------------------------------------------------
+move_dist_poll:
+        sub         $sp, $sp, 16
+        sw          $ra, 0($sp)
+        sw          $s0, 4($sp)
+        sw          $s1, 8($sp)
+        sw          $s2, 12($sp)
+
+        lw          $s0, BOT_X      # $a0 = start_x
+        lw          $s1, BOT_Y      # $a1 = start_y
+
+        move        $s2, $a0        # $s2 = dist
+
+        li          $t0, 10
+        sw          $t0, VELOCITY
+
+_move_dist_loop:
+        lw          $a2, BOT_X      # $a2 = curr_x
+        lw          $a3, BOT_Y      # $a2 = curr_y
+        move        $a0, $s0
+        move        $a1, $s1
+        jal         euc_dist        # $v0 = dist
+        bge         $v0, $s2, _move_dist_ret
+        j _move_dist_loop
+
+_move_dist_ret:
+        sw          $0, VELOCITY
+        lw          $ra, 0($sp)
+        lw          $s0, 4($sp)
+        lw          $s1, 8($sp)
+        lw          $s2, 12($sp)
+        add         $sp, $sp, 16
+
+
+# -----------------------------------------------------------------------
+# euc_dist - computes the euclidean distance between (x1, y1) and (x2, y2)
 # $a0 - x1
 # $a1 - y1
 # $a2 - x2
