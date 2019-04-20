@@ -42,12 +42,82 @@ _______#_#___##______###__###____###_
 ______####_#######____#____#__##_____
 _________#_########__________##_####_";
 
+        static byte[] transitions, touchVert, touchLeft, touchRight;
+
         static void Main(string[] args) {
-            Puzzle puzzle = new Puzzle(TestPuzzle);
-            Console.WriteLine(puzzle);
+            PrecomputeTables();
+            TestTables();
+            if (args.Length == 0) return;
+            switch (args[0]) {
+                case "save":
+                    // TODO: Write tables
+                    break;
+                case "solve":
+                    TestSolving(new Puzzle(TestPuzzle));
+                    break;
+            }
         }
 
+        static void PrecomputeTables() {
+            transitions = new byte[256 * 256];
+            touchVert = new byte[transitions.Length];
+            touchLeft = new byte[transitions.Length];
+            touchRight = new byte[transitions.Length];
+            for (int x = 0; x < transitions.Length; x++) {
+                int curChunk = x >> 8;
+                int touchingOther = x & 0xff;
+                transitions[x] = (byte) curChunk;
+                if (touchingOther == 0) {
+                    // Just starting a fill - take the first contiguous run
+                    bool filling = false;
+                    for (int bit = 7; bit >= 0; bit--) {
+                        bool hasBit = (curChunk & (1 << bit)) > 0;
+                        if (filling && !hasBit) break;
+                        if (hasBit) filling = true;
+                        if (filling) transitions[x] &= (byte) ~(1 << bit);
+                    }
+                } else {
+                    // Continuing a fill - only fill what's touching something from another chunk
+                    bool filling = false;
+                    for (int bit = 7; bit >= 0; bit--) {
+                        bool thisHasBit = (curChunk & (1 << bit)) > 0;
+                        bool touchingHasBit = (touchingOther & (1 << bit)) > 0;
+                        if (thisHasBit && touchingHasBit) filling = true;
+                        if (!thisHasBit && !touchingHasBit) filling = false;
+                        if (filling) transitions[x] &= (byte) ~(1 << bit);
+                    }
+                    filling = false;
+                    for (int bit = 0; bit < 8; bit++) {
+                        bool thisHasBit = (curChunk & (1 << bit)) > 0;
+                        bool touchingHasBit = (touchingOther & (1 << bit)) > 0;
+                        if (thisHasBit && touchingHasBit) filling = true;
+                        if (!thisHasBit && !touchingHasBit) filling = false;
+                        if (filling) transitions[x] &= (byte) ~(1 << bit);
+                    }
+                }
+                int changed = curChunk & ~transitions[x];
+                touchVert[x] = (byte) (changed | (changed << 1) | (changed >> 1));
+                if ((changed & 1) > 0) touchRight[x] = 0x80;
+                if ((changed & 0x80) > 0) touchLeft[x] = 1;
+            }
+        }
 
+        static void TestSolving(Puzzle Puzzle) {
+            
+            Console.WriteLine(Puzzle);
+        }
+
+        static void TestTables() {
+            foreach (int test in new int[] { 0xDF_00, 0xDF_80, 0xDF_40, 0xFF_01, 0x83_02 }) {
+                Console.WriteLine("Chunk:   " + Convert.ToString(test >> 8, 2).PadLeft(8, '0'));
+                Console.WriteLine("Touches: " + Convert.ToString(test & 0xff, 2).PadLeft(8, '0'));
+                Console.WriteLine("Result:  " + Convert.ToString(transitions[test], 2).PadLeft(8, '0'));
+                Console.WriteLine("VCheck:  " + Convert.ToString(touchVert[test], 2).PadLeft(8, '0'));
+                Console.WriteLine("LCheck:  " + Convert.ToString(touchLeft[test], 2).PadLeft(8, '0'));
+                Console.WriteLine("RCheck:  " + Convert.ToString(touchRight[test], 2).PadLeft(8, '0'));
+                Console.WriteLine();
+            }
+        }
     }
     class Puzzle {
         public int Width;
