@@ -241,6 +241,7 @@ infinite:
 	li	$a0, '\n'
 	li	$v0, PRINT_CHAR
 	syscall
+	syscall
 	
 	la	$t0, puzzle
 	sw	$t0, SUBMIT_SOLUTION
@@ -266,23 +267,24 @@ puzzle_bolt:
 	sw      $s4, 20($sp)	# qStart
 	sw      $s5, 24($sp)	# qEnd
 	sw      $s6, 28($sp)	# Puzzle.BytesWidth
-	sw      $s7, 32($sp)
+	sw      $s7, 32($sp)	# how many bitmap bytes per row are valid
 	sw      $gp, 36($sp)
 	sw      $fp, 40($sp)
 	
 	li	$s0, 0		# scanStart = 0
 	li	$s1, 'A'	# marker
+	li	$s6, 5		# always 5 bytes - documentation is a lie
 	
 	lw	$t0, 4($a0)	# width
 	and	$t1, $t0, 7	# width & 0x7
-	srl	$s6, $t0, 3	# floor(width / 8)
+	srl	$s7, $t0, 3	# floor(width / 8)
 	beq	$t1, $zero, pb_no_ceil_needed
-	add	$s6, $s6, 1	# ceil(width / 8)
+	add	$s7, $s7, 1	# ceil(width / 8)
 pb_no_ceil_needed:
 	lw	$t1, 0($a0)	# height
 	mul	$s2, $s6, $t1	# Puzzle.Bitmap.Length
 	mul	$s3, $t0, $t1	# width * height
-	add	$s3, $a0, $s3	# ->bitmap
+	add	$s3, $a0, $s3	# &puzzle->bitmap - 8
 	add	$s3, $s3, 8	# &puzzle->bitmap
 	
 pb_outer_loop_top:
@@ -332,6 +334,15 @@ pb_fill_loop_top:
 	and	$t3, $t0, $t6	# changed = chunk & ~transitions[lookupId]
 	beq	$t3, $zero, pb_fill_loop_next
 	
+	div	$t5, $s6	# need both quotient and remainder
+	mfhi	$t7		# position % Puzzle.BytesWidth
+	bge	$t7, $s7, pb_fill_loop_next
+	mflo	$t8		# position / Puzzle.BytesWidth
+	sll	$t7, $t7, 3	# (position % Puzzle.BytesWidth) * 8
+	lw	$t0, 4($a0)	# width
+	mul	$t8, $t8, $t0	# (position / Puzzle.BytesWidth) * Puzzle.Width
+	add	$t7, $t7, $t8	# mapPos
+	
 	la	$a1, puzzle_touch_vert
 	add	$a1, $a1, $t1	# &touchVert[lookupId]
 	lbu	$a1, 0($a1)	# touchVert[lookupId]
@@ -342,23 +353,11 @@ pb_fill_loop_top:
 	add	$a3, $a3, $t1	# &touchRight[lookupId]
 	lbu	$a3, 0($a3)	# touchRight[lookupId]
 	
-	div	$t5, $s6	# need both quotient and remainder
-	mfhi	$t7		# position % Puzzle.BytesWidth
-	mflo	$t8		# position / Puzzle.BytesWidth
-	sll	$t7, $t7, 3	# (position % Puzzle.BytesWidth) * 8
-	lw	$t0, 4($a0)	# width
-	mul	$t8, $t8, $t0	# (position / Puzzle.BytesWidth) * Puzzle.Width
-	add	$t7, $t7, $t8	# mapPos
-	
 	add	$t1, $a0, $t7	# &puzzle->map[mapPos] - 8
 	li	$t0, 0x80
 pb_write_map_top:
 	beq	$t3, $zero, pb_write_map_done
 	blt	$t3, $t0, pb_write_map_next
-	lbu	$v0, 8($t1)
-	beq	$v0, '#', pb_write_ok
-	add	$zero, $zero, $zero	# !!! tried to write to an unavailable spot - TEMP for debugging
-pb_write_ok:
 	sb	$s1, 8($t1)	# puzzle->map[mapPos] = marker
 pb_write_map_next:
 	sll	$t3, $t3, 1	# changed <<= 1
@@ -367,8 +366,6 @@ pb_write_map_next:
 	j	pb_write_map_top
 	
 pb_write_map_done:
-	j	pb_fill_loop_next	# TEMP: skip enqueueing neighbors
-
 	sub	$t1, $t5, $s6	# upPos = position - puzzle.BytesWidth
 	blt	$t1, $zero, pb_no_up
 	add	$t0, $s3, $t1	# &puzzle->bitmap[upPos]
@@ -383,6 +380,7 @@ pb_write_map_done:
 	
 pb_no_up:
 	add	$t8, $t5, $s6	# downPos = position + puzzle.BytesWidth
+	bge	$t8, $s2, pb_no_down
 	add	$t0, $s3, $t8	# &puzzle->bitmap[downPos]
 	lbu	$t0, 0($t0)	# puzzle->bitmap[downPos]
 	beq	$t0, $zero, pb_no_down
