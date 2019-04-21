@@ -68,7 +68,7 @@ main:
         li          $a0, 17
         li          $a1, 50
         jal move_point
-        jal wait_for_move_time  # need to wait for first move to finish before starting another, since move_point uses timer interrupts.
+        jal wait_for_move_time  # need to wait for first move to finish before starting another, since move_point uses timer interrupts and returns right after the interrupt is set.
         li          $a0, 70
         li          $a1, 80
         jal move_point
@@ -112,7 +112,9 @@ move_point:
 
         lw          $ra, 0($sp)     #cleanup
         lw          $s0, 4($sp)
-        add         $sp, $sp, 8
+        lw          $s1, 8($sp)
+        lw          $s2, 12($sp)
+        add         $sp, $sp, 16
         jr $ra
 
 
@@ -143,7 +145,7 @@ _move_dist_go:
 
 # -----------------------------------------------------------------------
 # wait_for_move_time - waits until the SPIMBot is done moving.
-# This function assums that move_dist_time was called.
+# This function assumes that move_dist_time was called.
 # It really just checks the state of timer_int_active.
 # -----------------------------------------------------------------------
 wait_for_move_time:
