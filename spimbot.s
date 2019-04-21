@@ -68,6 +68,7 @@ main:
         li          $a0, 17
         li          $a1, 50
         jal move_point
+        jal wait_for_move_time  # need to wait for first move to finish before starting another, since move_point uses timer interrupts.
         li          $a0, 70
         li          $a1, 80
         jal move_point
@@ -107,7 +108,7 @@ move_point:
         sw          $t0, ANGLE_CONTROL  # and set angle control to absolute
 
         move        $a0, $s2
-        jal         move_dist_poll  # call move_dist
+        jal         move_dist_time  # call move_dist
 
         lw          $ra, 0($sp)     #cleanup
         lw          $s0, 4($sp)
@@ -138,6 +139,22 @@ _move_dist_go:
         li          $t1, 10
         sw          $t1, VELOCITY   # set bot to max speed
         sw          $t1, 0($t0)     # update the timer_int_active flag
+        jr          $ra
+
+# -----------------------------------------------------------------------
+# wait_for_move_time - waits until the SPIMBot is done moving.
+# This function assums that move_dist_time was called.
+# It really just checks the state of timer_int_active.
+# -----------------------------------------------------------------------
+wait_for_move_time:
+
+_wait_for_move_time_wait:
+        la          $t0, timer_int_active
+        lw          $t1, 0($t0)
+        beq         $t1, 0, _wait_for_move_time_return
+        j _wait_for_move_time_wait
+
+_wait_for_move_time_return:
         jr          $ra
 
 # -----------------------------------------------------------------------
