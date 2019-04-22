@@ -322,8 +322,8 @@ pb_fill_loop_top:
 	beq	$t6, $zero, pb_fill_loop_next
 	
 	la	$t9, puzzle_contact
-	add	$t0, $t9, $t5	# &contact[position]
-	lbu	$t0, 0($t0)	# touching = contact[position]
+	add	$v0, $t9, $t5	# &contact[position]
+	lbu	$t0, 0($v0)	# touching = contact[position]
 	sll	$t1, $t6, 8	# chunk << 8
 	or	$t1, $t1, $t0	# lookupId = chunk << 8 | touching	
 	la	$t0, puzzle_transition
@@ -392,6 +392,53 @@ pb_no_up:
 	add	$s5, $s5, 1	# qEnd++
 
 pb_no_down:
+	beq	$a2, $zero, pb_no_left
+	div	$t5, $s6
+	mfhi	$t0		# position % Puzzle.BytesWidth
+	beq	$t0, $zero, pb_no_left
+	lbu	$t2, -1($t4)	# puzzle->bitmap[position - 1]
+	beq	$t2, $zero, pb_no_direct_left
+	add	$t0, $t9, $t5	# &contact[position]
+	lbu	$t3, -1($t0)	# contact[position - 1]
+	or	$t3, $t3, $a2	# contact[position - 1] | touchLeft[lookupId]
+	sb	$t3, -1($t0)
+	sub	$t0, $t5, 1	# position - 1
+	sb	$t0, 0($s5)	# queue[qEnd] = position - 1
+	add	$s5, $s5, 1	# qEnd++
+	
+pb_no_direct_left:
+	bge	$t1, $s2, pb_no_down_left
+	lbu	$t0, 4($t4)	# puzzle->bitmap[downPos - 1]
+	beq	$t0, $zero, pb_no_down_left
+	lbu	$t3, 4($v0)	# contact[downPos - 1]
+	or	$t3, $t3, $a2	# contact[downPos - 1] | touchLeft[lookupId]
+	sb	$t3, 4($v0)
+	add	$t0, $t5, 4	# downPos - 1
+	sb	$t0, 0($s5)	# queue[qEnd] = position - 1
+	add	$s5, $s5, 1	# qEnd++
+	
+pb_no_down_left:
+	# TODO: up-left
+	
+pb_no_left:
+	beq	$a3, $zero, pb_no_right
+	add	$t6, $t5, 1	# position + 1
+	div	$t6, $s6
+	mfhi	$t0		# (position + 1) % Puzzle.BytesWidth
+	beq	$t0, $zero, pb_no_right
+	lbu	$t2, 1($t4)	# puzzle->bitmap[position + 1]
+	beq	$t2, $zero, pb_no_direct_right
+	add	$t0, $t9, $t5	# &contact[position]
+	lbu	$t3, 1($t0)	# contact[position + 1]
+	or	$t3, $t3, $a3	# contact[position + 1] | touchRight[lookupId]
+	sb	$t3, 1($t0)
+	sb	$t6, 0($s5)	# queue[qEnd] = position + 1
+	add	$s5, $s5, 1	# qEnd++
+	
+pb_no_direct_right:
+	# TODO: up-right and down-right
+	
+pb_no_right:
 	
 pb_fill_loop_next:
 	add	$s4, $s4, 1	# qStart++
