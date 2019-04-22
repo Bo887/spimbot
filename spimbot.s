@@ -46,7 +46,7 @@ GET_BOOST 		= 0xffff0070
 GET_INGREDIENT_INSTANT 	= 0xffff0074
 FINISH_APPLIANCE_INSTANT= 0xffff0078
 
-timer_int_active:   .word 0     # global flag that is non-zero when the timer interrupt is being used for move_dist_time, otherwise false
+timer_int_active:   .word 0     # global flag that is non-zero when the timer interrupt is active
 puzzle:             .word 0:452
 
 PI:                 .float 3.14
@@ -67,28 +67,43 @@ main:
 	#Fill in your code here
         li          $a0, 17
         li          $a1, 50
-        jal move_point
-        jal wait_for_move_time  # need to wait for first move to finish before starting another, since move_point uses timer interrupts and returns right after the interrupt is set.
+        jal set_move_point_target
         li          $a0, 70
         li          $a1, 80
-        jal move_point
+        jal set_move_point_target
+        li          $a0, 70
+        li          $a1, 270
+        jal set_move_point_target
+        li          $a0, 70
+        li          $a1, 80
+        jal set_move_point_target
+        li          $a0, 17
+        li          $a1, 50
+        jal set_move_point_target
+        li          $a0, 10
+        li          $a1, 10
+        jal set_move_point_target
+
         
 infinite:
 	j           infinite
 
 # -----------------------------------------------------------------------
-# move_point - moves the SPIMBot to a target (pixel) point on the grid.
+# set_move_point_target - sets the target pixel for the SPIMBot to 
+# travel to. Uses timer interrupts.
 # This function assumes there is a direct path from the current location
-# to the target point.
+# to the target point (no collisions!).
 # $a0 - target_x
 # $a1 - target_y
 # -----------------------------------------------------------------------
-move_point:
+set_move_point_target:
         sub         $sp, $sp, 16
         sw          $ra, 0($sp)
         sw          $s0, 4($sp)
         sw          $s1, 8($sp)
         sw          $s2, 12($sp)
+
+        jal         wait_for_timer_int   # wait for timer interrupt handler to become inactive
 
         lw          $a2, BOT_X
         lw          $a3, BOT_Y
@@ -108,60 +123,59 @@ move_point:
         sw          $t0, ANGLE_CONTROL  # and set angle control to absolute
 
         move        $a0, $s2
-        jal         move_dist_time  # call move_dist
+        jal         set_move_dist_target # call move_dist
 
         lw          $ra, 0($sp)     #cleanup
         lw          $s0, 4($sp)
         lw          $s1, 8($sp)
         lw          $s2, 12($sp)
         add         $sp, $sp, 16
-        jr $ra
+        jr          $ra
 
 
 # -----------------------------------------------------------------------
-# move_dist_time - moves the SPIMBot a given distance by setting a 
-# timer interrupt.
+# set_move_dist_target - sets the target destination for the SPIMBot using
+# timer interrupts
 # Returns right after the interrupt is set, not after when the bot has
-# reached the target distance
+# reached the target distance.
+# Make sure to not call this function if a timer interrupt is already
+# active. See wait_for_timer_int
 # $a0 - dist
 # -----------------------------------------------------------------------
-move_dist_time:
+set_move_dist_target:
+        sub         $sp, $sp, 4
+        sw          $ra, 0($sp)
 
-_move_dist_wait:
-        la          $t0, timer_int_active
-        lw          $t1, 0($t0)
-        beq         $t1, 0, _move_dist_go   # check if the timer_int_active is true
-        j           _move_dist_wait # wait for the timer interrupt to finish before setting a new one
+        jal         wait_for_timer_int   # wait for timer interrupt handler to become inactive
 
-_move_dist_go:
         lw          $t1, TIMER      # $t0 = current time (cycles)
         mul         $a0, $a0, 1000  # $a0 = # of cycles needed to travel "dist" (assumes bot is moving at max speed (10 mips))
         add         $a0, $a0, $t1   # $a0 = cycle to stop moving
         sw          $a0, TIMER      # request TIMER interrupt
         li          $t1, 10
         sw          $t1, VELOCITY   # set bot to max speed
-        sw          $t1, 0($t0)     # update the timer_int_active flag
+        sw          $t1, 0($v0)     # update the timer_int_active flag
+
+        lw          $ra, 0($sp)
+        add         $sp, $sp, 4
         jr          $ra
 
 # -----------------------------------------------------------------------
-# wait_for_move_time - waits until the SPIMBot is done moving.
-# This function assumes that move_dist_time was called.
+# wait_for_timer_int - waits for timer interrupts to finish
 # It really just checks the state of timer_int_active.
+# Returns the address of timer_int_active in $v0
+# Returns the value of timer_int_active in $v1
 # -----------------------------------------------------------------------
-wait_for_move_time:
-
-_wait_for_move_time_wait:
-        la          $t0, timer_int_active
-        lw          $t1, 0($t0)
-        beq         $t1, 0, _wait_for_move_time_return
-        j _wait_for_move_time_wait
-
-_wait_for_move_time_return:
+wait_for_timer_int:
+        la          $v0, timer_int_active
+        lw          $v1, 0($v0)
+        bne         $v1, 0, wait_for_timer_int
         jr          $ra
 
 # -----------------------------------------------------------------------
 # move_dist_poll - moves the SPIMBot a given distance by constantly
 # polling the current position
+# It (currently) only returns after the bot has reached the given position
 # $a0 - dist
 # -----------------------------------------------------------------------
 move_dist_poll:
@@ -338,8 +352,8 @@ request_puzzle_interrupt:
 timer_interrupt:
 	sw 	    $0, TIMER_ACK
         sw          $0, VELOCITY        # stop moving
-        la          $t0, timer_int_active   
-        sw          $0, 0($t0)      # set timer_int_active to false
+        la          $t4, timer_int_active   
+        sw          $0, 0($t4)      # set timer_int_active to false
         j           interrupt_dispatch    # see if other interrupts are waiting
 
 non_intrpt:                # was some non-interrupt
