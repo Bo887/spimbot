@@ -1,8 +1,0 @@
-{
-  "profiles": {
-    "BOLT": {
-      "commandName": "Project",
-      "commandLineArgs": "save precomputed.s"
-    }
-  }
-}
