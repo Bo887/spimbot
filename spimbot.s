@@ -120,7 +120,6 @@ puzzle_contact:		.space 200
 d_puzzle_pending:	.word 0
 
 timer_int_active:   .word 0     # global flag that is non-zero when the timer interrupt is active
-puzzle:             .word 0:452
 
 PI:                 .float 3.14
 three:              .float 3.0
