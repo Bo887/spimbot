@@ -146,7 +146,8 @@ main:
 	
 	# testing puzzle generation and solving time
 	# note: marker doesn't have to start at A, and may increase by more than one
-	# given solution solving cycles on first 10: 137954 135267 160251 146216 122622 133782 127169 135742 142828 135172
+	# given solution solving cycles on first 10: 	137954 135267 160251 146216 122622 133782 127169 135742 142828 135172
+	# optimized solution:				27639  29067  30764  28458  27517  26126  15800  29193  21984  22825
 	lw	$s0, TIMER
 	la	$t0, puzzle
         sw	$t0, REQUEST_PUZZLE
@@ -345,7 +346,7 @@ pb_no_direct_left:
 	or	$t3, $t3, $a2	# contact[downPos - 1] | touchLeft[lookupId]
 	sb	$t3, 4($v0)
 	add	$t0, $t5, 4	# downPos - 1
-	sb	$t0, 0($s5)	# queue[qEnd] = position - 1
+	sb	$t0, 0($s5)	# queue[qEnd] = downPos - 1
 	add	$s5, $s5, 1	# qEnd++
 	
 pb_no_down_left:
@@ -357,7 +358,7 @@ pb_no_down_left:
 	or	$t3, $t3, $a2	# contact[upPos - 1] | touchLeft[lookupId]
 	sb	$t3, -6($v0)
 	add	$t0, $t5, -6	# upPos - 1
-	sb	$t0, 0($s5)	# queue[qEnd] = position - 1
+	sb	$t0, 0($s5)	# queue[qEnd] = upPos - 1
 	add	$s5, $s5, 1	# qEnd++
 	
 pb_no_left:
@@ -377,10 +378,30 @@ pb_no_left:
 	add	$s5, $s5, 1	# qEnd++
 	
 pb_no_direct_right:
-	# TODO: up-right and down-right
+	# down-right
+	bge	$t8, $s2, pb_no_down_right
+	lbu	$t0, 6($t4)	# puzzle->bitmap[downPos + 1]
+	beq	$t0, $zero, pb_no_down_right
+	lbu	$t3, 6($v0)	# contact[downPos + 1]
+	or	$t3, $t3, $a3	# contact[downPos + 1] | touchRight[lookupId]
+	sb	$t3, 6($v0)
+	add	$t0, $t5, 6	# downPos + 1
+	sb	$t0, 0($s5)	# queue[qEnd] = downPos + 1
+	add	$s5, $s5, 1	# qEnd++
+	
+pb_no_down_right:
+	# up-right
+	blt	$t1, $zero, pb_no_right
+	lbu	$t0, -4($t4)	# puzzle->bitmap[upPos + 1]
+	beq	$t0, $zero, pb_no_right
+	lbu	$t3, -4($v0)	# contact[upPos + 1]
+	or	$t3, $t3, $a3	# contact[upPos + 1] | touchRight[lookupId]
+	sb	$t3, -4($v0)
+	add	$t0, $t5, -4	# upPos + 1
+	sb	$t0, 0($s5)	# queue[qEnd] = upPos + 1
+	add	$s5, $s5, 1	# qEnd++
 	
 pb_no_right:
-	
 pb_fill_loop_next:
 	add	$s4, $s4, 1	# qStart++
 	j	pb_fill_loop_top
