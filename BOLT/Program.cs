@@ -1,6 +1,8 @@
 ﻿using System;
 using System.Text;
 using System.IO;
+using System.Collections.Generic;
+using System.Linq;
 
 namespace BOLT {
     class Program {
@@ -104,7 +106,7 @@ ______#___________###_####_###_##";
                     }
                     break;
                 case "solve":
-                    Puzzle puzzle = new Puzzle(DebugPuzzle);
+                    Puzzle puzzle = new Puzzle(TestPuzzle);
                     TestSolving(puzzle);
                     break;
             }
@@ -168,11 +170,18 @@ ______#___________###_####_###_##";
         }
 
         static void TestSolving(Puzzle Puzzle) {
-            void StoreWord(byte[] Array, int Address, int Value) {
+            void StoreWord(byte[] Array, int Address, uint Value) {
                 byte[] leBytes = BitConverter.GetBytes(Value);
-                for (int i = 0; i < 4; i++) {
+                for (int i = 0; i < 4 && Address + i < Array.Length; i++) {
                     Array[Address + i] = leBytes[i];
                 }
+            }
+            uint LoadWord(byte[] Array, int Address) {
+                uint result = 0;
+                for (int i = 0; i < 4; i++) {
+                    if (Address + i < Array.Length) result |= ((uint) Array[Address + i] << (i * 8));
+                }
+                return result;
             }
             int[] queue = new int[400];
             int qStart, qEnd;
@@ -181,7 +190,7 @@ ______#___________###_####_###_##";
                 qEnd++;
             }
             byte scanStart = 0; // How many starting chunks are now empty and can be skipped
-            char marker = 'A';
+            uint marker = 0x41414141;
             while (scanStart < Puzzle.Bitmap.Length) {
                 byte[] contact = new byte[Puzzle.BytesWidth * Puzzle.Height];
                 byte chunk = Puzzle.Bitmap[scanStart];
@@ -202,14 +211,16 @@ ______#___________###_####_###_##";
                     int changed = chunk & ~Puzzle.Bitmap[position];
                     if (changed == 0) continue;
                     int mapPos = (position % Puzzle.BytesWidth) * 8 + (position / Puzzle.BytesWidth) * Puzzle.Width;
-                    while (changed != 0) {
-                        if (changed >= 0x80) {
-                            if (Puzzle.Map[mapPos] != (byte) '#') throw new Exception("Tried to fill a bad spot");
-                            Puzzle.Map[mapPos] = (byte) marker;
-                        }
-                        changed = (changed << 1) & 0xff;
-                        mapPos++;
-                    }
+
+                    uint partA = LoadWord(Puzzle.Map, mapPos);
+                    uint aMask = maskA[changed];
+                    partA = (partA & ~aMask) | (marker & aMask);
+                    StoreWord(Puzzle.Map, mapPos, partA);
+                    uint partB = LoadWord(Puzzle.Map, mapPos + 4);
+                    uint bMask = maskB[changed];
+                    partB = (partB & ~bMask) | (marker & bMask);
+                    StoreWord(Puzzle.Map, mapPos + 4, partB);
+
                     int upPos = position - Puzzle.BytesWidth;
                     if (upPos >= 0 && Puzzle.Bitmap[upPos] != 0) {
                         contact[upPos] |= touchVert[lookupId];
@@ -249,7 +260,7 @@ ______#___________###_####_###_##";
                         }
                     }
                 }
-                marker++;
+                marker += 0x01010101;
             }
             Console.WriteLine(Puzzle);
         }
@@ -268,9 +279,9 @@ ______#___________###_####_###_##";
 
         static string WriteTables() {
             StringBuilder result = new StringBuilder();
-            void WriteArray(byte[] Array) {
+            void WriteArray(IEnumerable<uint> Array) {
                 int onThisLine = 0;
-                foreach (byte b in Array) {
+                foreach (uint b in Array) {
                     if (onThisLine == 2048) {
                         result.AppendLine();
                         result.Append("\t\t\t.byte ");
@@ -283,13 +294,13 @@ ______#___________###_####_###_##";
                 result.AppendLine();
             }
             result.Append("puzzle_transition:\t.byte ");
-            WriteArray(transitions);
+            WriteArray(transitions.Select(b => (uint) b));
             result.Append("puzzle_touch_vert:\t.byte ");
-            WriteArray(touchVert);
-            result.Append("puzzle_touch_left:\t.byte ");
-            WriteArray(touchLeft);
-            result.Append("puzzle_touch_right:\t.byte ");
-            WriteArray(touchRight);
+            WriteArray(touchVert.Select(b => (uint) b));
+            result.Append("puzzle_mask_a:\t\t.word ");
+            WriteArray(maskA);
+            result.Append("puzzle_mask_b:\t\t.word ");
+            WriteArray(maskB);
             return result.ToString();
         }
     }
