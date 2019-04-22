@@ -119,10 +119,13 @@ puzzle_contact:		.space 200
 			
 d_puzzle_pending:	.word 0
 
-PI:			.float 3.14
-three:			.float 3.0
-five:			.float 5.0
-F180:			.float 180.0
+timer_int_active:   .word 0     # global flag that is non-zero when the timer interrupt is active
+puzzle:             .word 0:452
+
+PI:                 .float 3.14
+three:              .float 3.0
+five:               .float 5.0
+F180:               .float 180.0
 
 .text
 
@@ -132,28 +135,33 @@ F180:			.float 180.0
 
 main:
 	# Construct interrupt mask
-	li	$t4, 0
-	or	$t4, $t4, BONK_INT_MASK			# request bonk
-	or	$t4, $t4, REQUEST_PUZZLE_INT_MASK	# puzzle interrupt bit
-	or	$t4, $t4, 1				# global enable
-	mtc0	$t4, $12
+	li          $t4, 0
+	or          $t4, $t4, BONK_INT_MASK # request bonk
+	or          $t4, $t4, REQUEST_PUZZLE_INT_MASK	        # puzzle interrupt bit
+        or          $t4, $t4, TIMER_INT_MASK        #enable timer interrupts
+	or          $t4, $t4, 1 # global enable
+	mtc0        $t4, $12
 	
-	# Fill in your code here
-	
-	# figure out which side we're on
-	lw	$t0, BOT_X
-	bge	$t0, 100, infinite	# only test on one bot
-	
-	# testing puzzle generation and solving time
-	# note: marker doesn't have to start at A, and may increase by more than one
-	# given solution solving cycles on first 10: 	137954 135267 160251 146216 122622 133782 127169 135742 142828 135172
-	# initial optimized solution:			27639  29067  30764  28458  27517  26126  15800  29193  21984  22825
-	# further optimized by using all registers:	25864  27220  29287  forgot 25819  24399  14887  27391  20622  21415
-	# further optimized inner loop:			24264  25503  26291  24037  24147  22931  13937  25700  19317  20123
-	lw	$s0, TIMER
-	la	$t0, puzzle
-        sw	$t0, REQUEST_PUZZLE
-	
+	#Fill in your code here
+        li          $a0, 17
+        li          $a1, 50
+        jal set_move_point_target
+        li          $a0, 70
+        li          $a1, 80
+        jal set_move_point_target
+        li          $a0, 70
+        li          $a1, 270
+        jal set_move_point_target
+        li          $a0, 70
+        li          $a1, 80
+        jal set_move_point_target
+        li          $a0, 17
+        li          $a1, 50
+        jal set_move_point_target
+        li          $a0, 10
+        li          $a1, 10
+        jal set_move_point_target
+        
 infinite:
 	lbu	$t0, d_puzzle_pending	# will be set in kernel mode when puzzle interrupt occurs
 	beq	$t0, $zero, m_no_puzzle
@@ -472,6 +480,152 @@ pb_cont:
     jr          $ra
 
 # -----------------------------------------------------------------------
+# set_move_point_target - sets the target pixel for the SPIMBot to 
+# travel to. Uses timer interrupts.
+# This function assumes there is a direct path from the current location
+# to the target point (no collisions!).
+# $a0 - target_x
+# $a1 - target_y
+# -----------------------------------------------------------------------
+set_move_point_target:
+        sub         $sp, $sp, 16
+        sw          $ra, 0($sp)
+        sw          $s0, 4($sp)
+        sw          $s1, 8($sp)
+        sw          $s2, 12($sp)
+
+        jal         wait_for_timer_int   # wait for timer interrupt handler to become inactive
+
+        lw          $a2, BOT_X
+        lw          $a3, BOT_Y
+
+        sub         $s0, $a0, $a2   # $s0 = current_x - target_x
+        sub         $s1, $a1, $a3   # $s1 = current_y - target_y
+
+        jal         euc_dist        
+        move        $s2, $v0        # s2 = distance
+
+        move        $a0, $s0
+        move        $a1, $s1
+        jal         sb_arctan       # $v0 = angle to rotate to.
+        
+        sw          $v0, ANGLE      # set target angle
+        li          $t0, 1
+        sw          $t0, ANGLE_CONTROL  # and set angle control to absolute
+
+        move        $a0, $s2
+        jal         set_move_dist_target # call move_dist
+
+        lw          $ra, 0($sp)     #cleanup
+        lw          $s0, 4($sp)
+        lw          $s1, 8($sp)
+        lw          $s2, 12($sp)
+        add         $sp, $sp, 16
+        jr          $ra
+
+
+# -----------------------------------------------------------------------
+# set_move_dist_target - sets the target destination for the SPIMBot using
+# timer interrupts
+# Returns right after the interrupt is set, not after when the bot has
+# reached the target distance.
+# Make sure to not call this function if a timer interrupt is already
+# active. See wait_for_timer_int
+# $a0 - dist
+# -----------------------------------------------------------------------
+set_move_dist_target:
+        sub         $sp, $sp, 4
+        sw          $ra, 0($sp)
+
+        jal         wait_for_timer_int   # wait for timer interrupt handler to become inactive
+
+        lw          $t1, TIMER      # $t0 = current time (cycles)
+        mul         $a0, $a0, 1000  # $a0 = # of cycles needed to travel "dist" (assumes bot is moving at max speed (10 mips))
+        add         $a0, $a0, $t1   # $a0 = cycle to stop moving
+        sw          $a0, TIMER      # request TIMER interrupt
+        li          $t1, 10
+        sw          $t1, VELOCITY   # set bot to max speed
+        sw          $t1, 0($v0)     # update the timer_int_active flag
+
+        lw          $ra, 0($sp)
+        add         $sp, $sp, 4
+        jr          $ra
+
+# -----------------------------------------------------------------------
+# wait_for_timer_int - waits for timer interrupts to finish
+# It really just checks the state of timer_int_active.
+# Returns the address of timer_int_active in $v0
+# Returns the value of timer_int_active in $v1
+# -----------------------------------------------------------------------
+wait_for_timer_int:
+        la          $v0, timer_int_active
+        lw          $v1, 0($v0)
+        bne         $v1, 0, wait_for_timer_int
+        jr          $ra
+
+# -----------------------------------------------------------------------
+# move_dist_poll - moves the SPIMBot a given distance by constantly
+# polling the current position
+# It (currently) only returns after the bot has reached the given position
+# $a0 - dist
+# -----------------------------------------------------------------------
+move_dist_poll:
+        sub         $sp, $sp, 16
+        sw          $ra, 0($sp)
+        sw          $s0, 4($sp)
+        sw          $s1, 8($sp)
+        sw          $s2, 12($sp)
+
+        lw          $s0, BOT_X      # $s0 = start_x
+        lw          $s1, BOT_Y      # $s1 = start_y
+
+        move        $s2, $a0        # $s2 = dist
+
+        li          $t0, 10
+        sw          $t0, VELOCITY
+
+_move_dist_loop:
+        lw          $a2, BOT_X      # $a2 = curr_x
+        lw          $a3, BOT_Y      # $a2 = curr_y
+        move        $a0, $s0
+        move        $a1, $s1
+        jal         euc_dist        # $v0 = dist
+        bge         $v0, $s2, _move_dist_ret        # did we hit the distance?
+        j _move_dist_loop
+
+_move_dist_ret:
+        sw          $0, VELOCITY
+        lw          $ra, 0($sp)
+        lw          $s0, 4($sp)
+        lw          $s1, 8($sp)
+        lw          $s2, 12($sp)
+        add         $sp, $sp, 16
+
+
+# -----------------------------------------------------------------------
+# euc_dist - computes the euclidean distance between (x1, y1) and (x2, y2)
+# $a0 - x1
+# $a1 - y1
+# $a2 - x2
+# $a3 - y2
+# returns the (integer casted) euclidean distance in $v0
+# -----------------------------------------------------------------------
+euc_dist:
+        sub         $a0, $a2, $a0   # $a0 = (x2 - x1)
+        mul         $a0, $a0, $a0   # $a0 = (x2 - x1)^2
+        sub         $a1, $a3, $a1   # $a1 = (y2 - y1)
+        mul         $a1, $a1, $a1   # $a1 = (y2 - y1)^2
+
+        add         $v0, $a0, $a1   # $v0 = (x2 - x1)^2 + (y2 - y1)^2
+
+        mtc1        $v0, $f12       # $f12 = $v0
+        cvt.s.w     $f12, $f12      # cast $f12 to a float
+        sqrt.s      $f12, $f12      # $f12 = sqrt($f12)
+        cvt.w.s     $f12, $f12      # cast $f12 to an int
+        mfc1        $v0, $f12       # $v0 = $f12
+        jr          $ra
+
+# -----------------------------------------------------------------------
 # sb_arctan - computes the arctangent of y / x
 # $a0 - x
 # $a1 - y
@@ -589,7 +743,9 @@ request_puzzle_interrupt:
 
 timer_interrupt:
 	sw 	    $0, TIMER_ACK
-	#Fill in your code here
+        sw          $0, VELOCITY        # stop moving
+        la          $t4, timer_int_active   
+        sw          $0, 0($t4)      # set timer_int_active to false
         j           interrupt_dispatch    # see if other interrupts are waiting
 
 non_intrpt:                # was some non-interrupt
