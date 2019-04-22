@@ -148,7 +148,8 @@ main:
 	# note: marker doesn't have to start at A, and may increase by more than one
 	# given solution solving cycles on first 10: 	137954 135267 160251 146216 122622 133782 127169 135742 142828 135172
 	# initial optimized solution:			27639  29067  30764  28458  27517  26126  15800  29193  21984  22825
-	# further optimized by using all registers:	25864  27220  29287  22966  25819  24399  14887  27391  20622  21415
+	# further optimized by using all registers:	25864  27220  29287  forgot 25819  24399  14887  27391  20622  21415
+	# further optimized inner loop:			24264  25503  26291  24037  24147  22931  13937  25700  19317  20123
 	lw	$s0, TIMER
 	la	$t0, puzzle
         sw	$t0, REQUEST_PUZZLE
@@ -270,10 +271,8 @@ pb_fill_loop_top:
 	nor	$t0, $t0, $t0	# ~transitions[lookupId]
 	and	$t3, $t0, $t6	# changed = chunk & ~transitions[lookupId]
 	beq	$t3, $zero, pb_fill_loop_next
-	and	$a2, $t3, 0x80	# calculate touchLeft
-	srl	$a2, $a2, 7
-	and	$a3, $t3, 0x01	# calculate touchRight
-	sll	$a3, $a3, 7
+	and	$a2, $t3, 0x80	# nonzero if need to use touchLeft
+	and	$a3, $t3, 0x01	# likewise for touchRight
 	
 	div	$t5, $s6	# need both quotient and remainder
 	mfhi	$t7		# position % Puzzle.BytesWidth
@@ -288,14 +287,13 @@ pb_fill_loop_top:
 	lbu	$a1, 0($a1)	# touchVert[lookupId]
 	
 	add	$t1, $a0, $t7	# &puzzle->map[mapPos] - 8
-	li	$t0, 0x80
 pb_write_map_top:
 	beq	$t3, $zero, pb_write_map_done
-	blt	$t3, $t0, pb_write_map_next
+	and	$t0, $t3, 0x7f	# see if cutting off the top bit changes the value
+	beq	$t3, $t0, pb_write_map_next
 	sb	$s1, 8($t1)	# puzzle->map[mapPos] = marker
 pb_write_map_next:
-	sll	$t3, $t3, 1	# changed <<= 1
-	and	$t3, $t3, 0xff	# changed &= 0xff
+	sll	$t3, $t0, 1	# changed <<= 1
 	add	$t1, $t1, 1
 	j	pb_write_map_top
 	
@@ -332,7 +330,7 @@ pb_no_down:
 	lbu	$t2, -1($t4)	# puzzle->bitmap[position - 1]
 	beq	$t2, $zero, pb_no_direct_left
 	lbu	$t3, -1($v0)	# contact[position - 1]
-	or	$t3, $t3, $a2	# contact[position - 1] | touchLeft[lookupId]
+	or	$t3, $t3, 1	# contact[position - 1] | touchLeft[lookupId]
 	sb	$t3, -1($v0)
 	sub	$t0, $t5, 1	# position - 1
 	sb	$t0, 0($s5)	# queue[qEnd] = position - 1
@@ -344,7 +342,7 @@ pb_no_direct_left:
 	lbu	$t0, 4($t4)	# puzzle->bitmap[downPos - 1]
 	beq	$t0, $zero, pb_no_down_left
 	lbu	$t3, 4($v0)	# contact[downPos - 1]
-	or	$t3, $t3, $a2	# contact[downPos - 1] | touchLeft[lookupId]
+	or	$t3, $t3, 1	# contact[downPos - 1] | touchLeft[lookupId]
 	sb	$t3, 4($v0)
 	add	$t0, $t5, 4	# downPos - 1
 	sb	$t0, 0($s5)	# queue[qEnd] = downPos - 1
@@ -356,7 +354,7 @@ pb_no_down_left:
 	lbu	$t0, -6($t4)	# puzzle->bitmap[upPos - 1]
 	beq	$t0, $zero, pb_no_left
 	lbu	$t3, -6($v0)	# contact[upPos - 1]
-	or	$t3, $t3, $a2	# contact[upPos - 1] | touchLeft[lookupId]
+	or	$t3, $t3, 1	# contact[upPos - 1] | touchLeft[lookupId]
 	sb	$t3, -6($v0)
 	add	$t0, $t5, -6	# upPos - 1
 	sb	$t0, 0($s5)	# queue[qEnd] = upPos - 1
@@ -372,7 +370,7 @@ pb_no_left:
 	lbu	$t2, 1($t4)	# puzzle->bitmap[position + 1]
 	beq	$t2, $zero, pb_no_direct_right
 	lbu	$t3, 1($v0)	# contact[position + 1]
-	or	$t3, $t3, $a3	# contact[position + 1] | touchRight[lookupId]
+	or	$t3, $t3, 0x80	# contact[position + 1] | touchRight[lookupId]
 	sb	$t3, 1($v0)
 	sb	$t6, 0($s5)	# queue[qEnd] = position + 1
 	add	$s5, $s5, 1	# qEnd++
@@ -383,7 +381,7 @@ pb_no_direct_right:
 	lbu	$t0, 6($t4)	# puzzle->bitmap[downPos + 1]
 	beq	$t0, $zero, pb_no_down_right
 	lbu	$t3, 6($v0)	# contact[downPos + 1]
-	or	$t3, $t3, $a3	# contact[downPos + 1] | touchRight[lookupId]
+	or	$t3, $t3, 0x80	# contact[downPos + 1] | touchRight[lookupId]
 	sb	$t3, 6($v0)
 	add	$t0, $t5, 6	# downPos + 1
 	sb	$t0, 0($s5)	# queue[qEnd] = downPos + 1
@@ -395,7 +393,7 @@ pb_no_down_right:
 	lbu	$t0, -4($t4)	# puzzle->bitmap[upPos + 1]
 	beq	$t0, $zero, pb_no_right
 	lbu	$t3, -4($v0)	# contact[upPos + 1]
-	or	$t3, $t3, $a3	# contact[upPos + 1] | touchRight[lookupId]
+	or	$t3, $t3, 0x80	# contact[upPos + 1] | touchRight[lookupId]
 	sb	$t3, -4($v0)
 	add	$t0, $t5, -4	# upPos + 1
 	sb	$t0, 0($s5)	# queue[qEnd] = upPos + 1
