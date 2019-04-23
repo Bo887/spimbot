@@ -149,13 +149,14 @@ main:
         # determine which side of the map we are on.
         lw          $t0, BOT_X
         slt         $t1, $t0, 150       # $t1 = BOT_X < 150 ? 1 : 0
-        sw          $t1, bot_on_left    # save to global variable
+        la          $t0, bot_on_left
+        sw          $t1, 0($t0)    # save to global variable
 
         # fill tile_types
         la          $t0, map
         sw          $t0, GET_LAYOUT     # $t0 = struct layout {char map[15][15];};
         la          $t2, tile_types     # $t2 = &tile_types
-        bne         $t1, 0, fill_right_tiles
+        bne         $t1, 1, fill_right_tiles    # when bot_on_left is false, branch to fill_right_tiles
 
 fill_left_tiles:
         lbu         $t3, 165($t0)
@@ -169,6 +170,8 @@ fill_left_tiles:
         lbu         $t3, 35($t0)
         sb          $t3, 4($t2)
 
+        lbu         $t9, 0($t2)  # since the console isn't really working for me, I'm "printing" by moving stuff to $t9, which is never used elsewhere
+
 fill_right_tiles:
         lbu         $t3, 179($t0)
         sb          $t3, 0($t2)
@@ -181,7 +184,8 @@ fill_right_tiles:
         lbu         $t3, 39($t0)
         sb          $t3, 4($t2)
 
-        lbu         $t9, 2($t2)  # since the console isn't really working for me, I'm "printing" by moving stuff to $t9, which is never used elsewhere
+        lbu         $t9, 0($t2)  # since the console isn't really working for me, I'm "printing" by moving stuff to $t9, which is never used elsewhere
+
 
         lw          $t0, bot_on_left
         beq         $t0, 0, right_main  # jump to the corresponsind "main" depending on which side we are
