@@ -152,8 +152,8 @@ main:
         sw          $t1, bot_on_left    # save to global variable
 
         # fill tile_types
-        la          $t0, map            # $t0 = &map
-        sw          $t0, GET_LAYOUT
+        la          $t0, map
+        sw          $t0, GET_LAYOUT     # $t0 = struct layout {char map[15][15];};
         la          $t2, tile_types     # $t2 = &tile_types
         bne         $t1, 0, fill_right_tiles
 
