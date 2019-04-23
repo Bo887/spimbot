@@ -181,7 +181,7 @@ fill_right_tiles:
         lbu         $t3, 39($t0)
         sb          $t3, 4($t2)
 
-        lbu         $t9, 4($t2)
+        lbu         $t9, 2($t2)  # since the console isn't really working for me, I'm "printing" by moving stuff to $t9, which is never used elsewhere
 
         lw          $t0, bot_on_left
         beq         $t0, 0, right_main  # jump to the corresponsind "main" depending on which side we are
