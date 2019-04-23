@@ -1,4 +1,10 @@
 default:
+	QtSpimbot -file spimbot.s
+
+debug:
+	QtSpimbot -debug -file spimbot.s -file2 spimbot.s
+
+tournament:
 	QtSpimbot -tournament -file spimbot.s -file2 spimbot.s
 
 seed-233:
