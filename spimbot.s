@@ -475,6 +475,129 @@ pb_outer_loop_done:
 	add         $sp, $sp, 44
 	jr	    $ra
 
+# -----------------------------------------------------------------------
+# request/order/counter encoding and decoding functions
+# -----------------------------------------------------------------------
+
+# decode_request turns two ints (packed request) into a 12-long int array
+# $a0: request low word
+# $a1: request high word
+# $a2: result array base address
+
+.globl decode_request
+decode_request:
+	li	$t0, 0
+	
+dr_first_loop:
+	bge	$t0, 6, dr_intermediate_bits
+	and	$t1, $a0, 0x1f		# array[i] = lo & 0x0000001f;
+	mul	$t2, $t0, 4		# Calculate array[i]
+	add	$t3, $a2, $t2
+	sw	$t1, 0($t3)		# Save array[i]
+	srl	$a0, $a0, 5		# lo = lo >> 5;
+	add	$t0, $t0, 1
+	j	dr_first_loop
+	
+dr_intermediate_bits:
+	sll	$t0, $a1, 2		# unsigned upper_three_bits = (hi << 2) & 0x0000001f;
+	and	$t0, $t0, 0x1f
+	or	$t0, $t0, $a0		# array[6] = upper_three_bits | lo;
+	sw	$t0, 24($a2)
+	srl	$a1, $a1, 3		# hi = hi >> 3;
+	
+	li	$t0, 7
+	
+dr_second_loop:
+	bge 	$t0, 12, dr_end		# for (int i = 7; i < 12; ++i)
+	and	$t1, $a1, 0x1f		# array[i] = hi & 0x0000001f;
+	mul	$t2, $t0, 4		# Calculate array[i]
+	add	$t3, $a2, $t2
+	sw	$t1, 0($t3)		# Save array[i]
+	srl	$a1, $a1, 5		# hi = hi >> 5;
+	add	$t0, $t0, 1
+	j	dr_second_loop
+	
+dr_end:
+	jr	$ra
+	
+# decode_request_at_mem unpacks a request from memory into an ingredient array in memory
+# $a0: base address of request structure
+# $a1: result array base address
+
+.globl decode_request_at_mem
+decode_request_at_mem:
+	move	$a2, $a1	# result address
+	lw	$a1, 0($a0)	# high
+	lw	$a0, 4($a0)	# low
+	j	decode_request	# will use current $ra
+	
+# create_request turns an array of 12 ingredient counts (words) into a two-word (packed) request
+# $a0: array base address
+# $v0: low word of result
+# $v1: high word of result
+	
+.globl create_request
+create_request:
+	lw	$v0, 24($a0)	# unsigned lo = ((array[6] << 30) >> 30);
+	sll	$v0, $v0, 30
+	srl	$v0, $v0, 30
+	
+	li	$t0, 5
+cr_first_loop:
+	blt 	$t0, 0, cr_second_loop_start	# for (int i = 5; i >= 0; --i) {
+	sll	$v0, $v0, 5	# lo = lo << 5;
+	mul	$t1, $t0, 4	# Calculate array[i]
+	add	$t2, $a0, $t1	
+	lw	$t1, 0($t2)	# Load array[i]
+	or	$v0, $v0, $t1	# lo |= array[i];
+	sub	$t0, $t0, 1
+	j	cr_first_loop
+	
+second_loop_start:
+	li	$t0, 12
+	li	$v1, 0
+	
+cr_second_loop:
+	ble 	$t0, 7, cr_intermediate_bits	# for (int i = 12; i > 7; --i) {
+	mul	$t1, $t0, 4	# Calculate array[i]
+	add	$t2, $a0, $t1	
+	lw	$t1, 0($t2)	# Load array[i]
+	or	$v1, $v1, $t1	# hi |= array[i];
+	sll	$v1, $v1, 5	# hi = hi << 5;
+	
+	sub	$t0, $t0, 1
+	j	cr_second_loop
+	
+cr_intermediate_bits:	
+	lw	$t1, 28($a0)	# Load array[7]
+	or	$v1, $v1, $t1	# hi |= array[i];
+	sll	$v1, $v1, 3	# hi = hi << 3;
+	lw	$t1, 24($a0)	# Load array[6]
+	srl	$t1, $t1, 2	# (array[6] >> 2)
+	or	$v1, $v1, $t1	# hi |= (array[6] >> 2);
+	
+cr_end:
+	jr	$ra
+	
+# create_request_in_mem packs an ingredients list into a request structure in memory
+# $a0: base address of (output) request structure
+# $a1: input (unpacked) array base address
+
+.globl create_request_in_mem
+create_request_in_mem:
+	sub	$sp, $sp, 8
+	sw	$ra, 0($sp)
+	sw	$s0, 4($sp)	# saves $a0
+	
+	move	$s0, $a0
+	move	$a0, $a1
+	jal	create_request
+	sw	$v0, 4($s0)	# low
+	sw	$v1, 0($s0)	# high
+	
+	lw	$ra, 0($sp)
+	lw	$s0, 0($sp)
+	jr	$ra
 
 # print board ##################################################
 #
