@@ -49,9 +49,12 @@ FINISH_APPLIANCE_INSTANT= 0xffff0078
 puzzle:			.space 1832     # space allocated for the puzzle
 map:			.space 225      # stores the map from GET_LAYOUT
 tile_types:		.space 5        # 5 bytes for a 5-element char array representing what is in the 5 item locations.
-			.align 4	# force the following to be word-aligned
+
+			.align 2	# force the following to be word-aligned
+
 encoded_request:	.space 24	# 3 orders, 2 words per packed request
 decoded_request:	.space 144	# 3 orders, 12 words per unpacked request (ingredients array)
+inventory:              .space 16       # 4 elements (each an integer) in the inventory -> 16 bytes total
 
 ### PRECOMPUTED PUZZLE SOLVING TABLES ###
 
@@ -192,41 +195,21 @@ fill_right_tiles:
         lw          $t0, bot_on_left
         beq         $t0, 0, right_main  # jump to the corresponsind "main" depending on which side we are
 left_main:
-	# TEMP: test order decoding
-	la	$a0, encoded_request
-	sw	$a0, GET_TURNIN_ORDER
-	add	$a0, $a0, 16		# try order index 2
-	la	$a1, decoded_request
-	jal	decode_request_in_mem
-	add	$zero, $zero, $zero	# !!! set breakpoint here to make sure request was decoded
-	# ...and re-encoding
-	la	$a0, encoded_request
-	la	$a1, decoded_request
-	jal	create_request_in_mem
-	add	$zero, $zero, $zero	# !!! make sure first encoded order was replaced with last
-
         la          $t0, puzzle
-        sw          $t0, REQUEST_PUZZLE
+        #sw          $t0, REQUEST_PUZZLE
 	
 	#Fill in your code here
-        li          $a0, 17
-        li          $a1, 50
-        jal         set_move_point_target
-        li          $a0, 70
-        li          $a1, 80
-        jal         set_move_point_target
-        li          $a0, 70
-        li          $a1, 270
-        jal         set_move_point_target
-        li          $a0, 70
-        li          $a1, 80
-        jal         set_move_point_target
-        li          $a0, 17
-        li          $a1, 50
-        jal         set_move_point_target
         li          $a0, 10
-        li          $a1, 10
-        jal         set_move_point_target
+        li          $a1, 55
+        jal         set_move_point_target       # go to closest bin
+
+        jal         wait_for_timer_int          # and wait for the bot to reach it
+        sw          $0, PICKUP                  # once reached, pickup whatever is from that bin
+        sw          $0, PICKUP                  # until our inventory is full
+        sw          $0, PICKUP
+        sw          $0, PICKUP
+        jal         update_inventory            # and test updating the inventory
+        add         $0, $0, $0                  # set bp here to check .data segment
 
 left_infinite:
 	lw	    $t0, d_puzzle_pending	# will be set in kernel mode when puzzle interrupt occurs
@@ -254,6 +237,15 @@ right_infinite:
 
 nothing:
         j nothing
+
+# -----------------------------------------------------------------------
+# update_inventory - updates the "inventory" block in the .data segment
+# -----------------------------------------------------------------------
+update_inventory:
+        la          $t0, inventory
+        sw          $t0, GET_INVENTORY
+        jr          $ra
+
 	
 # -----------------------------------------------------------------------
 # optimized puzzle solving function
