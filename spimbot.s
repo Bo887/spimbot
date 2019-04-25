@@ -137,6 +137,8 @@ three:              .float 3.0
 five:               .float 5.0
 F180:               .float 180.0
 
+shared_counter_x:   .word 170 130   # 2-element array, shared_counter_x[bot_on_left] will give the corresponding one to use
+
 .text
 
 # -----------------------------------------------------------------------
@@ -205,14 +207,14 @@ left_main:
         li          $a1, 80
         jal         move_point_while_solving
 
-        jal         drive_to_shared_counter_left
+        jal         drive_to_shared_counter
         jal         dropoff_all
 
         li          $a0, 30
         li          $a1, 70
         jal         move_point_while_solving
         jal         pickup_all_unprocessed
-        jal         drive_to_shared_counter_left
+        jal         drive_to_shared_counter
         jal         dropoff_all
 
         li          $a0, 30
@@ -223,14 +225,14 @@ left_main:
         li          $t0, 1
         sw          $t0, ANGLE_CONTROL
         jal         pickup_all_unprocessed
-        jal         drive_to_shared_counter_left
+        jal         drive_to_shared_counter
         jal         dropoff_all
 
         li          $a0, 30
         li          $a1, 150
         jal         move_point_while_solving
         jal         pickup_all_unprocessed
-        jal         drive_to_shared_counter_left
+        jal         drive_to_shared_counter
         jal         dropoff_all
 
         li          $a0, 30
@@ -241,23 +243,78 @@ left_main:
         li          $t0, 1
         sw          $t0, ANGLE_CONTROL
         jal         pickup_all_unprocessed
-        jal         drive_to_shared_counter_left
+        jal         drive_to_shared_counter
         jal         dropoff_all
 
         li          $a0, 30
         li          $a1, 230
         jal         move_point_while_solving
         jal         pickup_all_unprocessed
-        jal         drive_to_shared_counter_left
+        jal         drive_to_shared_counter
         jal         dropoff_all
 
 left_infinite:
 	j	    left_infinite
 
 right_main:
-        li          $a0, 10
-        li          $a1, 10
-        jal         set_move_point_target
+        li          $a0, 290
+        li          $a1, 55
+        jal         move_point_while_solving
+        jal         pickup_all_unprocessed
+
+        li          $a0, 285
+        li          $a1, 50
+        jal         move_point_while_solving
+
+        li          $a0, 240
+        li          $a1, 80
+        jal         move_point_while_solving
+
+        jal         drive_to_shared_counter
+        jal         dropoff_all
+
+        li          $a0, 270
+        li          $a1, 70
+        jal         move_point_while_solving
+        jal         pickup_all_unprocessed
+        jal         drive_to_shared_counter
+        jal         dropoff_all
+
+        li          $a0, 270
+        li          $a1, 150
+        jal         move_point_while_solving
+        li          $t0, 0
+        sw          $t0, ANGLE
+        li          $t0, 1
+        sw          $t0, ANGLE_CONTROL
+        jal         pickup_all_unprocessed
+        jal         drive_to_shared_counter
+        jal         dropoff_all
+
+        li          $a0, 270
+        li          $a1, 150
+        jal         move_point_while_solving
+        jal         pickup_all_unprocessed
+        jal         drive_to_shared_counter
+        jal         dropoff_all
+
+        li          $a0, 270
+        li          $a1, 230
+        jal         move_point_while_solving
+        li          $t0, 0
+        sw          $t0, ANGLE
+        li          $t0, 1
+        sw          $t0, ANGLE_CONTROL
+        jal         pickup_all_unprocessed
+        jal         drive_to_shared_counter
+        jal         dropoff_all
+
+        li          $a0, 270
+        li          $a1, 230
+        jal         move_point_while_solving
+        jal         pickup_all_unprocessed
+        jal         drive_to_shared_counter
+        jal         dropoff_all
 
 right_infinite:
         j           right_infinite
@@ -324,21 +381,27 @@ wait_cycles:
         jr          $ra
 
 # -----------------------------------------------------------------------
-# drive_to_shared_counter_left - drives the most optimal path to the
-# left side of the shared counter
-# Assumes there is a direct path and that the bot is on the left!
+# drive_to_shared_counter - drives the most optimal path to the
+# corresponding side of the shared counter (depending on bot_on_left)
+# Assumes there is a direct path!
 # This function only returns once the bot reaches the counter.
 # -----------------------------------------------------------------------
-drive_to_shared_counter_left:
+drive_to_shared_counter:
         sub         $sp, $sp, 4
         sw          $ra, 0($sp)
 
-        li          $a0, 130        # x-target (slightly left of left side of counter)
+        lw          $t1, bot_on_left        # load bot_on_left
+        move        $t9, $t1
+        mul         $t1, $t1, 4
+        la          $t2, shared_counter_x
+        add         $t2, $t2, $t1
+        lw          $a0, 0($t2)             # and get shared_counter_x[bot_on_left]
+
         lw          $a1, BOT_Y      # the y-target will be the bot's current y location (shortest distance is direct)
-        bge         $a1, 65, _drive_to_shared_counter_left_drive
+        bge         $a1, 65, _drive_to_shared_counter_drive
         li          $a1, 65         # unless the bot's height is < 65, then load 65 (we want to stay in the center "rectangle", 65 is an approximate cutoff)
 
-_drive_to_shared_counter_left_drive:
+_drive_to_shared_counter_drive:
         jal         move_point_while_solving
 
         lw          $ra, 0($sp)
