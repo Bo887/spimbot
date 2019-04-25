@@ -610,7 +610,8 @@ create_request_in_mem:
 	sw	$v1, 4($s0)	# high
 	
 	lw	$ra, 0($sp)
-	lw	$s0, 0($sp)
+	lw	$s0, 4($sp)
+	add	$sp, $sp, 8
 	jr	$ra
 
 # print board ##################################################
