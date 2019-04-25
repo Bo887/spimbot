@@ -150,6 +150,9 @@ main:
 	# initial optimized solution:			27639  29067  30764  28458  27517  26126  15800  29193  21984  22825
 	# further optimized by using all registers:	25864  27220  29287  forgot 25819  24399  14887  27391  20622  21415
 	# further optimized inner loop:			24264  25503  26291  24037  24147  22931  13937  25700  19317  20123
+	# earlier exit when chunk unchanged:		23865  25065  26895  23786  23793  22481  13763  25331  19044  19820
+	# check width before some computation:		23865  25065  26727  23516  23793  22481  13763  25331  19044  19820
+	# beq instead of bgt:				23661  24859  26509  23324  23593  22298  13651  25117  18880  19656
 	lw	$s0, TIMER
 	la	$t0, puzzle
         sw	$t0, REQUEST_PUZZLE
@@ -266,22 +269,23 @@ pb_fill_loop_top:
 	sll	$t1, $t6, 8	# chunk << 8
 	or	$t1, $t1, $t0	# lookupId = chunk << 8 | touching
 	add	$t0, $gp, $t1	# &transitions[lookupId]
-	lbu	$t0, 0($t0)	# transitions[lookupId]
-	sb	$t0, 0($t4)	# puzzle->bitmap[position] = transitions[lookupId]
-	nor	$t0, $t0, $t0	# ~transitions[lookupId]
-	and	$t3, $t0, $t6	# changed = chunk & ~transitions[lookupId]
-	beq	$t3, $zero, pb_fill_loop_next
-	and	$a2, $t3, 0x80	# nonzero if need to use touchLeft
-	and	$a3, $t3, 0x01	# likewise for touchRight
+	lbu	$t9, 0($t0)	# transitions[lookupId]
+	beq	$t9, $t6, pb_fill_loop_next
+	sb	$t9, 0($t4)	# puzzle->bitmap[position] = transitions[lookupId]
 	
 	div	$t5, $s6	# need both quotient and remainder
 	mfhi	$t7		# position % Puzzle.BytesWidth
-	bge	$t7, $s7, pb_fill_loop_next
+	beq	$t7, $s7, pb_fill_loop_next
 	mflo	$t8		# position / Puzzle.BytesWidth
 	sll	$t7, $t7, 3	# (position % Puzzle.BytesWidth) * 8
 	lw	$t0, 4($a0)	# width
 	mul	$t8, $t8, $t0	# (position / Puzzle.BytesWidth) * Puzzle.Width
 	add	$t7, $t7, $t8	# mapPos
+	
+	nor	$t9, $t9, $t9	# ~transitions[lookupId]
+	and	$t3, $t9, $t6	# changed = chunk & ~transitions[lookupId]
+	and	$a2, $t3, 0x80	# nonzero if need to use touchLeft
+	and	$a3, $t3, 0x01	# likewise for touchRight
 	
 	add	$a1, $ra, $t1	# &touchVert[lookupId]
 	lbu	$a1, 0($a1)	# touchVert[lookupId]
