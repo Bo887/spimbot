@@ -46,7 +46,8 @@ GET_BOOST 		= 0xffff0070
 GET_INGREDIENT_INSTANT 	= 0xffff0074
 FINISH_APPLIANCE_INSTANT= 0xffff0078
 
-puzzle:			.space 1832     # space allocated for the puzzle
+puzzle1:		.space 1832     # space allocated for the puzzle
+puzzle2:		.space 1832
 map:			.space 225      # stores the map from GET_LAYOUT
 tile_types:		.space 5        # 5 bytes for a 5-element char array representing what is in the 5 item locations.
 
@@ -129,6 +130,7 @@ puzzle_queue:	    .space 400
 puzzle_contact:	    .space 200
 			
 d_puzzle_pending:   .word 0
+d_solving_puzzle:   .word 0	    # nonzero when working on puzzle2
 timer_int_active:   .word 0         # global flag that is non-zero when the timer interrupt is active
 
 bot_on_left:        .word 0         # true if the bot is on the left side, false if bot is on the right side
@@ -152,6 +154,10 @@ main:
         or          $t4, $t4, TIMER_INT_MASK        #enable timer interrupts
 	or          $t4, $t4, 1 # global enable
 	mtc0        $t4, $12
+	
+	# start generating the first puzzle
+	la	$t0, puzzle1
+	sw	$t0, REQUEST_PUZZLE
 
         # determine which side of the map we are on.
         lw          $t0, BOT_X
@@ -176,6 +182,7 @@ fill_left_tiles:
         sb          $t3, 3($t2)
         lbu         $t3, 35($t0)
         sb          $t3, 4($t2)
+	j	infinite
 
 fill_right_tiles:
         lbu         $t3, 179($t0)       # hardcoded locations for the relevent tiles on the right side
@@ -188,47 +195,33 @@ fill_right_tiles:
         sb          $t3, 3($t2)
         lbu         $t3, 39($t0)
         sb          $t3, 4($t2)
-
-        lw          $t0, bot_on_left
-        beq         $t0, 0, right_main  # jump to the corresponsind "main" depending on which side we are
-left_main:
-	#Fill in your code here
-        li          $a0, 10
-        li          $a1, 55
-        jal         move_point_while_solving    # go to closest bin
-
-        sw          $0, PICKUP                  # once reached, pickup whatever is from that bin
-        sw          $0, PICKUP                  # until our inventory is full
-        sw          $0, PICKUP
-        sw          $0, PICKUP
-        jal         update_inventory            # and test updating the inventory
-
-        li          $a0, 15                     # continue testing
-        li          $a1, 50
-        jal         move_point_while_solving
-
-        li          $a0, 60
-        li          $a1, 80
-        jal         move_point_while_solving
-
-        li          $a0, 1000000
-        jal         wait_cycles
-
-        jal         drive_to_shared_counter_left
-
-left_infinite:
-	j	    left_infinite
-
-right_main:
-        li          $a0, 10
-        li          $a1, 10
-        jal         set_move_point_target
-
-right_infinite:
-        j           right_infinite
-
-nothing:
-        j nothing
+        # fall through to infinite
+	
+infinite:
+	lw	$t0, d_puzzle_pending		# will be set in kernel mode when puzzle is generated (not written yet)
+	beq	$t0, $zero, infinite
+	
+	# figure out whether to use puzzle1 or puzzle2
+	sw	$zero, d_puzzle_pending
+	la	$a0, puzzle1			# puzzle to work on
+	la	$s2, puzzle2			# puzzle to generate
+	lw	$t3, d_solving_puzzle
+	li	$t0, 1
+	sw	$t0, d_solving_puzzle
+	beq	$t3, $zero, use_puzzle1
+	
+	# reached only if d_solving_puzzle was 1
+	move	$a0, $s2			# switch current and next
+	la	$s2, puzzle1
+	sw	$zero, d_solving_puzzle
+	
+	# skips to here if d_solving_puzzle was 0
+use_puzzle1:
+	sw	$s2, REQUEST_PUZZLE		# request the next puzzle (generated while solving this one)
+	jal	puzzle_bolt			# solve the current puzzle
+	sw	$a0, SUBMIT_SOLUTION		# submit the current solution - puzzle_bolt doesn't change $a0
+	
+	j	infinite
 
 # -----------------------------------------------------------------------
 # wait_cycles - waits for a number of cycles
@@ -753,7 +746,7 @@ set_move_point_target:
 
         move        $a0, $s0
         move        $a1, $s1
-        jal         sb_arctan       # $v0 = angle to rotate to.
+        #jal         sb_arctan       # $v0 = angle to rotate to. # TEMP: disabled
         
         sw          $v0, ANGLE      # set target angle
         li          $t0, 1
@@ -874,67 +867,6 @@ euc_dist:
         mfc1        $v0, $f12       # $v0 = $f12
         jr          $ra
 
-# -----------------------------------------------------------------------
-# sb_arctan - computes the arctangent of y / x
-# $a0 - x
-# $a1 - y
-# returns the arctangent in $v0
-# -----------------------------------------------------------------------
-sb_arctan:
-        li          $v0, 0           # angle = 0;
-
-        abs         $t0, $a0         # get absolute values
-        abs         $t1, $a1
-        ble         $t1, $t0, no_TURN_90
-
-        ## if (abs(y) > abs(x)) { rotate 90 degrees }
-        move        $t0, $a1         # int temp = y;
-        neg         $a1, $a0         # y = -x;
-        move        $a0, $t0         # x = temp;
-        li          $v0, 90          # angle = 90;
-
-no_TURN_90:
-        bgez        $a0, pos_x       # skip if (x >= 0)
-
-        ## if (x < 0)
-        add         $v0, $v0, 180    # angle += 180;
-
-pos_x:
-        mtc1        $a0, $f0
-        mtc1        $a1, $f1
-        cvt.s.w     $f0, $f0         # convert from ints to floats
-        cvt.s.w     $f1, $f1
-
-        div.s       $f0, $f1, $f0    # float v = (float) y / (float) x;
-    
-        mul.s       $f1, $f0, $f0    # v^^2
-        mul.s       $f2, $f1, $f0    # v^^3
-        l.s         $f3, three       # load 3.0
-        div.s       $f3, $f2, $f3    # v^^3/3
-        sub.s       $f6, $f0, $f3    # v - v^^3/3
-
-        mul.s       $f4, $f1, $f2    # v^^5
-        l.s         $f5, five        # load 5.0
-        div.s       $f5, $f4, $f5    # v^^5/5
-        add.s       $f6, $f6, $f5    # value = v - v^^3/3 + v^^5/5
-
-        l.s         $f8, PI          # load PI
-        div.s       $f6, $f6, $f8    # value / PI
-        l.s         $f7, F180        # load 180.0
-        mul.s       $f6, $f6, $f7    # 180.0 * value / PI
-
-        cvt.w.s     $f6, $f6         # convert "delta" back to integer
-        mfc1        $t0, $f6
-        add         $v0, $v0, $t0    # angle += delta
-
-        bge         $v0, 0, sb_arc_tan_end
-        # negative value received.
-        li          $t0, 360
-        add         $v0, $t0, $v0
-
-sb_arc_tan_end:
-        jr          $ra
-
 	
 	
 	
@@ -943,9 +875,11 @@ sb_arc_tan_end:
 #  KERNEL MODE  #
 #               #
 #################
+
+# NOTE: Due to kernel mode including the sb_arctan function, USER MODE MUST NOT attempt any floating point operations!
 	
 .kdata
-chunkIH:            .space 56
+chunkIH:            .space 64
 non_intrpt_str:     .asciiz "Non-interrupt exception\n"
 unhandled_str:      .asciiz "Unhandled interrupt type\n"
 
@@ -967,12 +901,14 @@ interrupt_handler:
 	sw	$a2, 36($k0)
 	sw	$a3, 40($k0)
 	sw	$v1, 44($k0)
+	sw	$ra, 48($k0)
+	sw	$sp, 52($k0)
 	
 	# preserve HI and LO
 	mflo	$t0
-	sw	$t0, 48($k0)
+	sw	$t0, 56($k0)
 	mfhi	$t0
-	sw	$t0, 52($k0)
+	sw	$t0, 60($k0)
 
         mfc0        $k0, $13             # Get Cause register
         srl         $a0, $k0, 2
@@ -1003,9 +939,9 @@ ih_bonk_interrupt:
         j           ih_interrupt_dispatch    # see if other interrupts are waiting
 
 ih_request_puzzle_interrupt:
-	sw	$0, REQUEST_PUZZLE_ACK
+	sw	$zero, REQUEST_PUZZLE_ACK
 	li	$t0, 1
-	sb	$t0, d_puzzle_pending
+	sw	$t0, d_puzzle_pending
 	j	ih_interrupt_dispatch
 
 ih_timer_interrupt:
@@ -1025,9 +961,9 @@ ih_done:
         la          $k0, chunkIH
 	
 	# restore HI and LO
-	lw	$t0, 48($k0)
+	lw	$t0, 56($k0)
 	mtlo	$t0
-	lw	$t0, 52($k0)
+	lw	$t0, 60($k0)
 	mthi	$t0
 	
         lw          $a0, 0($k0)        # Restore saved registers
@@ -1042,7 +978,71 @@ ih_done:
 	lw	$a2, 36($k0)
 	lw	$a3, 40($k0)
 	lw	$v1, 44($k0)
+	lw	$ra, 48($k0)
+	lw	$sp, 52($k0)
 .set noat
         move        $at, $k1        # Restore $at
 .set at
         eret
+
+# -----------------------------------------------------------------------
+# sb_arctan - computes the arctangent of y / x
+# $a0 - x
+# $a1 - y
+# returns the arctangent in $v0
+# -----------------------------------------------------------------------
+sb_arctan:
+        li          $v0, 0           # angle = 0;
+
+        abs         $t0, $a0         # get absolute values
+        abs         $t1, $a1
+        ble         $t1, $t0, at_no_turn_90
+
+        ## if (abs(y) > abs(x)) { rotate 90 degrees }
+        move        $t0, $a1         # int temp = y;
+        neg         $a1, $a0         # y = -x;
+        move        $a0, $t0         # x = temp;
+        li          $v0, 90          # angle = 90;
+
+at_no_turn_90:
+        bgez        $a0, at_pos_x    # skip if (x >= 0)
+
+        ## if (x < 0)
+        add         $v0, $v0, 180    # angle += 180;
+
+at_pos_x:
+        mtc1        $a0, $f0
+        mtc1        $a1, $f1
+        cvt.s.w     $f0, $f0         # convert from ints to floats
+        cvt.s.w     $f1, $f1
+
+        div.s       $f0, $f1, $f0    # float v = (float) y / (float) x;
+    
+        mul.s       $f1, $f0, $f0    # v^^2
+        mul.s       $f2, $f1, $f0    # v^^3
+        l.s         $f3, three       # load 3.0
+        div.s       $f3, $f2, $f3    # v^^3/3
+        sub.s       $f6, $f0, $f3    # v - v^^3/3
+
+        mul.s       $f4, $f1, $f2    # v^^5
+        l.s         $f5, five        # load 5.0
+        div.s       $f5, $f4, $f5    # v^^5/5
+        add.s       $f6, $f6, $f5    # value = v - v^^3/3 + v^^5/5
+
+        l.s         $f8, PI          # load PI
+        div.s       $f6, $f6, $f8    # value / PI
+        l.s         $f7, F180        # load 180.0
+        mul.s       $f6, $f6, $f7    # 180.0 * value / PI
+
+        cvt.w.s     $f6, $f6         # convert "delta" back to integer
+        mfc1        $t0, $f6
+        add         $v0, $v0, $t0    # angle += delta
+
+        bge         $v0, 0, at_end
+        # negative value received.
+        li          $t0, 360
+        add         $v0, $t0, $v0
+
+at_end:
+        jr          $ra
+	
