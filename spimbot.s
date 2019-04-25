@@ -195,11 +195,7 @@ left_main:
         li          $a1, 55
         jal         move_point_while_solving    # go to closest bin
 
-        sw          $0, PICKUP                  # once reached, pickup whatever is from that bin
-        sw          $0, PICKUP                  # until our inventory is full
-        sw          $0, PICKUP
-        sw          $0, PICKUP
-        jal         update_inventory            # and test updating the inventory
+        jal         pickup_all_unprocessed
 
         li          $a0, 15                     # continue testing
         li          $a1, 50
@@ -209,10 +205,51 @@ left_main:
         li          $a1, 80
         jal         move_point_while_solving
 
-        li          $a0, 1000000
-        jal         wait_cycles
-
         jal         drive_to_shared_counter_left
+        jal         dropoff_all
+
+        li          $a0, 30
+        li          $a1, 70
+        jal         move_point_while_solving
+        jal         pickup_all_unprocessed
+        jal         drive_to_shared_counter_left
+        jal         dropoff_all
+
+        li          $a0, 30
+        li          $a1, 150
+        jal         move_point_while_solving
+        li          $t0, 180
+        sw          $t0, ANGLE
+        li          $t0, 1
+        sw          $t0, ANGLE_CONTROL
+        jal         pickup_all_unprocessed
+        jal         drive_to_shared_counter_left
+        jal         dropoff_all
+
+        li          $a0, 30
+        li          $a1, 150
+        jal         move_point_while_solving
+        jal         pickup_all_unprocessed
+        jal         drive_to_shared_counter_left
+        jal         dropoff_all
+
+        li          $a0, 30
+        li          $a1, 230
+        jal         move_point_while_solving
+        li          $t0, 180
+        sw          $t0, ANGLE
+        li          $t0, 1
+        sw          $t0, ANGLE_CONTROL
+        jal         pickup_all_unprocessed
+        jal         drive_to_shared_counter_left
+        jal         dropoff_all
+
+        li          $a0, 30
+        li          $a1, 230
+        jal         move_point_while_solving
+        jal         pickup_all_unprocessed
+        jal         drive_to_shared_counter_left
+        jal         dropoff_all
 
 left_infinite:
 	j	    left_infinite
@@ -227,6 +264,44 @@ right_infinite:
 
 nothing:
         j nothing
+
+# -----------------------------------------------------------------------
+# pickup_all - pickups 4 (inventory max) unprocessed ingredients
+# -----------------------------------------------------------------------
+pickup_all_unprocessed:
+        sub         $sp, $sp, 4
+        sw          $ra, 0($sp)
+
+        sw          $0, PICKUP
+        sw          $0, PICKUP
+        sw          $0, PICKUP
+        sw          $0, PICKUP
+        jal         update_inventory
+
+        lw          $ra, 0($sp)
+        add         $sp, $sp, 4
+        jr          $ra
+
+# -----------------------------------------------------------------------
+# dropoff_all - drops off all (4) ingredients
+# -----------------------------------------------------------------------
+dropoff_all:
+        sub         $sp, $sp, 4
+        sw          $ra, 0($sp)
+
+        add         $t0, $zero, $zero
+        sw          $t0, DROPOFF
+        add         $t0, $t0, 1
+        sw          $t0, DROPOFF
+        add         $t0, $t0, 1
+        sw          $t0, DROPOFF
+        add         $t0, $t0, 1
+        sw          $t0, DROPOFF
+        jal         update_inventory
+
+        lw          $ra, 0($sp)
+        add         $sp, $sp, 4
+        jr          $ra
 
 # -----------------------------------------------------------------------
 # wait_cycles - waits for a number of cycles
