@@ -212,7 +212,7 @@ left_main:
         li          $a0, 1000000
         jal         wait_cycles
 
-        jal drive_to_shared_counter_left
+        jal         drive_to_shared_counter_left
 
 left_infinite:
 	j	    left_infinite
@@ -242,7 +242,7 @@ wait_cycles:
         sw          $t1, TIMER          # set timer interrupt
         la          $t0, timer_int_active
         sw          $t1, 0($t0)         # update the timer_int_active flag
-        jal         wait_for_timer_int
+        jal         wait_for_timer_int  # and just wait............
 
         lw          $ra, 0($sp)
         add         $sp, $sp, 4
@@ -262,10 +262,9 @@ drive_to_shared_counter_left:
         lw          $a1, BOT_Y      # the y-target will be the bot's current y location (shortest distance is direct)
         bge         $a1, 65, _drive_to_shared_counter_left_drive
         move        $t9, $a1
-        li          $a1, 65         # unless the bot's height is < 65, then load 65 (we want to stay in the center "rectangle")
+        li          $a1, 65         # unless the bot's height is < 65, then load 65 (we want to stay in the center "rectangle", 65 is an approximate cutoff)
 
 _drive_to_shared_counter_left_drive:
-
         jal         move_point_while_solving
 
         lw          $ra, 0($sp)
@@ -305,7 +304,6 @@ _move_point_solve_solve:                                    # update the d_puzzl
         j           _move_point_solve_request_puzzle        # and loop again
 
 _move_point_solve_return: 
-
         lw          $ra, 0($sp)
         add         $sp, $sp, 4
         jr          $ra
