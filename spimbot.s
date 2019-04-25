@@ -46,10 +46,46 @@ GET_BOOST 		= 0xffff0070
 GET_INGREDIENT_INSTANT 	= 0xffff0074
 FINISH_APPLIANCE_INSTANT= 0xffff0078
 
+# tile constants
+T_FLOOR			= 0
+T_WALL			= 1
+T_TURNIN		= 2
+T_SHARED		= 3
+T_OVEN			= 4
+T_SINK			= 5
+T_CHOPPING_BOARD	= 6
+T_BIN_BREAD		= 7
+T_BIN_MEAT		= 8
+T_BIN_LETTUCE		= 9
+T_BIN_TOMATO		= 10
+T_BIN_CHEESE		= 11
+T_BIN_ONION		= 12
+
+# food constants
+F_BREAD			= 0
+F_CHEESE		= 1
+F_MEAT			= 2
+F_TOMATO		= 3
+F_ONION			= 4
+F_LETTUCE		= 5
+
+# request constants
+R_LETTUCE		= 0
+R_UNWASHED_LETTUCE	= 1
+R_UNPROCESSED_LETTUCE	= 2
+R_ONIONS		= 3
+R_UNCUT_ONIONS		= 4
+R_TOMATOES		= 5
+R_UNWASHED_TOMATOES	= 6
+R_BURNED_MEAT		= 7
+R_MEAT			= 8
+R_UNCOOKED_MEAT		= 9
+R_CHEESE		= 10
+R_BREAD			= 11
+
 puzzle1:		.space 1832     # space allocated for the puzzle
 puzzle2:		.space 1832
 map:			.space 225      # stores the map from GET_LAYOUT
-tile_types:		.space 5        # 5 bytes for a 5-element char array representing what is in the 5 item locations.
 
 			.align 4	# force the following to be word-aligned
 
@@ -126,16 +162,18 @@ puzzle_touch_vert:	.byte 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
 
 ### END PRECOMPUTED TABLES ###
 
-puzzle_queue:	    .space 400
-puzzle_contact:	    .space 200
+puzzle_queue:		.space 400
+puzzle_contact:		.space 200
 			
-d_puzzle_pending:   .word 0
-d_solving_puzzle:   .word 0	    # nonzero when working on puzzle2
-timer_int_active:   .word 0         # global flag that is non-zero when the timer interrupt is active
+d_puzzle_pending:	.word 0
+d_solving_puzzle:	.word 0	    # nonzero when working on puzzle2
+timer_int_active:	.word 0         # global flag that is non-zero when the timer interrupt is active
 
-bot_on_left:        .word 0         # true if the bot is on the left side, false if bot is on the right side
+bot_on_left:		.word 0         # true if the bot is on the left side, false if bot is on the right side
+useful_locations:	.space 13	# locations of each type of interesting tile (zero if absent on this side)
 
 # constants for arctan
+			.align 4
 PI:                 .float 3.14
 three:              .float 3.0
 five:               .float 5.0
@@ -166,35 +204,35 @@ main:
         sw          $t1, 0($t0)    # save to global variable
 
         # fill tile_types
-        la          $t0, map
-        sw          $t0, GET_LAYOUT     # $t0 = struct layout {char map[15][15];};
-        la          $t2, tile_types     # $t2 = &tile_types
-        bne         $t1, 1, fill_right_tiles    # when bot_on_left is false, branch to fill_right_tiles
+        la          $s0, map
+        sw          $s0, GET_LAYOUT     # $s0 = struct layout {char map[15][15];};
+	la	$s1, useful_locations
+        beq     $t1, $zero, fill_right_tiles    # when bot_on_left is false, branch to fill_right_tiles
 
 fill_left_tiles:
-        lbu         $t3, 165($t0)       # hardcoded locations for the relevent tiles on the left side
-        sb          $t3, 0($t2)         # save all 5 of them to the tile_types array
-        lbu         $t3, 105($t0)
-        sb          $t3, 1($t2)
-        lbu         $t3, 45($t0)
-        sb          $t3, 2($t2)
-        lbu         $t3, 32($t0)
-        sb          $t3, 3($t2)
-        lbu         $t3, 35($t0)
-        sb          $t3, 4($t2)
+	li	$a0, 165
+	jal	examine_location
+        li	$a0, 105
+	jal	examine_location
+	li	$a0, 45
+	jal	examine_location
+	li	$a0, 32
+	jal	examine_location
+	li	$a0, 35
+	jal	examine_location
 	j	start_operations
 
 fill_right_tiles:
-        lbu         $t3, 179($t0)       # hardcoded locations for the relevent tiles on the right side
-        sb          $t3, 0($t2)         # save all 5 of them to the tile_types array
-        lbu         $t3, 119($t0)
-        sb          $t3, 1($t2)
-        lbu         $t3, 59($t0)
-        sb          $t3, 2($t2)
-        lbu         $t3, 42($t0)
-        sb          $t3, 3($t2)
-        lbu         $t3, 39($t0)
-        sb          $t3, 4($t2)
+	li	$a0, 179
+	jal	examine_location
+	li	$a0, 119
+	jal	examine_location
+	li	$a0, 59
+	jal	examine_location
+	li	$a0, 42
+	jal	examine_location
+	li	$a0, 39
+	jal	examine_location
         # fall through
 	
 start_operations:
@@ -226,6 +264,21 @@ use_puzzle1:
 	sw	$a0, SUBMIT_SOLUTION		# submit the current solution - puzzle_bolt doesn't change $a0
 	
 	j	infinite
+	
+# -----------------------------------------------------------------------
+# examine_location - updates useful_locations from the specified tile
+# $a0: offset in layout array
+# $s0: layout array base address
+# $s1: useful_locations base address
+# -----------------------------------------------------------------------
+
+.globl examine_location
+examine_location:
+	add	$t0, $s0, $a0	# &map[tile]
+	lbu	$t0, 0($t0)	# type = map[tile]
+	add	$t1, $s1, $t0	# &useful_locations[type]
+	sb	$a0, 0($t1)	# useful_locations[type] = tile
+	jr	$ra
 
 # -----------------------------------------------------------------------
 # wait_cycles - waits for a number of cycles
