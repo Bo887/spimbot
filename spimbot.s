@@ -209,6 +209,9 @@ left_main:
         li          $a1, 80
         jal         move_point_while_solving
 
+        li          $a0, 1000000
+        jal         wait_cycles
+
         jal drive_to_shared_counter_left
 
 left_infinite:
@@ -227,8 +230,22 @@ nothing:
 
 # -----------------------------------------------------------------------
 # wait_cycles - waits for a number of cycles
+# $a0 - number of cycles to wait
 # -----------------------------------------------------------------------
 wait_cycles:
+        sub         $sp, $sp, 4
+        sw          $ra, 0($sp)
+
+        jal         wait_for_timer_int  # wait for ongoing timer interrupts, don't want to accidentally screw up something else
+        lw          $t1, TIMER          # load current cycle
+        add         $t1, $t1, $a0       # and calculate target cycle to stop
+        sw          $t1, TIMER          # set timer interrupt
+        la          $t0, timer_int_active
+        sw          $t1, 0($t0)         # update the timer_int_active flag
+        jal         wait_for_timer_int
+
+        lw          $ra, 0($sp)
+        add         $sp, $sp, 4
         jr          $ra
 
 # -----------------------------------------------------------------------
