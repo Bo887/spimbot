@@ -243,26 +243,26 @@ move_point_while_solving:
         sub         $sp, $sp, 4
         sw          $ra, 0($sp)
 
-        jal         set_move_point_target
+        jal         set_move_point_target       # set the target
 
 _move_point_solve_request_puzzle:
         lw          $t0, timer_int_active
-        beq         $t0, $zero, _move_point_solve_return
-        la          $t0, puzzle
+        beq         $t0, $zero, _move_point_solve_return    # loop until the timer interrupt is no longer active (which means we have reached our destination)
+        la          $t0, puzzle                             # request a puzzle
         sw          $t0, REQUEST_PUZZLE
 
 _move_point_solve_wait:
-	lw	    $t0, d_puzzle_pending
+	lw	    $t0, d_puzzle_pending                   # wait for the puzzle to be ready
 	beq         $t0, $zero, _move_point_solve_wait
 
-_move_point_solve_solve:
+_move_point_solve_solve:                                    # update the d_puzzle_pending flag
         sb	    $zero, d_puzzle_pending
-	la	    $a0, puzzle
+	la	    $a0, puzzle                             # solve puzzle
 	jal	    puzzle_bolt
 	
-	la	    $t0, puzzle
+	la	    $t0, puzzle                             # submit the solution
 	sw	    $t0, SUBMIT_SOLUTION
-        j           _move_point_solve_request_puzzle
+        j           _move_point_solve_request_puzzle        # and loop again
 
 _move_point_solve_return: 
 
