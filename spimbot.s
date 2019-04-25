@@ -189,37 +189,35 @@ fill_right_tiles:
         lbu         $t3, 39($t0)
         sb          $t3, 4($t2)
 
-        lw          $t0, bot_on_left
-        beq         $t0, 0, right_main  # jump to the corresponsind "main" depending on which side we are
-left_main:
+start:
 	#Fill in your code here
         li          $a0, 10
         li          $a1, 55
-        jal         move_point_while_solving    # go to closest bin
+        jal         move_point_while_solving_generic
 
         jal         pickup_all_unprocessed
 
         li          $a0, 15                     # continue testing
         li          $a1, 50
-        jal         move_point_while_solving
+        jal         move_point_while_solving_generic
 
         li          $a0, 60
         li          $a1, 80
-        jal         move_point_while_solving
+        jal         move_point_while_solving_generic
 
         jal         drive_to_shared_counter
         jal         dropoff_all
 
         li          $a0, 30
         li          $a1, 70
-        jal         move_point_while_solving
+        jal         move_point_while_solving_generic
         jal         pickup_all_unprocessed
         jal         drive_to_shared_counter
         jal         dropoff_all
 
         li          $a0, 30
         li          $a1, 150
-        jal         move_point_while_solving
+        jal         move_point_while_solving_generic
         li          $t0, 180
         sw          $t0, ANGLE
         li          $t0, 1
@@ -230,14 +228,14 @@ left_main:
 
         li          $a0, 30
         li          $a1, 150
-        jal         move_point_while_solving
+        jal         move_point_while_solving_generic
         jal         pickup_all_unprocessed
         jal         drive_to_shared_counter
         jal         dropoff_all
 
         li          $a0, 30
         li          $a1, 230
-        jal         move_point_while_solving
+        jal         move_point_while_solving_generic
         li          $t0, 180
         sw          $t0, ANGLE
         li          $t0, 1
@@ -248,79 +246,41 @@ left_main:
 
         li          $a0, 30
         li          $a1, 230
-        jal         move_point_while_solving
+        jal         move_point_while_solving_generic
         jal         pickup_all_unprocessed
         jal         drive_to_shared_counter
         jal         dropoff_all
 
-left_infinite:
-	j	    left_infinite
-
-right_main:
-        li          $a0, 290
-        li          $a1, 55
-        jal         move_point_while_solving
-        jal         pickup_all_unprocessed
-
-        li          $a0, 285
-        li          $a1, 50
-        jal         move_point_while_solving
-
-        li          $a0, 240
-        li          $a1, 80
-        jal         move_point_while_solving
-
-        jal         drive_to_shared_counter
-        jal         dropoff_all
-
-        li          $a0, 270
-        li          $a1, 70
-        jal         move_point_while_solving
-        jal         pickup_all_unprocessed
-        jal         drive_to_shared_counter
-        jal         dropoff_all
-
-        li          $a0, 270
-        li          $a1, 150
-        jal         move_point_while_solving
-        li          $t0, 0
-        sw          $t0, ANGLE
-        li          $t0, 1
-        sw          $t0, ANGLE_CONTROL
-        jal         pickup_all_unprocessed
-        jal         drive_to_shared_counter
-        jal         dropoff_all
-
-        li          $a0, 270
-        li          $a1, 150
-        jal         move_point_while_solving
-        jal         pickup_all_unprocessed
-        jal         drive_to_shared_counter
-        jal         dropoff_all
-
-        li          $a0, 270
-        li          $a1, 230
-        jal         move_point_while_solving
-        li          $t0, 0
-        sw          $t0, ANGLE
-        li          $t0, 1
-        sw          $t0, ANGLE_CONTROL
-        jal         pickup_all_unprocessed
-        jal         drive_to_shared_counter
-        jal         dropoff_all
-
-        li          $a0, 270
-        li          $a1, 230
-        jal         move_point_while_solving
-        jal         pickup_all_unprocessed
-        jal         drive_to_shared_counter
-        jal         dropoff_all
-
-right_infinite:
-        j           right_infinite
+infinite:
+	j	    infinite
 
 nothing:
         j nothing
+
+# -----------------------------------------------------------------------
+# move_point_while_solving_generic - same as move_point_while_solving,
+# but this is now generic.
+# This function only takes in coordinates from the left side, and automatically
+# converts them to the POV of the right side when needed (based on bot_on_left)
+# $a0 - target_x
+# $a1 - target_y
+# -----------------------------------------------------------------------
+move_point_while_solving_generic:
+        sub         $sp, $sp, 4
+        sw          $ra, 0($sp)
+
+        lw          $t0, bot_on_left        # load bot_on_left
+        bne         $t0, 0, _move_point_generic_move
+        li          $t1, 300
+        sub         $a0, $t1, $a0           # bot is on the right side - mirror the x value
+
+_move_point_generic_move:
+        jal         move_point_while_solving
+
+        lw          $ra, 0($sp)
+        add         $sp, $sp, 4
+        jr          $ra
+# -----------------------------------------------------------------------
 
 # -----------------------------------------------------------------------
 # pickup_all - pickups 4 (inventory max) unprocessed ingredients
@@ -391,7 +351,6 @@ drive_to_shared_counter:
         sw          $ra, 0($sp)
 
         lw          $t1, bot_on_left        # load bot_on_left
-        move        $t9, $t1
         mul         $t1, $t1, 4
         la          $t2, shared_counter_x
         add         $t2, $t2, $t1
