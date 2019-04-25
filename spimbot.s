@@ -190,15 +190,11 @@ fill_right_tiles:
         lw          $t0, bot_on_left
         beq         $t0, 0, right_main  # jump to the corresponsind "main" depending on which side we are
 left_main:
-        la          $t0, puzzle
-        #sw          $t0, REQUEST_PUZZLE
-	
 	#Fill in your code here
         li          $a0, 10
         li          $a1, 55
         jal         move_point_while_solving    # go to closest bin
 
-        jal         wait_for_timer_int          # and wait for the bot to reach it
         sw          $0, PICKUP                  # once reached, pickup whatever is from that bin
         sw          $0, PICKUP                  # until our inventory is full
         sw          $0, PICKUP
@@ -208,26 +204,14 @@ left_main:
         li          $a0, 15                     # continue testing
         li          $a1, 50
         jal         move_point_while_solving
-        jal         wait_for_timer_int
 
-        li          $a0, 145
-        li          $a1, 180
+        li          $a0, 60
+        li          $a1, 80
         jal         move_point_while_solving
 
+        jal drive_to_shared_counter_left
+
 left_infinite:
-	lw	    $t0, d_puzzle_pending	# will be set in kernel mode when puzzle interrupt occurs
-	beq	    $t0, $zero, left_no_puzzle
-	
-	sb	    $zero, d_puzzle_pending
-	la	    $a0, puzzle
-	jal	    puzzle_bolt
-	
-	la	    $t0, puzzle
-	sw	    $t0, SUBMIT_SOLUTION
-	
-	sw	    $t0, REQUEST_PUZZLE	# get another puzzle
-	
-left_no_puzzle:
 	j	    left_infinite
 
 right_main:
@@ -242,8 +226,39 @@ nothing:
         j nothing
 
 # -----------------------------------------------------------------------
+# wait_cycles - waits for a number of cycles
+# -----------------------------------------------------------------------
+wait_cycles:
+        jr          $ra
+
+# -----------------------------------------------------------------------
+# drive_to_shared_counter_left - drives the most optimal path to the
+# left side of the shared counter
+# Assumes there is a direct path and that the bot is on the left!
+# This function only returns once the bot reaches the counter.
+# -----------------------------------------------------------------------
+drive_to_shared_counter_left:
+        sub         $sp, $sp, 4
+        sw          $ra, 0($sp)
+
+        li          $a0, 130        # x-target (slightly left of left side of counter)
+        lw          $a1, BOT_Y      # the y-target will be the bot's current y location (shortest distance is direct)
+        bge         $a1, 65, _drive_to_shared_counter_left_drive
+        move        $t9, $a1
+        li          $a1, 65         # unless the bot's height is < 65, then load 65 (we want to stay in the center "rectangle")
+
+_drive_to_shared_counter_left_drive:
+
+        jal         move_point_while_solving
+
+        lw          $ra, 0($sp)
+        add         $sp, $sp, 4
+        jr          $ra
+
+# -----------------------------------------------------------------------
 # move_point_while_solving - wrapper around set_move_point_target
 # that tries to solve puzzles in the meantime
+# This function only returns once the target is reached.
 # $a0 - target_x
 # $a1 - target_y
 # -----------------------------------------------------------------------
