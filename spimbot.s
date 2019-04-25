@@ -204,7 +204,15 @@ left_main:
         sw          $0, PICKUP
         sw          $0, PICKUP
         jal         update_inventory            # and test updating the inventory
-        add         $0, $0, $0                  # set bp here to check .data segment
+
+        li          $a0, 15                     # continue testing
+        li          $a1, 50
+        jal         move_point_while_solving
+        jal         wait_for_timer_int
+
+        li          $a0, 145
+        li          $a1, 180
+        jal         move_point_while_solving
 
 left_infinite:
 	lw	    $t0, d_puzzle_pending	# will be set in kernel mode when puzzle interrupt occurs
