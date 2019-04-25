@@ -314,7 +314,6 @@ update_inventory:
         la          $t0, inventory
         sw          $t0, GET_INVENTORY
         jr          $ra
-
 	
 # -----------------------------------------------------------------------
 # optimized puzzle solving function
@@ -382,38 +381,39 @@ pb_clear_contact_done:
 	sb	    $s0, 0($s4)		# queue[0] = scanStart
 	
 pb_fill_loop_top:
-	beq	    $s4, $s5, pb_fill_loop_done
-	lbu	    $t5, 0($s4)	# position = queue[qStart]
-	add	    $t4, $s3, $t5	# &puzzle->bitmap[position]
-	lbu	    $t6, 0($t4)	# chunk = puzzle->bitmap[position]
-	beq	    $t6, $zero, pb_fill_loop_next
+	beq	$s4, $s5, pb_fill_loop_done
+	lbu	$t5, 0($s4)	# position = queue[qStart]
+	add	$t4, $s3, $t5	# &puzzle->bitmap[position]
+	lbu	$t6, 0($t4)	# chunk = puzzle->bitmap[position]
+	beq	$t6, $zero, pb_fill_loop_next
 	
-	add	    $v0, $fp, $t5	# &contact[position]
-	lbu	    $t0, 0($v0)	# touching = contact[position]
-	sll	    $t1, $t6, 8	# chunk << 8
-	or	    $t1, $t1, $t0	# lookupId = chunk << 8 | touching
-	add	    $t0, $gp, $t1	# &transitions[lookupId]
-	lbu	    $t0, 0($t0)	# transitions[lookupId]
-	sb	    $t0, 0($t4)	# puzzle->bitmap[position] = transitions[lookupId]
-	nor	    $t0, $t0, $t0	# ~transitions[lookupId]
-	and	    $t3, $t0, $t6	# changed = chunk & ~transitions[lookupId]
-	beq	    $t3, $zero, pb_fill_loop_next
-	and	    $a2, $t3, 0x80	# nonzero if need to use touchLeft
-	and	    $a3, $t3, 0x01	# likewise for touchRight
+	add	$v0, $fp, $t5	# &contact[position]
+	lbu	$t0, 0($v0)	# touching = contact[position]
+	sll	$t1, $t6, 8	# chunk << 8
+	or	$t1, $t1, $t0	# lookupId = chunk << 8 | touching
+	add	$t0, $gp, $t1	# &transitions[lookupId]
+	lbu	$t9, 0($t0)	# transitions[lookupId]
+	beq	$t9, $t6, pb_fill_loop_next
+	sb	$t9, 0($t4)	# puzzle->bitmap[position] = transitions[lookupId]
 	
-	div	    $t5, $s6	# need both quotient and remainder
-	mfhi	    $t7		# position % Puzzle.BytesWidth
-	bge	    $t7, $s7, pb_fill_loop_next
-	mflo	    $t8		# position / Puzzle.BytesWidth
-	sll	    $t7, $t7, 3	# (position % Puzzle.BytesWidth) * 8
-	lw	    $t0, 4($a0)	# width
-	mul	    $t8, $t8, $t0	# (position / Puzzle.BytesWidth) * Puzzle.Width
-	add	    $t7, $t7, $t8	# mapPos
+	div	$t5, $s6	# need both quotient and remainder
+	mfhi	$t7		# position % Puzzle.BytesWidth
+	beq	$t7, $s7, pb_fill_loop_next
+	mflo	$t8		# position / Puzzle.BytesWidth
+	sll	$t7, $t7, 3	# (position % Puzzle.BytesWidth) * 8
+	lw	$t0, 4($a0)	# width
+	mul	$t8, $t8, $t0	# (position / Puzzle.BytesWidth) * Puzzle.Width
+	add	$t7, $t7, $t8	# mapPos
 	
-	add	    $a1, $ra, $t1	# &touchVert[lookupId]
-	lbu	    $a1, 0($a1)	# touchVert[lookupId]
+	nor	$t9, $t9, $t9	# ~transitions[lookupId]
+	and	$t3, $t9, $t6	# changed = chunk & ~transitions[lookupId]
+	and	$a2, $t3, 0x80	# nonzero if need to use touchLeft
+	and	$a3, $t3, 0x01	# likewise for touchRight
 	
-	add	    $t1, $a0, $t7	# &puzzle->map[mapPos] - 8
+	add	$a1, $ra, $t1	# &touchVert[lookupId]
+	lbu	$a1, 0($a1)	# touchVert[lookupId]
+	
+	add	$t1, $a0, $t7	# &puzzle->map[mapPos] - 8
 pb_write_map_top:
 	beq	    $t3, $zero, pb_write_map_done
 	and	    $t0, $t3, 0x7f	# see if cutting off the top bit changes the value
