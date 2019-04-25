@@ -261,7 +261,6 @@ drive_to_shared_counter_left:
         li          $a0, 130        # x-target (slightly left of left side of counter)
         lw          $a1, BOT_Y      # the y-target will be the bot's current y location (shortest distance is direct)
         bge         $a1, 65, _drive_to_shared_counter_left_drive
-        move        $t9, $a1
         li          $a1, 65         # unless the bot's height is < 65, then load 65 (we want to stay in the center "rectangle", 65 is an approximate cutoff)
 
 _drive_to_shared_counter_left_drive:
