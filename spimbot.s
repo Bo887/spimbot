@@ -149,10 +149,10 @@ F180:               .float 180.0
 main:
 	# Construct interrupt mask
 	li          $t4, 0
-	or          $t4, $t4, BONK_INT_MASK # request bonk
-	or          $t4, $t4, REQUEST_PUZZLE_INT_MASK	        # puzzle interrupt bit
-        or          $t4, $t4, TIMER_INT_MASK        #enable timer interrupts
-	or          $t4, $t4, 1 # global enable
+	or          $t4, $t4, BONK_INT_MASK		# request bonk
+	or          $t4, $t4, REQUEST_PUZZLE_INT_MASK	# puzzle interrupt bit
+        or          $t4, $t4, TIMER_INT_MASK		# enable timer interrupts
+	or          $t4, $t4, 1				# global enable
 	mtc0        $t4, $12
 	
 	# start generating the first puzzle
@@ -182,7 +182,7 @@ fill_left_tiles:
         sb          $t3, 3($t2)
         lbu         $t3, 35($t0)
         sb          $t3, 4($t2)
-	j	infinite
+	j	start_operations
 
 fill_right_tiles:
         lbu         $t3, 179($t0)       # hardcoded locations for the relevent tiles on the right side
@@ -195,7 +195,11 @@ fill_right_tiles:
         sb          $t3, 3($t2)
         lbu         $t3, 39($t0)
         sb          $t3, 4($t2)
-        # fall through to infinite
+        # fall through
+	
+start_operations:
+	lw	$t0, TIMER
+	sw	$t0, TIMER	# immediately causes a timer interrupt, transfers control to kernel mode
 	
 infinite:
 	lw	$t0, d_puzzle_pending		# will be set in kernel mode when puzzle is generated (not written yet)
@@ -879,9 +883,15 @@ euc_dist:
 # NOTE: Due to kernel mode including the sb_arctan function, USER MODE MUST NOT attempt any floating point operations!
 	
 .kdata
-chunkIH:            .space 64
-non_intrpt_str:     .asciiz "Non-interrupt exception\n"
-unhandled_str:      .asciiz "Unhandled interrupt type\n"
+chunkIH:		.space 64
+			.word F1EE0801
+kstack_top:		.space 1020
+kstack_bottom:		.word 0
+			.word F1EE0802
+operations_queue:	.space 512
+			.word F1EE0803
+non_intrpt_str:		.asciiz "Non-interrupt exception\n"
+unhandled_str:		.asciiz "Unhandled interrupt type\n"
 
 .ktext 0x80000180
 interrupt_handler:
@@ -934,9 +944,9 @@ ih_interrupt_dispatch:
         j           ih_done
 	
 ih_bonk_interrupt:
-	sw 	    $0, BONK_ACK
+	sw	$0, BONK_ACK
         #Fill in your code here
-        j           ih_interrupt_dispatch    # see if other interrupts are waiting
+        j	ih_perform_operation
 
 ih_request_puzzle_interrupt:
 	sw	$zero, REQUEST_PUZZLE_ACK
@@ -946,10 +956,11 @@ ih_request_puzzle_interrupt:
 
 ih_timer_interrupt:
 	sw 	    $0, TIMER_ACK
-        sw          $0, VELOCITY        # stop moving
-        la          $t4, timer_int_active   
-        sw          $0, 0($t4)      # set timer_int_active to false
-        j           ih_interrupt_dispatch    # see if other interrupts are waiting
+        # fall through to ih_perform_operation
+	
+ih_perform_operation:
+	la	$sp, kstack_bottom
+	j	ih_interrupt_dispatch
 
 ih_non_intrpt:                # was some non-interrupt
         li          $v0, PRINT_STRING
