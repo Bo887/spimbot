@@ -175,8 +175,6 @@ fill_left_tiles:
         lbu         $t3, 35($t0)
         sb          $t3, 4($t2)
 
-        #lbu         $t9, 0($t2)  # since the console isn't really working for me, I'm "printing" by moving stuff to $t9, which is never used elsewhere
-
 fill_right_tiles:
         lbu         $t3, 179($t0)       # hardcoded locations for the relevent tiles on the right side
         sb          $t3, 0($t2)         # save all 5 of them to the tile_types array
@@ -189,9 +187,6 @@ fill_right_tiles:
         lbu         $t3, 39($t0)
         sb          $t3, 4($t2)
 
-        #lbu         $t9, 0($t2)  # since the console isn't really working for me, I'm "printing" by moving stuff to $t9, which is never used elsewhere
-
-
         lw          $t0, bot_on_left
         beq         $t0, 0, right_main  # jump to the corresponsind "main" depending on which side we are
 left_main:
@@ -201,7 +196,7 @@ left_main:
 	#Fill in your code here
         li          $a0, 10
         li          $a1, 55
-        jal         set_move_point_target       # go to closest bin
+        jal         move_point_while_solving    # go to closest bin
 
         jal         wait_for_timer_int          # and wait for the bot to reach it
         sw          $0, PICKUP                  # once reached, pickup whatever is from that bin
@@ -209,7 +204,15 @@ left_main:
         sw          $0, PICKUP
         sw          $0, PICKUP
         jal         update_inventory            # and test updating the inventory
-        add         $0, $0, $0                  # set bp here to check .data segment
+
+        li          $a0, 15                     # continue testing
+        li          $a1, 50
+        jal         move_point_while_solving
+        jal         wait_for_timer_int
+
+        li          $a0, 145
+        li          $a1, 180
+        jal         move_point_while_solving
 
 left_infinite:
 	lw	    $t0, d_puzzle_pending	# will be set in kernel mode when puzzle interrupt occurs
@@ -237,6 +240,43 @@ right_infinite:
 
 nothing:
         j nothing
+
+# -----------------------------------------------------------------------
+# move_point_while_solving - wrapper around set_move_point_target
+# that tries to solve puzzles in the meantime
+# $a0 - target_x
+# $a1 - target_y
+# -----------------------------------------------------------------------
+move_point_while_solving:
+        sub         $sp, $sp, 4
+        sw          $ra, 0($sp)
+
+        jal         set_move_point_target       # set the target
+
+_move_point_solve_request_puzzle:
+        lw          $t0, timer_int_active
+        beq         $t0, $zero, _move_point_solve_return    # loop until the timer interrupt is no longer active (which means we have reached our destination)
+        la          $t0, puzzle                             # request a puzzle
+        sw          $t0, REQUEST_PUZZLE
+
+_move_point_solve_wait:
+	lw	    $t0, d_puzzle_pending                   # wait for the puzzle to be ready
+	beq         $t0, $zero, _move_point_solve_wait
+
+_move_point_solve_solve:                                    # update the d_puzzle_pending flag
+        sb	    $zero, d_puzzle_pending
+	la	    $a0, puzzle                             # solve puzzle
+	jal	    puzzle_bolt
+	
+	la	    $t0, puzzle                             # submit the solution
+	sw	    $t0, SUBMIT_SOLUTION
+        j           _move_point_solve_request_puzzle        # and loop again
+
+_move_point_solve_return: 
+
+        lw          $ra, 0($sp)
+        add         $sp, $sp, 4
+        jr          $ra
 
 # -----------------------------------------------------------------------
 # update_inventory - updates the "inventory" block in the .data segment
@@ -659,6 +699,7 @@ pb_cont:
 # to the target point (no collisions!).
 # $a0 - target_x
 # $a1 - target_y
+# returns the number of cycles needed to move in $v0
 # -----------------------------------------------------------------------
 set_move_point_target:
         sub         $sp, $sp, 16
@@ -687,7 +728,7 @@ set_move_point_target:
         sw          $t0, ANGLE_CONTROL  # and set angle control to absolute
 
         move        $a0, $s2
-        jal         set_move_dist_target # call move_dist
+        jal         set_move_dist_target # call move_dist, $v0 is set here also
 
         lw          $ra, 0($sp)     #cleanup
         lw          $s0, 4($sp)
@@ -705,6 +746,7 @@ set_move_point_target:
 # Make sure to not call this function if a timer interrupt is already
 # active. See wait_for_timer_int
 # $a0 - dist
+# returns the number of cycles needed in $v0
 # -----------------------------------------------------------------------
 set_move_dist_target:
         sub         $sp, $sp, 4
@@ -714,11 +756,13 @@ set_move_dist_target:
 
         lw          $t1, TIMER      # $t0 = current time (cycles)
         mul         $a0, $a0, 1000  # $a0 = # of cycles needed to travel "dist" (assumes bot is moving at max speed (10 mips))
-        add         $a0, $a0, $t1   # $a0 = cycle to stop moving
-        sw          $a0, TIMER      # request TIMER interrupt
+        add         $t2, $a0, $t1   # $a0 = cycle to stop moving
+        sw          $t2, TIMER      # request TIMER interrupt
         li          $t1, 10
         sw          $t1, VELOCITY   # set bot to max speed
         sw          $t1, 0($v0)     # update the timer_int_active flag
+
+        move        $v0, $a0        # store the return value (# of cycles needed)
 
         lw          $ra, 0($sp)
         add         $sp, $sp, 4
