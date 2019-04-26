@@ -279,93 +279,6 @@ examine_location:
 	add	$t1, $s1, $t0	# &useful_locations[type]
 	sb	$a0, 0($t1)	# useful_locations[type] = tile
 	jr	$ra
-
-# -----------------------------------------------------------------------
-# wait_cycles - waits for a number of cycles
-# $a0 - number of cycles to wait
-# -----------------------------------------------------------------------
-wait_cycles:
-        sub         $sp, $sp, 4
-        sw          $ra, 0($sp)
-
-        jal         wait_for_timer_int  # wait for ongoing timer interrupts, don't want to accidentally screw up something else
-        lw          $t1, TIMER          # load current cycle
-        add         $t1, $t1, $a0       # and calculate target cycle to stop
-        sw          $t1, TIMER          # set timer interrupt
-        la          $t0, timer_int_active
-        sw          $t1, 0($t0)         # update the timer_int_active flag
-        jal         wait_for_timer_int  # and just wait............
-
-        lw          $ra, 0($sp)
-        add         $sp, $sp, 4
-        jr          $ra
-
-# -----------------------------------------------------------------------
-# drive_to_shared_counter_left - drives the most optimal path to the
-# left side of the shared counter
-# Assumes there is a direct path and that the bot is on the left!
-# This function only returns once the bot reaches the counter.
-# -----------------------------------------------------------------------
-drive_to_shared_counter_left:
-        sub         $sp, $sp, 4
-        sw          $ra, 0($sp)
-
-        li          $a0, 130        # x-target (slightly left of left side of counter)
-        lw          $a1, BOT_Y      # the y-target will be the bot's current y location (shortest distance is direct)
-        bge         $a1, 65, _drive_to_shared_counter_left_drive
-        li          $a1, 65         # unless the bot's height is < 65, then load 65 (we want to stay in the center "rectangle", 65 is an approximate cutoff)
-
-_drive_to_shared_counter_left_drive:
-        jal         move_point_while_solving
-
-        lw          $ra, 0($sp)
-        add         $sp, $sp, 4
-        jr          $ra
-
-# -----------------------------------------------------------------------
-# move_point_while_solving - wrapper around set_move_point_target
-# that tries to solve puzzles in the meantime
-# This function only returns once the target is reached.
-# $a0 - target_x
-# $a1 - target_y
-# -----------------------------------------------------------------------
-move_point_while_solving:
-        sub         $sp, $sp, 4
-        sw          $ra, 0($sp)
-
-        jal         set_move_point_target       # set the target
-
-_move_point_solve_request_puzzle:
-        lw          $t0, timer_int_active
-        beq         $t0, $zero, _move_point_solve_return    # loop until the timer interrupt is no longer active (which means we have reached our destination)
-        la          $t0, puzzle                             # request a puzzle
-        sw          $t0, REQUEST_PUZZLE
-
-_move_point_solve_wait:
-	lw	    $t0, d_puzzle_pending                   # wait for the puzzle to be ready
-	beq         $t0, $zero, _move_point_solve_wait
-
-_move_point_solve_solve:                                    # update the d_puzzle_pending flag
-        sb	    $zero, d_puzzle_pending
-	la	    $a0, puzzle                             # solve puzzle
-	jal	    puzzle_bolt
-	
-	la	    $t0, puzzle                             # submit the solution
-	sw	    $t0, SUBMIT_SOLUTION
-        j           _move_point_solve_request_puzzle        # and loop again
-
-_move_point_solve_return: 
-        lw          $ra, 0($sp)
-        add         $sp, $sp, 4
-        jr          $ra
-
-# -----------------------------------------------------------------------
-# update_inventory - updates the "inventory" block in the .data segment
-# -----------------------------------------------------------------------
-update_inventory:
-        la          $t0, inventory
-        sw          $t0, GET_INVENTORY
-        jr          $ra
 	
 # -----------------------------------------------------------------------
 # optimized puzzle solving function
@@ -775,82 +688,6 @@ pb_cont:
         jr          $ra
 
 # -----------------------------------------------------------------------
-# set_move_point_target - sets the target pixel for the SPIMBot to 
-# travel to. Uses timer interrupts.
-# This function assumes there is a direct path from the current location
-# to the target point (no collisions!).
-# $a0 - target_x
-# $a1 - target_y
-# returns the number of cycles needed to move in $v0
-# -----------------------------------------------------------------------
-set_move_point_target:
-        sub         $sp, $sp, 16
-        sw          $ra, 0($sp)
-        sw          $s0, 4($sp)
-        sw          $s1, 8($sp)
-        sw          $s2, 12($sp)
-
-        jal         wait_for_timer_int   # wait for timer interrupt handler to become inactive
-
-        lw          $a2, BOT_X
-        lw          $a3, BOT_Y
-
-        sub         $s0, $a0, $a2   # $s0 = current_x - target_x
-        sub         $s1, $a1, $a3   # $s1 = current_y - target_y
-
-        #jal         euc_dist        # TEMP: disabled
-        move        $s2, $v0        # s2 = distance
-
-        move        $a0, $s0
-        move        $a1, $s1
-        #jal         sb_arctan       # $v0 = angle to rotate to. # TEMP: disabled
-        
-        sw          $v0, ANGLE      # set target angle
-        li          $t0, 1
-        sw          $t0, ANGLE_CONTROL  # and set angle control to absolute
-
-        move        $a0, $s2
-        jal         set_move_dist_target # call move_dist, $v0 is set here also
-
-        lw          $ra, 0($sp)     #cleanup
-        lw          $s0, 4($sp)
-        lw          $s1, 8($sp)
-        lw          $s2, 12($sp)
-        add         $sp, $sp, 16
-        jr          $ra
-
-
-# -----------------------------------------------------------------------
-# set_move_dist_target - sets the target destination for the SPIMBot using
-# timer interrupts
-# Returns right after the interrupt is set, not after when the bot has
-# reached the target distance.
-# Make sure to not call this function if a timer interrupt is already
-# active. See wait_for_timer_int
-# $a0 - dist
-# returns the number of cycles needed in $v0
-# -----------------------------------------------------------------------
-set_move_dist_target:
-        sub         $sp, $sp, 4
-        sw          $ra, 0($sp)
-
-        jal         wait_for_timer_int   # wait for timer interrupt handler to become inactive
-
-        lw          $t1, TIMER      # $t0 = current time (cycles)
-        mul         $a0, $a0, 1000  # $a0 = # of cycles needed to travel "dist" (assumes bot is moving at max speed (10 mips))
-        add         $t2, $a0, $t1   # $a0 = cycle to stop moving
-        sw          $t2, TIMER      # request TIMER interrupt
-        li          $t1, 10
-        sw          $t1, VELOCITY   # set bot to max speed
-        sw          $t1, 0($v0)     # update the timer_int_active flag
-
-        move        $v0, $a0        # store the return value (# of cycles needed)
-
-        lw          $ra, 0($sp)
-        add         $sp, $sp, 4
-        jr          $ra
-
-# -----------------------------------------------------------------------
 # wait_for_timer_int - waits for timer interrupts to finish
 # It really just checks the state of timer_int_active.
 # Returns the address of timer_int_active in $v0
@@ -913,7 +750,7 @@ _move_dist_ret:
 # NOTE: Only kernel mode is allowed to use floating-point operations!
 	
 .kdata
-chunkIH:		.space 72
+chunkIH:		.space 76
 			.word 0xF1EE0801
 kstack_top:		.space 1020
 kstack_bottom:		.word 0
@@ -923,17 +760,28 @@ OPQ_NOTHING		= 0	# no-op
 OPQ_INITIAL_DOWN	= 1	# go down 2 tiles (from start)
 OPQ_INITIAL_ENTRY	= 2	# angle down into the relevant rectangle
 OPQ_STOP		= 3	# done moving for now
-operations_queue:	.word OPQ_NOTHING OPQ_INITIAL_DOWN OPQ_INITIAL_ENTRY OPQ_STOP
+OPQ_GOTO_TILE		= 4	# drive to a useful tile type (high 16)
+OPQ_GOTO_APPLIANCE_EDGE	= 5	# drive to an appliance tile (high 16) stopping at inner edge
+OPQ_BOOST		= 6	# ensure enough boost for a time (high 16)
+OPQ_FACE_APPLIANCE	= 7	# stop and look at the appliance
+OPQ_FACE_BIN		= 8	# stop and look at the food bin
+operations_queue:	.word OPQ_NOTHING OPQ_INITIAL_DOWN OPQ_INITIAL_ENTRY 0x00060004 OPQ_FACE_APPLIANCE
 			.space 512
 			.word 0xF1EE0803
 op_queue_pos:		.word 0
-op_queue_length:	.word 4
-
-entry_angles:		.byte 110 70
+op_queue_length:	.word 5
 
 			.align 4
-od_jump_table:		.word	od_always	od_initial_down	od_initial_entry	od_stop
-po_jump_table:		.word	po_done	po_initial_down	po_initial_entry	po_stop
+			#       NOTHING   INITIAL_DOWN    INITIAL_ENTRY    STOP    GOTO_TILE    GOTO_APPLIANCE_EDGE BOOST    FACE_APPLIANCE    FACE_BIN
+od_jump_table:		.word	od_always od_initial_down od_initial_entry od_stop od_goto_tile od_goto_app_edge    od_boost od_face_appliance od_face_bin
+po_jump_table:		.word	po_done   po_initial_down po_initial_entry po_stop po_goto_tile po_goto_app_edge    po_boost po_done           po_done
+
+# constants for each side (right vs. left)
+entry_angles:		.byte 110 70
+bin_xs:			.byte 285 15
+bin_prox_xs:		.byte 286 17
+
+boost_end_time:		.word 0
 
 non_intrpt_str:		.asciiz "Non-interrupt exception\n"
 unhandled_str:		.asciiz "Unhandled interrupt type\n"
@@ -960,12 +808,13 @@ interrupt_handler:
 	sw	$sp, 52($k0)
 	sw	$s0, 56($k0)
 	sw	$s1, 60($k0)
+	sw	$s2, 64($k0)
 	
 	# preserve HI and LO
 	mflo	$t0
-	sw	$t0, 64($k0)
-	mfhi	$t0
 	sw	$t0, 68($k0)
+	mfhi	$t0
+	sw	$t0, 72($k0)
 
         mfc0	$k0, $13	# Get Cause register
         srl	$a0, $k0, 2
@@ -1046,9 +895,9 @@ ih_done:
         la	$k0, chunkIH
 	
 	# restore HI and LO
-	lw	$t0, 64($k0)
-	mtlo	$t0
 	lw	$t0, 68($k0)
+	mtlo	$t0
+	lw	$t0, 72($k0)
 	mthi	$t0
 	
         lw	$a0, 0($k0)	# Restore saved registers
@@ -1067,6 +916,7 @@ ih_done:
 	lw	$sp, 52($k0)
 	lw	$s0, 56($k0)
 	lw	$s1, 60($k0)
+	lw	$s2, 64($k0)
 .set noat
         move	$at, $k1	# Restore $at
 .set at
@@ -1114,7 +964,74 @@ od_stop:
 	lw	$t0, VELOCITY
 	seq	$v0, $t0, $zero	# return (velocity == 0)
 	j	od_done
+	
+od_goto_tile:
+	la	$t0, useful_locations
+	add	$t0, $t0, $a1	# &useful_locations[type]
+	lbu	$t0, 0($t0)	# tileID = useful_locations[type]
+	li	$t1, 15		# width = 15
+	div	$t0, $t1
+	mflo	$t0		# y = tileID / 15
+	bgt	$t0, 2, od_goto_tile_food
+	
+	lw	$t0, BOT_Y	# make sure we're vertically at the appliance
+	bge	$t0, 62, od_no
+	mfhi	$t1		# x = tileId % 15
+	li	$t0, 20		# 20 px per tile
+	mul	$t1, $t1, $t0
+	lw	$t0, BOT_X
+	blt	$t0, $t1, od_no
+	add	$t1, $t1, 20	# make sure we're not more than 20 px to right of tile
+	bgt	$t0, $t1, od_no
+	j	od_yes
+	
+od_goto_tile_food:
+	li	$t1, 20		# 20 px per tile
+	mul	$t1, $t0, $t1	# y * px
+	lw	$t0, BOT_Y
+	blt	$t0, $t1, od_no
+	add	$t1, $t1, 20	# make sure we're not more than 20 px below top of tile
+	bgt	$t0, $t1, od_no
+	la	$t0, bin_prox_xs
+	lw	$t1, bot_on_left
+	add	$t0, $t0, $t1	# &bin_prox_xs[bot_on_left]
+	lbu	$t0, 0($t0)	# target = bin_prox_xs[bot_on_left]
+	lw	$t1, BOT_X
+	sub	$t0, $t0, $t1	# margin = target - botX
+	slt	$v0, $t0, 3
+	j	od_done
+	
+od_goto_app_edge:
+	# TODO
+	j	od_done
 
+od_boost:
+	lw	$t0, TIMER
+	add	$t0, $t0, $a1	# when we want it to end
+	lw	$t1, boost_end_time
+	slt	$v0, $t0, $t1	# true if desired < boost_end_time
+	j	od_done
+	
+od_face_appliance:
+	li	$t0, 270
+	sw	$t0, ANGLE
+	li	$t0, 1
+	sw	$t0, ANGLE_CONTROL
+	j	od_yes
+
+od_face_bin:
+	sw	$zero, VELOCITY
+	# TODO
+
+od_yes:
+	sw	$zero, VELOCITY
+	li	$v0, 1
+	j	od_done
+	
+od_no:
+	li	$v0, 0
+	# fall through to done
+	
 od_done:
 	jr	$ra
 	
@@ -1125,6 +1042,9 @@ od_done:
 # -----------------------------------------------------------------------
 	
 perform_operation:
+	sub	$sp, $sp, 4
+	sw	$ra, 0($sp)
+
 	la	$t0, po_jump_table
 	sll	$t1, $a0, 2	# [i]
 	add	$t0, $t0, $t1	# address in jump table to load
@@ -1162,9 +1082,102 @@ po_stop:
 	sw	$zero, VELOCITY
 	j	po_done
 	
+po_goto_tile:
+	la	$t0, useful_locations
+	add	$t0, $t0, $a1	# &useful_locations[type]
+	lbu	$t0, 0($t0)	# useful_locations[type]
+	li	$t1, 15		# width = 15
+	li	$t2, 20		# 20 px per tile
+	div	$t0, $t1
+	mflo	$a1		# target_y
+	mfhi	$a0		# target_x
+	mul	$a1, $a1, $t2
+	beq	$a1, 40, pb_goto_tile_appliance
+	
+	la	$t0, bin_xs
+	lw	$t1, bot_on_left
+	add	$t0, $t0, $t1	# &bin_xs[bot_on_left]
+	lbu	$a0, 0($t0)	# bin_xs[bot_on_left]
+	add	$a1, $a1, 10	# target the middle (not the top)
+	j	pb_goto_tile_go
+	
+pb_goto_tile_appliance:	
+	add	$a1, $a1, 21	# target the bottom of the appliance (not the top)
+	mul	$a0, $a0, $t2
+	add	$a0, $a0, 10	# target the middle (not the left)
+
+pb_goto_tile_go:
+	jal	set_move_point_target
+	lw	$t0, TIMER
+	add	$t0, $t0, $v0
+	sw	$t0, TIMER	# request timer when arrived
+	j	po_done
+	
+po_goto_app_edge:
+	# TODO
+	j	po_done
+	
+po_boost:
+	lw	$t0, TIMER
+	add	$t2, $t0, $a1	# desired end time
+	lw	$t1, boost_end_time
+	bge	$t1, $t2, po_boost_loop_top
+	move	$t1, $t0	# set end time to now (if it was in the past)
+po_boost_loop_top:
+	blt	$t2, $t1, po_boost_loop_done
+	add	$t1, $t1, 10000	# assumes we have enough money
+	sw	$zero, GET_BOOST
+	j	po_boost_loop_top
+po_boost_loop_done:
+	sw	$t1, boost_end_time
+	j	po_done
+	
 po_done:
+	lw	$ra, 0($sp)
+	add	$sp, $sp, 4
 	jr	$ra
 
+# -----------------------------------------------------------------------
+# set_move_point_target - sets the target pixel for the SPIMBot to travel to.
+# This function assumes there is a direct path from the current location to the target point (no collisions!)
+# $a0 - target_x
+# $a1 - target_y
+# returns the number of cycles needed to move in $v0
+# -----------------------------------------------------------------------
+set_move_point_target:
+        sub         $sp, $sp, 16
+        sw          $ra, 0($sp)
+        sw          $s0, 4($sp)
+        sw          $s1, 8($sp)
+        sw          $s2, 12($sp)
+
+        lw          $a2, BOT_X
+        lw          $a3, BOT_Y
+
+        sub         $s0, $a0, $a2   # $s0 = current_x - target_x
+        sub         $s1, $a1, $a3   # $s1 = current_y - target_y
+
+        jal         euc_dist
+        move        $s2, $v0        # s2 = distance
+
+        move        $a0, $s0
+        move        $a1, $s1
+        jal         sb_arctan       # $v0 = angle to rotate to.
+        
+        sw          $v0, ANGLE      # set target angle
+        li          $t0, 1
+        sw          $t0, ANGLE_CONTROL  # and set angle control to absolute
+
+        li	$t0, 1000	# cycles to move one pixel
+	mul	$v0, $s2, $t0
+
+        lw          $ra, 0($sp)     #cleanup
+        lw          $s0, 4($sp)
+        lw          $s1, 8($sp)
+        lw          $s2, 12($sp)
+        add         $sp, $sp, 16
+        jr          $ra
+	
 # -----------------------------------------------------------------------
 # sb_arctan - computes the arctangent of y / x
 # $a0 - x
@@ -1249,3 +1262,11 @@ euc_dist:
         mfc1        $v0, $f12       # $v0 = $f12
         jr          $ra
 	
+	
+# -----------------------------------------------------------------------
+# update_inventory - updates the "inventory" block in the .data segment
+# -----------------------------------------------------------------------
+update_inventory:
+        la          $t0, inventory
+        sw          $t0, GET_INVENTORY
+        jr          $ra
