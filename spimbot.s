@@ -176,6 +176,7 @@ fill_left_tiles:
         sb          $t3, 3($t2)
         lbu         $t3, 35($t0)
         sb          $t3, 4($t2)
+        j           start
 
 fill_right_tiles:
         lbu         $t3, 179($t0)       # hardcoded locations for the relevent tiles on the right side
@@ -194,10 +195,9 @@ start:
         li          $a0, 10
         li          $a1, 55
         jal         move_point_while_solving_generic
-
         jal         pickup_all_unprocessed
 
-        li          $a0, 15                     # continue testing
+        li          $a0, 15
         li          $a1, 50
         jal         move_point_while_solving_generic
 
@@ -205,6 +205,11 @@ start:
         li          $a1, 80
         jal         move_point_while_solving_generic
 
+        jal         can_cook_inventory_items
+        beq         $v0, 0, next_1
+        j           infinite
+
+next_1:
         jal         drive_to_shared_counter
         jal         dropoff_all
 
@@ -223,6 +228,12 @@ start:
         li          $t0, 1
         sw          $t0, ANGLE_CONTROL
         jal         pickup_all_unprocessed
+
+        jal         can_cook_inventory_items
+        beq         $v0, 0, next_2
+        j           infinite
+
+next_2:
         jal         drive_to_shared_counter
         jal         dropoff_all
 
@@ -241,6 +252,12 @@ start:
         li          $t0, 1
         sw          $t0, ANGLE_CONTROL
         jal         pickup_all_unprocessed
+
+        jal         can_cook_inventory_items
+        beq         $v0, 0, next_3
+        j           infinite
+
+next_3:
         jal         drive_to_shared_counter
         jal         dropoff_all
 
@@ -256,6 +273,85 @@ infinite:
 
 nothing:
         j nothing
+
+# -----------------------------------------------------------------------
+# can_cook_inventory_items - returns 1 if we can process the inventory items,
+# otherwise returns 0
+# Assumes the inventory contains the exact same elements!! (i.e. only checks
+# the first inventory item to decide on the item type)
+# returns if the bot can process the inventory items in $v0
+# returns the index of tile_types that contains the processing item in $v1
+# -----------------------------------------------------------------------
+can_cook_inventory_items:
+        lw          $t0, inventory      # $t0 = ID of the items in the inventory
+        li          $v0, 0              # default $v0 = 0 (false)
+
+        beq         $t0, 0, _can_cook_return
+        beq         $t0, 0x10000, _can_cook_return
+
+        li          $t1, 0              # $t1 = i
+        la          $t2, tile_types     # $t2 = tile_types (tile_types = char[5])
+_can_cook_search_tiles_for_begin:
+        bge         $t1, 3, _can_cook_return         # we only need to search indices 0-2
+        add         $t3, $t1, $t2       # $t3 = tile_types+i
+        lb          $t3, 0($t3)         # $t3 = *(tile_types+i) = tile_types[i]
+        beq         $t3, 8, _can_cook_handle_meat
+        beq         $t3, 9, _can_cook_handle_lettuce
+        beq         $t3, 12 _can_cook_handle_onion
+        beq         $t3, 10 _can_cook_handle_tomato
+        j           _can_cook_loop_inc
+
+_can_cook_handle_tomato:
+        lb          $t4, 3($t2)
+        li          $t5, 3
+        beq         $t4, 5, _can_cook_handle_tomato_go
+        lb          $t4, 4($t2)
+        li          $t5, 4
+        beq         $t4, 5, _can_cook_handle_tomato_go
+_can_cook_handle_tomato_go:
+        beq         $t0, 0x30000, _can_cook_found       # tomato that is not cooked, return true
+        beq         $t0, 0x30001, _can_cook_return      # tomato that is already cooked, return false
+        j _can_cook_loop_inc
+_can_cook_handle_onion:
+        lb          $t4, 3($t2)
+        li          $t5, 3
+        beq         $t4, 6, _can_cook_handle_onion_go
+        lb          $t4, 4($t2)
+        li          $t5, 4
+        beq         $t4, 6, _can_cook_handle_onion_go
+_can_cook_handle_onion_go:
+        beq         $t0, 0x40000, _can_cook_found
+        beq         $t0, 0x40001, _can_cook_return
+        j _can_cook_loop_inc
+_can_cook_handle_meat:
+        lb          $t4, 3($t2)
+        li          $t5, 3
+        beq         $t4, 4, _can_cook_handle_meat_go
+        lb          $t4, 4($t2)
+        li          $t5, 4
+        beq         $t4, 4, _can_cook_handle_meat_go
+_can_cook_handle_meat_go:
+        beq         $t0, 0x20000, _can_cook_found
+        beq         $t0, 0x20001, _can_cook_return
+        j _can_cook_loop_inc
+_can_cook_handle_lettuce:
+        # TODO: lettuce logic is a bit complicated, since we have to wash and chop it.
+_can_cook_handle_lettuce_go:
+        beq         $t0, 0x50000, _can_cook_found
+        beq         $t0, 0x50001, _can_cook_found
+        beq         $t0, 0x50002, _can_cook_return
+
+_can_cook_loop_inc:
+        add         $t1, $t1, 1
+        j _can_cook_search_tiles_for_begin
+
+_can_cook_found:
+        li          $v0, 1              # $v0 = 1 (true)
+        move        $v1, $t5            # $v1 = $t5 (index of processing item)
+        # fall through
+
+_can_cook_return:
+        jr          $ra
 
 # -----------------------------------------------------------------------
 # move_point_while_solving_generic - same as move_point_while_solving,
