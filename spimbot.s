@@ -941,7 +941,7 @@ unhandled_str:		.asciiz "Unhandled interrupt type\n"
 .ktext 0x80000180
 interrupt_handler:
 .set noat
-        move	$k1, $a		# Save $at
+        move	$k1, $at	# Save $at
 .set at
         la	$k0, chunkIH
         sw	$a0, 0($k0)	# Get some free registers
