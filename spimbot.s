@@ -207,20 +207,29 @@ start:
 
         jal         can_cook_inventory_items
         beq         $v0, 0, next_1
-        j           infinite
+        move        $a0, $v1
+        jal         process_item
 
 next_1:
         jal         drive_to_shared_counter
         jal         dropoff_all
 
-        li          $a0, 30
+        li          $a0, 25
         li          $a1, 70
         jal         move_point_while_solving_generic
+        jal         rotate_face_outside
         jal         pickup_all_unprocessed
+
+        jal         can_cook_inventory_items
+        beq         $v0, 0, next_1a
+        move        $a0, $v1
+        jal         process_item
+
+next_1a:
         jal         drive_to_shared_counter
         jal         dropoff_all
 
-        li          $a0, 30
+        li          $a0, 25
         li          $a1, 150
         jal         move_point_while_solving_generic
         jal         rotate_face_outside
@@ -228,20 +237,29 @@ next_1:
 
         jal         can_cook_inventory_items
         beq         $v0, 0, next_2
-        j           infinite
+        move        $a0, $v1
+        jal         process_item
 
 next_2:
         jal         drive_to_shared_counter
         jal         dropoff_all
 
-        li          $a0, 30
+        li          $a0, 25
         li          $a1, 150
         jal         move_point_while_solving_generic
+        jal         rotate_face_outside
         jal         pickup_all_unprocessed
+
+        jal         can_cook_inventory_items
+        beq         $v0, 0, next_2a
+        move        $a0, $v1
+        jal         process_item
+
+next_2a:
         jal         drive_to_shared_counter
         jal         dropoff_all
 
-        li          $a0, 30
+        li          $a0, 25
         li          $a1, 230
         jal         move_point_while_solving_generic
         jal         rotate_face_outside
@@ -249,24 +267,103 @@ next_2:
 
         jal         can_cook_inventory_items
         beq         $v0, 0, next_3
-        j           infinite
+        move        $a0, $v1
+        jal         process_item
 
 next_3:
         jal         drive_to_shared_counter
         jal         dropoff_all
 
-        li          $a0, 30
+        li          $a0, 25
         li          $a1, 230
         jal         move_point_while_solving_generic
+        jal         rotate_face_outside
         jal         pickup_all_unprocessed
+
+        jal         can_cook_inventory_items
+        beq         $v0, 0, next_3a
+        move        $a0, $v1
+        jal         process_item
+
+next_3a:
         jal         drive_to_shared_counter
         jal         dropoff_all
 
 infinite:
 	j	    infinite
 
-nothing:
-        j nothing
+# -----------------------------------------------------------------------
+# process_item - function that makes the bot go process a set of items
+# $a0 - location (index of tile_types) of the item
+# -----------------------------------------------------------------------
+process_item:
+        sub         $sp, $sp, 8
+        sw          $ra, 0($sp)
+        sw          $s0, 4($sp)
+        li          $a1, 62         # height, all utilities are at height 60, so go a bit lower
+
+        bne         $a0, 3, _process_item_idx_4
+        li          $a0, 50
+        j           _process_item_go
+_process_item_idx_4:
+        li          $a0, 110
+
+_process_item_go:
+        jal         move_point_while_solving_generic
+        jal         rotate_face_up
+
+        lw          $t2, inventory
+        beq         $t2, 0x20000, _process_item_oven    # uncooked meat
+        beq         $t2, 0x30000, _process_item_sink    # unwashed tomato
+        beq         $t2, 0x40000, _process_item_chop    # unchopped onion
+        beq         $t2, 0x40000, _process_item_sink    # unwashed unchopped lettuce
+        beq         $t2, 0x40001, _process_item_chop    # unchopped lettuce
+        j           _process_item_return
+
+_process_item_oven:
+        li          $s0, 0
+_process_item_oven_for_begin:
+        bge         $s0, 4, _process_item_return
+        sw          $s0, DROPOFF
+        jal         wait_for_timer_int
+        li          $a0, 100000
+        jal         set_wait_cycles
+        jal         wait_for_timer_int
+        add         $s0, $s0, 1
+        sw          $0, PICKUP
+        j           _process_item_oven_for_begin
+
+_process_item_sink:
+        li          $s0, 0
+_process_item_sink_for_begin:
+        bge         $s0, 4, _process_item_return
+        sw          $s0, DROPOFF
+        jal         wait_for_timer_int
+        li          $a0, 20000
+        jal         set_wait_cycles
+        jal         wait_for_timer_int
+        add         $s0, $s0, 1
+        sw          $0, PICKUP
+        j           _process_item_sink_for_begin
+
+_process_item_chop:
+        li          $s0, 0
+_process_item_chop_for_begin:
+        bge         $s0, 4, _process_item_return
+        sw          $s0, DROPOFF
+        jal         wait_for_timer_int
+        li          $a0, 20000
+        jal         set_wait_cycles
+        jal         wait_for_timer_int
+        add         $s0, $s0, 1
+        sw          $0, PICKUP
+        j           _process_item_chop_for_begin
+
+_process_item_return:
+        lw          $ra, 0($sp)
+        lw          $s0, 4($sp)
+        add         $sp, $sp, 8
+        jr          $ra
 
 # -----------------------------------------------------------------------
 # can_cook_inventory_items - returns 1 if we can process the inventory items,
@@ -333,6 +430,9 @@ _can_cook_handle_meat_go:
         j _can_cook_loop_inc
 _can_cook_handle_lettuce:
         # TODO: lettuce logic is a bit complicated, since we have to wash and chop it.
+        # if the lettuce is unwashed and unchopped (level 0), return true if there is a sink
+        # if the lettuce is unchopped (level 1), return true if there is a chopping board
+        # else, the lettuce is processed (level 2), return false since we don't need to do any processing
         #j _can_cook_loop_inc
 _can_cook_handle_lettuce_go:
         beq         $t0, 0x50000, _can_cook_found
@@ -349,6 +449,16 @@ _can_cook_found:
         # fall through
 
 _can_cook_return:
+        jr          $ra
+
+# ----------------------------------------------------------------------
+# rotate_face_up - makes the SPIMBot face upwards (towards the utilities)
+# ----------------------------------------------------------------------
+rotate_face_up:
+        li          $t0, 270
+        sw          $t0, ANGLE
+        li          $t1, 1
+        sw          $t1, ANGLE_CONTROL
         jr          $ra
 
 # ----------------------------------------------------------------------
@@ -395,7 +505,6 @@ _move_point_generic_move:
         lw          $ra, 0($sp)
         add         $sp, $sp, 4
         jr          $ra
-# -----------------------------------------------------------------------
 
 # -----------------------------------------------------------------------
 # pickup_all - pickups 4 (inventory max) unprocessed ingredients
@@ -433,6 +542,19 @@ dropoff_all:
 
         lw          $ra, 0($sp)
         add         $sp, $sp, 4
+        jr          $ra
+
+# -----------------------------------------------------------------------
+# set_wait_cycles - sets the timer to wait for a number of cycles.
+# Note: does not actually do the waiting!
+# $a0 - number of cycles to wait
+# -----------------------------------------------------------------------
+set_wait_cycles:
+        lw          $t1, TIMER          # load current cycle
+        add         $t1, $t1, $a0       # and calculate target cycle to stop
+        sw          $t1, TIMER          # set timer interrupt
+        la          $t0, timer_int_active
+        sw          $t1, 0($t0)         # update the timer_int_active flag
         jr          $ra
 
 # -----------------------------------------------------------------------
