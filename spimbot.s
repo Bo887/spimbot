@@ -798,7 +798,7 @@ set_move_point_target:
         sub         $s0, $a0, $a2   # $s0 = current_x - target_x
         sub         $s1, $a1, $a3   # $s1 = current_y - target_y
 
-        jal         euc_dist        
+        #jal         euc_dist        # TEMP: disabled
         move        $s2, $v0        # s2 = distance
 
         move        $a0, $s0
@@ -888,7 +888,7 @@ _move_dist_loop:
         lw          $a3, BOT_Y      # $a2 = curr_y
         move        $a0, $s0
         move        $a1, $s1
-        jal         euc_dist        # $v0 = dist
+        #jal         euc_dist        # $v0 = dist # TEMP: disabled
         bge         $v0, $s2, _move_dist_ret        # did we hit the distance?
         j _move_dist_loop
 
@@ -901,29 +901,6 @@ _move_dist_ret:
         add         $sp, $sp, 16
 
 
-# -----------------------------------------------------------------------
-# euc_dist - computes the euclidean distance between (x1, y1) and (x2, y2)
-# $a0 - x1
-# $a1 - y1
-# $a2 - x2
-# $a3 - y2
-# returns the (integer casted) euclidean distance in $v0
-# -----------------------------------------------------------------------
-euc_dist:
-        sub         $a0, $a2, $a0   # $a0 = (x2 - x1)
-        mul         $a0, $a0, $a0   # $a0 = (x2 - x1)^2
-        sub         $a1, $a3, $a1   # $a1 = (y2 - y1)
-        mul         $a1, $a1, $a1   # $a1 = (y2 - y1)^2
-
-        add         $v0, $a0, $a1   # $v0 = (x2 - x1)^2 + (y2 - y1)^2
-
-        mtc1        $v0, $f12       # $f12 = $v0
-        cvt.s.w     $f12, $f12      # cast $f12 to a float
-        sqrt.s      $f12, $f12      # $f12 = sqrt($f12)
-        cvt.w.s     $f12, $f12      # cast $f12 to an int
-        mfc1        $v0, $f12       # $v0 = $f12
-        jr          $ra
-
 	
 	
 	
@@ -933,16 +910,31 @@ euc_dist:
 #               #
 #################
 
-# NOTE: Due to kernel mode including the sb_arctan function, USER MODE MUST NOT attempt any floating point operations!
+# NOTE: Only kernel mode is allowed to use floating-point operations!
 	
 .kdata
-chunkIH:		.space 64
-			.word F1EE0801
+chunkIH:		.space 72
+			.word 0xF1EE0801
 kstack_top:		.space 1020
 kstack_bottom:		.word 0
-			.word F1EE0802
-operations_queue:	.space 512
-			.word F1EE0803
+			.word 0xF1EE0802
+			
+OPQ_NOTHING		= 0	# no-op
+OPQ_INITIAL_DOWN	= 1	# go down 2 tiles (from start)
+OPQ_INITIAL_ENTRY	= 2	# angle down into the relevant rectangle
+OPQ_STOP		= 3	# done moving for now
+operations_queue:	.word OPQ_NOTHING OPQ_INITIAL_DOWN OPQ_INITIAL_ENTRY OPQ_STOP
+			.space 512
+			.word 0xF1EE0803
+op_queue_pos:		.word 0
+op_queue_length:	.word 4
+
+entry_angles:		.byte 110 70
+
+			.align 4
+od_jump_table:		.word	od_always	od_initial_down	od_initial_entry	od_stop
+po_jump_table:		.word	po_done	po_initial_down	po_initial_entry	po_stop
+
 non_intrpt_str:		.asciiz "Non-interrupt exception\n"
 unhandled_str:		.asciiz "Unhandled interrupt type\n"
 
@@ -966,12 +958,14 @@ interrupt_handler:
 	sw	$v1, 44($k0)
 	sw	$ra, 48($k0)
 	sw	$sp, 52($k0)
+	sw	$s0, 56($k0)
+	sw	$s1, 60($k0)
 	
 	# preserve HI and LO
 	mflo	$t0
-	sw	$t0, 56($k0)
+	sw	$t0, 64($k0)
 	mfhi	$t0
-	sw	$t0, 60($k0)
+	sw	$t0, 68($k0)
 
         mfc0        $k0, $13             # Get Cause register
         srl         $a0, $k0, 2
@@ -998,7 +992,6 @@ ih_interrupt_dispatch:
 	
 ih_bonk_interrupt:
 	sw	$0, BONK_ACK
-        #Fill in your code here
         j	ih_perform_operation
 
 ih_request_puzzle_interrupt:
@@ -1013,6 +1006,34 @@ ih_timer_interrupt:
 	
 ih_perform_operation:
 	la	$sp, kstack_bottom
+	lw	$t0, op_queue_pos
+	lw	$t1, op_queue_length
+	bne	$t0, $t1, ih_queue_ready
+	
+	jal	fill_queue	# find some work to do
+	lw	$t0, op_queue_length
+	beq	$t0, $zero, ih_interrupt_dispatch
+	li	$t0, 0		# start from the top of the queue
+	
+ih_queue_ready:
+	sll	$t0, $t0, 2	# [opQueuePos]
+	la	$t1, operations_queue
+	add	$t1, $t1, $t0	# &opQueue[opQueuePos]
+	lw	$s0, 0($t1)	# current operation
+	srl	$a1, $s0, 16	# high bits (extra data)
+	and	$a0, $s0, 0xFFFF
+	jal	operation_done	# check whether a task was just completed
+	beq	$v0, $zero, ih_operation_incomplete
+	
+	lw	$t0, op_queue_pos
+	add	$t0, $t0, 1	# opQueuePos++
+	sw	$t0, op_queue_pos
+	j	ih_perform_operation
+	
+ih_operation_incomplete:
+	srl	$a1, $s0, 16	# prepare arguments again
+	and	$a0, $s0, 0xFFFF
+	jal	perform_operation
 	j	ih_interrupt_dispatch
 
 ih_non_intrpt:                # was some non-interrupt
@@ -1025,9 +1046,9 @@ ih_done:
         la          $k0, chunkIH
 	
 	# restore HI and LO
-	lw	$t0, 56($k0)
+	lw	$t0, 64($k0)
 	mtlo	$t0
-	lw	$t0, 60($k0)
+	lw	$t0, 68($k0)
 	mthi	$t0
 	
         lw          $a0, 0($k0)        # Restore saved registers
@@ -1044,10 +1065,105 @@ ih_done:
 	lw	$v1, 44($k0)
 	lw	$ra, 48($k0)
 	lw	$sp, 52($k0)
+	lw	$s0, 56($k0)
+	lw	$s1, 60($k0)
 .set noat
         move        $at, $k1        # Restore $at
 .set at
         eret
+
+# -----------------------------------------------------------------------
+# fill_queue - determines what the bot should work on next
+# -----------------------------------------------------------------------
+
+fill_queue:
+	sw	$zero, op_queue_pos
+	sw	$zero, op_queue_length
+	# TODO
+	jr	$ra
+	
+# -----------------------------------------------------------------------
+# operation_done - determines whether a queue item has been completed
+# $a0: operation ID from queue (low 16 bits)
+# $a1: extra data
+# $v0: nonzero if task is complete and should be dequeued
+# -----------------------------------------------------------------------
+
+operation_done:
+	la	$t0, od_jump_table
+	sll	$t1, $a0, 2	# [i]
+	add	$t0, $t0, $t1	# address in jump table to load
+	lw	$t0, 0($t0)	# subfunction address
+	jr	$t0
+	
+od_always:
+	li	$v0, 1
+	j	od_done
+	
+od_initial_down:
+	lw	$t0, BOT_Y
+	sge	$v0, $t0, 20	# return (y >= 20)
+	j	od_done
+
+od_initial_entry:
+	lw	$t0, BOT_Y
+	sge	$v0, $t0, 60	# return (y >= 60)
+	j	od_done
+	
+od_stop:
+	lw	$t0, VELOCITY
+	seq	$v0, $t0, $zero	# return (velocity == 0)
+	j	od_done
+
+od_done:
+	jr	$ra
+	
+# -----------------------------------------------------------------------
+# perform_operation - process an operation queue work item
+# $a0: data from queue (low 16 bits)
+# $a1: extra data
+# -----------------------------------------------------------------------
+	
+perform_operation:
+	la	$t0, po_jump_table
+	sll	$t1, $a0, 2	# [i]
+	add	$t0, $t0, $t1	# address in jump table to load
+	lw	$t0, 0($t0)	# subfunction address
+	jr	$t0
+	
+po_initial_down:
+	li	$t0, 10
+	sw	$t0, VELOCITY	# start moving
+	lw	$t0, TIMER
+	li	$t1, 5000
+	sll	$t1, $t1, 2	# cycles = 20000
+	add	$t0, $t0, $t1
+	sw	$t0, TIMER
+	j	po_done
+	
+po_initial_entry:
+	lw	$t0, bot_on_left
+	la	$t1, entry_angles
+	add	$t1, $t1, $t0	# index into angles array
+	lbu	$t1, 0($t1)
+	sw	$t1, ANGLE
+	li	$t0, 1		# turn
+	sw	$t0, ANGLE_CONTROL
+	li	$t0, 10
+	sw	$t0, VELOCITY
+	lw	$t0, TIMER
+	li	$t1, 9000
+	sll	$t1, $t1, 2	# cycles = 36000
+	add	$t0, $t0, $t1
+	sw	$t0, TIMER
+	j	po_done
+	
+po_stop:
+	sw	$zero, VELOCITY
+	j	po_done
+	
+po_done:
+	jr	$ra
 
 # -----------------------------------------------------------------------
 # sb_arctan - computes the arctangent of y / x
@@ -1108,5 +1224,28 @@ at_pos_x:
         add         $v0, $t0, $v0
 
 at_end:
+        jr          $ra
+	
+# -----------------------------------------------------------------------
+# euc_dist - computes the euclidean distance between (x1, y1) and (x2, y2)
+# $a0 - x1
+# $a1 - y1
+# $a2 - x2
+# $a3 - y2
+# returns the (integer casted) euclidean distance in $v0
+# -----------------------------------------------------------------------
+euc_dist:
+        sub         $a0, $a2, $a0   # $a0 = (x2 - x1)
+        mul         $a0, $a0, $a0   # $a0 = (x2 - x1)^2
+        sub         $a1, $a3, $a1   # $a1 = (y2 - y1)
+        mul         $a1, $a1, $a1   # $a1 = (y2 - y1)^2
+
+        add         $v0, $a0, $a1   # $v0 = (x2 - x1)^2 + (y2 - y1)^2
+
+        mtc1        $v0, $f12       # $f12 = $v0
+        cvt.s.w     $f12, $f12      # cast $f12 to a float
+        sqrt.s      $f12, $f12      # $f12 = sqrt($f12)
+        cvt.w.s     $f12, $f12      # cast $f12 to an int
+        mfc1        $v0, $f12       # $v0 = $f12
         jr          $ra
 	
