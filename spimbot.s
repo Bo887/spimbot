@@ -941,17 +941,17 @@ unhandled_str:		.asciiz "Unhandled interrupt type\n"
 .ktext 0x80000180
 interrupt_handler:
 .set noat
-        move        $k1, $at        # Save $at
+        move	$k1, $a		# Save $at
 .set at
-        la          $k0, chunkIH
-        sw          $a0, 0($k0)        # Get some free registers
-        sw          $v0, 4($k0)        # by storing them to a global variable
-        sw          $t0, 8($k0)
-        sw          $t1, 12($k0)
-        sw          $t2, 16($k0)
-        sw          $t3, 20($k0)
-	sw          $t4, 24($k0)
-	sw          $t5, 28($k0)
+        la	$k0, chunkIH
+        sw	$a0, 0($k0)	# Get some free registers
+        sw	$v0, 4($k0)	# by storing them to a global variable
+        sw	$t0, 8($k0)
+        sw	$t1, 12($k0)
+        sw	$t2, 16($k0)
+        sw	$t3, 20($k0)
+	sw	$t4, 24($k0)
+	sw	$t5, 28($k0)
 	sw	$a1, 32($k0)
 	sw	$a2, 36($k0)
 	sw	$a3, 40($k0)
@@ -967,28 +967,28 @@ interrupt_handler:
 	mfhi	$t0
 	sw	$t0, 68($k0)
 
-        mfc0        $k0, $13             # Get Cause register
-        srl         $a0, $k0, 2
-        and         $a0, $a0, 0xf        # ExcCode field
+        mfc0	$k0, $13	# Get Cause register
+        srl	$a0, $k0, 2
+        and	$a0, $a0, 0xf	# ExcCode field
         bne	$a0, 0, ih_non_intrpt
 
 ih_interrupt_dispatch:
-        mfc0        $k0, $13        # Get Cause register, again
-        beq         $k0, 0, ih_done        # handled all outstanding interrupts
+        mfc0	$k0, $13		# Get Cause register, again
+        beq	$k0, 0, ih_done		# handled all outstanding interrupts
 
-        and         $a0, $k0, BONK_INT_MASK    # is there a bonk interrupt?
-        bne         $a0, 0, ih_bonk_interrupt
+        and	$a0, $k0, BONK_INT_MASK		# is there a bonk interrupt?
+        bne	$a0, 0, ih_bonk_interrupt
 
-        and         $a0, $k0, TIMER_INT_MASK    # is there a timer interrupt?
-        bne         $a0, 0, ih_timer_interrupt
+        and	$a0, $k0, TIMER_INT_MASK	# is there a timer interrupt?
+        bne	$a0, 0, ih_timer_interrupt
 
-        and 	    $a0, $k0, REQUEST_PUZZLE_INT_MASK
-        bne 	    $a0, 0, ih_request_puzzle_interrupt
+        and	$a0, $k0, REQUEST_PUZZLE_INT_MASK
+        bne	$a0, 0, ih_request_puzzle_interrupt
 
-        li          $v0, PRINT_STRING    # Unhandled interrupt types
-        la          $a0, unhandled_str
+        li	$v0, PRINT_STRING	# Unhandled interrupt types
+        la	$a0, unhandled_str
         syscall
-        j           ih_done
+        j	ih_done
 	
 ih_bonk_interrupt:
 	sw	$0, BONK_ACK
@@ -1001,7 +1001,7 @@ ih_request_puzzle_interrupt:
 	j	ih_interrupt_dispatch
 
 ih_timer_interrupt:
-	sw 	    $0, TIMER_ACK
+	sw	$0, TIMER_ACK
         # fall through to ih_perform_operation
 	
 ih_perform_operation:
@@ -1036,14 +1036,14 @@ ih_operation_incomplete:
 	jal	perform_operation
 	j	ih_interrupt_dispatch
 
-ih_non_intrpt:                # was some non-interrupt
-        li          $v0, PRINT_STRING
-        la          $a0, non_intrpt_str
-        syscall                # print out an error message
+ih_non_intrpt:			# was some non-interrupt
+        li	$v0, PRINT_STRING
+        la	$a0, non_intrpt_str
+        syscall			# print out an error message
         # fall through to done
 
 ih_done:
-        la          $k0, chunkIH
+        la	$k0, chunkIH
 	
 	# restore HI and LO
 	lw	$t0, 64($k0)
@@ -1051,14 +1051,14 @@ ih_done:
 	lw	$t0, 68($k0)
 	mthi	$t0
 	
-        lw          $a0, 0($k0)        # Restore saved registers
-        lw          $v0, 4($k0)
-        lw          $t0, 8($k0)
-        lw          $t1, 12($k0)
-        lw          $t2, 16($k0)
-        lw          $t3, 20($k0)
-        lw          $t4, 24($k0)
-        lw          $t5, 28($k0)
+        lw	$a0, 0($k0)	# Restore saved registers
+        lw	$v0, 4($k0)
+        lw	$t0, 8($k0)
+        lw	$t1, 12($k0)
+        lw	$t2, 16($k0)
+        lw	$t3, 20($k0)
+        lw	$t4, 24($k0)
+        lw	$t5, 28($k0)
 	lw	$a1, 32($k0)
 	lw	$a2, 36($k0)
 	lw	$a3, 40($k0)
@@ -1068,7 +1068,7 @@ ih_done:
 	lw	$s0, 56($k0)
 	lw	$s1, 60($k0)
 .set noat
-        move        $at, $k1        # Restore $at
+        move	$at, $k1	# Restore $at
 .set at
         eret
 
