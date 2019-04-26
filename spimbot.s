@@ -223,10 +223,7 @@ next_1:
         li          $a0, 30
         li          $a1, 150
         jal         move_point_while_solving_generic
-        li          $t0, 180
-        sw          $t0, ANGLE
-        li          $t0, 1
-        sw          $t0, ANGLE_CONTROL
+        jal         rotate_face_outside
         jal         pickup_all_unprocessed
 
         jal         can_cook_inventory_items
@@ -247,10 +244,7 @@ next_2:
         li          $a0, 30
         li          $a1, 230
         jal         move_point_while_solving_generic
-        li          $t0, 180
-        sw          $t0, ANGLE
-        li          $t0, 1
-        sw          $t0, ANGLE_CONTROL
+        jal         rotate_face_outside
         jal         pickup_all_unprocessed
 
         jal         can_cook_inventory_items
@@ -308,6 +302,7 @@ _can_cook_handle_tomato:
         lb          $t4, 4($t2)
         li          $t5, 4
         beq         $t4, 5, _can_cook_handle_tomato_go
+        j _can_cook_loop_inc
 _can_cook_handle_tomato_go:
         beq         $t0, 0x30000, _can_cook_found       # tomato that is not cooked, return true
         beq         $t0, 0x30001, _can_cook_return      # tomato that is already cooked, return false
@@ -319,6 +314,7 @@ _can_cook_handle_onion:
         lb          $t4, 4($t2)
         li          $t5, 4
         beq         $t4, 6, _can_cook_handle_onion_go
+        j _can_cook_loop_inc
 _can_cook_handle_onion_go:
         beq         $t0, 0x40000, _can_cook_found
         beq         $t0, 0x40001, _can_cook_return
@@ -330,12 +326,14 @@ _can_cook_handle_meat:
         lb          $t4, 4($t2)
         li          $t5, 4
         beq         $t4, 4, _can_cook_handle_meat_go
+        j _can_cook_loop_inc
 _can_cook_handle_meat_go:
         beq         $t0, 0x20000, _can_cook_found
         beq         $t0, 0x20001, _can_cook_return
         j _can_cook_loop_inc
 _can_cook_handle_lettuce:
         # TODO: lettuce logic is a bit complicated, since we have to wash and chop it.
+        #j _can_cook_loop_inc
 _can_cook_handle_lettuce_go:
         beq         $t0, 0x50000, _can_cook_found
         beq         $t0, 0x50001, _can_cook_found
@@ -351,6 +349,27 @@ _can_cook_found:
         # fall through
 
 _can_cook_return:
+        jr          $ra
+
+# ----------------------------------------------------------------------
+# rotate_face_outside - makes the SPIMBot face towards the outside wall
+# If the bot is on the left, turns towards angle 180.
+# If the bot is on the right, turns towards angle 0.
+# ----------------------------------------------------------------------
+rotate_face_outside:
+        lw          $t0, bot_on_left        # load bot_on_left
+        beq         $t0, 0, _rotate_face_outside_right
+        li          $t1, 180
+        sw          $t1, ANGLE
+        j           _rotate_face_outside_go
+
+_rotate_face_outside_right:
+        li          $t1, 0
+        sw          $t1, ANGLE
+
+_rotate_face_outside_go:
+        li          $t1, 1
+        sw          $t1, ANGLE_CONTROL
         jr          $ra
 
 # -----------------------------------------------------------------------
