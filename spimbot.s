@@ -56,6 +56,12 @@ encoded_request:	.space 24	# 3 orders, 2 words per packed request
 decoded_request:	.space 144	# 3 orders, 12 words per unpacked request (ingredients array)
 inventory:              .space 16       # 4 elements (each an integer) in the inventory -> 16 bytes total
 
+testa: .word 0xdeadbeef
+encoded_shared_counter: .space 8
+testc: .word 0xdeadbeef
+decoded_shared_counter:         .space 48
+testb: .word 0xdeadbeef
+
 ### PRECOMPUTED PUZZLE SOLVING TABLES ###
 
 puzzle_transition:	.byte 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 1 0 1 0 1 0 1 0 1 0 1 0 1 0 1 0 1 0 1 0 1 0 1 0 1 0 1 0 1 0 1 0 1 0 1 0 1 0 1 0 1 0 1 0 1 0 1 0 1 0 1 0 1 0 1 0 1 0 1 0 1 0 1 0 1 0 1 0 1 0 1 0 1 0 1 0 1 0 1 0 1 0 1 0 1 0 1 0 1 0 1 0 1 0 1 0 1 0 1 0 1 0 1 0 1 0 1 0 1 0 1 0 1 0 1 0 1 0 1 0 1 0 1 0 1 0 1 0 1 0 1 0 1 0 1 0 1 0 1 0 1 0 1 0 1 0 1 0 1 0 1 0 1 0 1 0 1 0 1 0 1 0 1 0 1 0 1 0 1 0 1 0 1 0 1 0 1 0 1 0 1 0 1 0 1 0 1 0 1 0 1 0 1 0 1 0 1 0 1 0 1 0 1 0 1 0 1 0 1 0 1 0 1 0 1 0 1 0 1 0 1 0 1 0 1 0 1 0 1 0 1 0 1 0 1 0 1 0 1 0 1 0 1 0 1 0 1 0 1 0 1 0 1 0 0 2 0 0 2 2 0 0 2 2 0 0 2 2 0 0 2 2 0 0 2 2 0 0 2 2 0 0 2 2 0 0 2 2 0 0 2 2 0 0 2 2 0 0 2 2 0 0 2 2 0 0 2 2 0 0 2 2 0 0 2 2 0 0 2 2 0 0 2 2 0 0 2 2 0 0 2 2 0 0 2 2 0 0 2 2 0 0 2 2 0 0 2 2 0 0 2 2 0 0 2 2 0 0 2 2 0 0 2 2 0 0 2 2 0 0 2 2 0 0 2 2 0 0 2 2 0 0 2 2 0 0 2 2 0 0 2 2 0 0 2 2 0 0 2 2 0 0 2 2 0 0 2 2 0 0 2 2 0 0 2 2 0 0 2 2 0 0 2 2 0 0 2 2 0 0 2 2 0 0 2 2 0 0 2 2 0 0 2 2 0 0 2 2 0 0 2 2 0 0 2 2 0 0 2 2 0 0 2 2 0 0 2 2 0 0 2 2 0 0 2 2 0 0 2 2 0 0 2 2 0 0 2 2 0 0 2 2 0 0 2 2 0 0 2 2 0 0 2 2 0 0 2 2 0 0 0 0 0 0 3 0 0 0 3 0 0 0 3 0 0 0 3 0 0 0 3 0 0 0 3 0 0 0 3 0 0 0 3 0 0 0 3 0 0 0 3 0 0 0 3 0 0 0 3 0 0 0 3 0 0 0 3 0 0 0 3 0 0 0 3 0 0 0 3 0 0 0 3 0 0 0 3 0 0 0 3 0 0 0 3 0 0 0 3 0 0 0 3 0 0 0 3 0 0 0 3 0 0 0 3 0 0 0 3 0 0 0 3 0 0 0 3 0 0 0 3 0 0 0 3 0 0 0 3 0 0 0 3 0 0 0 3 0 0 0 3 0 0 0 3 0 0 0 3 0 0 0 3 0 0 0 3 0 0 0 3 0 0 0 3 0 0 0 3 0 0 0 3 0 0 0 3 0 0 0 3 0 0 0 3 0 0 0 3 0 0 0 3 0 0 0 3 0 0 0 3 0 0 0 3 0 0 0 3 0 0 0 3 0 0 0 3 0 0 0 3 0 0 0 3 0 0 0 3 0 0 0 3 0 0 0 3 0 0 0 3 0 0 0 3 0 0 0 3 0 0 0 3 0 0 0 0 4 4 4 0 0 0 0 4 4 4 4 0 0 0 0 4 4 4 4 0 0 0 0 4 4 4 4 0 0 0 0 4 4 4 4 0 0 0 0 4 4 4 4 0 0 0 0 4 4 4 4 0 0 0 0 4 4 4 4 0 0 0 0 4 4 4 4 0 0 0 0 4 4 4 4 0 0 0 0 4 4 4 4 0 0 0 0 4 4 4 4 0 0 0 0 4 4 4 4 0 0 0 0 4 4 4 4 0 0 0 0 4 4 4 4 0 0 0 0 4 4 4 4 0 0 0 0 4 4 4 4 0 0 0 0 4 4 4 4 0 0 0 0 4 4 4 4 0 0 0 0 4 4 4 4 0 0 0 0 4 4 4 4 0 0 0 0 4 4 4 4 0 0 0 0 4 4 4 4 0 0 0 0 4 4 4 4 0 0 0 0 4 4 4 4 0 0 0 0 4 4 4 4 0 0 0 0 4 4 4 4 0 0 0 0 4 4 4 4 0 0 0 0 4 4 4 4 0 0 0 0 4 4 4 4 0 0 0 0 4 4 4 4 0 0 0 0 4 4 4 4 0 0 0 0 1 4 5 4 1 0 1 0 5 4 5 4 1 0 1 0 5 4 5 4 1 0 1 0 5 4 5 4 1 0 1 0 5 4 5 4 1 0 1 0 5 4 5 4 1 0 1 0 5 4 5 4 1 0 1 0 5 4 5 4 1 0 1 0 5 4 5 4 1 0 1 0 5 4 5 4 1 0 1 0 5 4 5 4 1 0 1 0 5 4 5 4 1 0 1 0 5 4 5 4 1 0 1 0 5 4 5 4 1 0 1 0 5 4 5 4 1 0 1 0 5 4 5 4 1 0 1 0 5 4 5 4 1 0 1 0 5 4 5 4 1 0 1 0 5 4 5 4 1 0 1 0 5 4 5 4 1 0 1 0 5 4 5 4 1 0 1 0 5 4 5 4 1 0 1 0 5 4 5 4 1 0 1 0 5 4 5 4 1 0 1 0 5 4 5 4 1 0 1 0 5 4 5 4 1 0 1 0 5 4 5 4 1 0 1 0 5 4 5 4 1 0 1 0 5 4 5 4 1 0 1 0 5 4 5 4 1 0 1 0 5 4 5 4 1 0 1 0 5 4 5 4 1 0 1 0 0 6 0 0 0 0 0 0 6 6 0 0 0 0 0 0 6 6 0 0 0 0 0 0 6 6 0 0 0 0 0 0 6 6 0 0 0 0 0 0 6 6 0 0 0 0 0 0 6 6 0 0 0 0 0 0 6 6 0 0 0 0 0 0 6 6 0 0 0 0 0 0 6 6 0 0 0 0 0 0 6 6 0 0 0 0 0 0 6 6 0 0 0 0 0 0 6 6 0 0 0 0 0 0 6 6 0 0 0 0 0 0 6 6 0 0 0 0 0 0 6 6 0 0 0 0 0 0 6 6 0 0 0 0 0 0 6 6 0 0 0 0 0 0 6 6 0 0 0 0 0 0 6 6 0 0 0 0 0 0 6 6 0 0 0 0 0 0 6 6 0 0 0 0 0 0 6 6 0 0 0 0 0 0 6 6 0 0 0 0 0 0 6 6 0 0 0 0 0 0 6 6 0 0 0 0 0 0 6 6 0 0 0 0 0 0 6 6 0 0 0 0 0 0 6 6 0 0 0 0 0 0 6 6 0 0 0 0 0 0 6 6 0 0 0 0 0 0 6 6 0 0 0 0 0 0 0 0 0 0 0 0 0 0 7 0 0 0 0 0 0 0 7 0 0 0 0 0 0 0 7 0 0 0 0 0 0 0 7 0 0 0 0 0 0 0 7 0 0 0 0 0 0 0 7 0 0 0 0 0 0 0 7 0 0 0 0 0 0 0 7 0 0 0 0 0 0 0 7 0 0 0 0 0 0 0 7 0 0 0 0 0 0 0 7 0 0 0 0 0 0 0 7 0 0 0 0 0 0 0 7 0 0 0 0 0 0 0 7 0 0 0 0 0 0 0 7 0 0 0 0 0 0 0 7 0 0 0 0 0 0 0 7 0 0 0 0 0 0 0 7 0 0 0 0 0 0 0 7 0 0 0 0 0 0 0 7 0 0 0 0 0 0 0 7 0 0 0 0 0 0 0 7 0 0 0 0 0 0 0 7 0 0 0 0 0 0 0 7 0 0 0 0 0 0 0 7 0 0 0 0 0 0 0 7 0 0 0 0 0 0 0 7 0 0 0 0 0 0 0 7 0 0 0 0 0 0 0 7 0 0 0 0 0 0 0 7 0 0 0 0 0 0 0 7 0 0 0 0 0 0 0 
@@ -176,7 +182,7 @@ fill_left_tiles:
         sb          $t3, 3($t2)
         lbu         $t3, 35($t0)
         sb          $t3, 4($t2)
-        j           start
+        j           place_ingredients_on_sc
 
 fill_right_tiles:
         lbu         $t3, 179($t0)       # hardcoded locations for the relevent tiles on the right side
@@ -190,8 +196,7 @@ fill_right_tiles:
         lbu         $t3, 39($t0)
         sb          $t3, 4($t2)
 
-start:
-	#Fill in your code here
+place_ingredients_on_sc:
         li          $a0, 10
         li          $a1, 55
         jal         move_point_while_solving_generic
@@ -200,17 +205,9 @@ start:
         li          $a0, 15
         li          $a1, 50
         jal         move_point_while_solving_generic
-
         li          $a0, 60
         li          $a1, 80
         jal         move_point_while_solving_generic
-
-        jal         can_cook_inventory_items
-        beq         $v0, 0, next_1
-        move        $a0, $v1
-        jal         process_item
-
-next_1:
         jal         drive_to_shared_counter
         jal         dropoff_all
 
@@ -219,13 +216,6 @@ next_1:
         jal         move_point_while_solving_generic
         jal         rotate_face_outside
         jal         pickup_all_unprocessed
-
-        jal         can_cook_inventory_items
-        beq         $v0, 0, next_1a
-        move        $a0, $v1
-        jal         process_item
-
-next_1a:
         jal         drive_to_shared_counter
         jal         dropoff_all
 
@@ -234,13 +224,6 @@ next_1a:
         jal         move_point_while_solving_generic
         jal         rotate_face_outside
         jal         pickup_all_unprocessed
-
-        jal         can_cook_inventory_items
-        beq         $v0, 0, next_2
-        move        $a0, $v1
-        jal         process_item
-
-next_2:
         jal         drive_to_shared_counter
         jal         dropoff_all
 
@@ -249,13 +232,6 @@ next_2:
         jal         move_point_while_solving_generic
         jal         rotate_face_outside
         jal         pickup_all_unprocessed
-
-        jal         can_cook_inventory_items
-        beq         $v0, 0, next_2a
-        move        $a0, $v1
-        jal         process_item
-
-next_2a:
         jal         drive_to_shared_counter
         jal         dropoff_all
 
@@ -264,13 +240,6 @@ next_2a:
         jal         move_point_while_solving_generic
         jal         rotate_face_outside
         jal         pickup_all_unprocessed
-
-        jal         can_cook_inventory_items
-        beq         $v0, 0, next_3
-        move        $a0, $v1
-        jal         process_item
-
-next_3:
         jal         drive_to_shared_counter
         jal         dropoff_all
 
@@ -279,15 +248,15 @@ next_3:
         jal         move_point_while_solving_generic
         jal         rotate_face_outside
         jal         pickup_all_unprocessed
-
-        jal         can_cook_inventory_items
-        beq         $v0, 0, next_3a
-        move        $a0, $v1
-        jal         process_item
-
-next_3a:
         jal         drive_to_shared_counter
         jal         dropoff_all
+
+process_items:
+        la          $a0, encoded_shared_counter
+        sw          $a0, GET_SHARED
+        la          $a1, decoded_shared_counter
+        jal         decode_request_in_mem
+        add         $0, $0, $0
 
 infinite:
 	j	    infinite
