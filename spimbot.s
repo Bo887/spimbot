@@ -214,7 +214,7 @@ next_1:
         jal         drive_to_shared_counter
         jal         dropoff_all
 
-        li          $a0, 25
+        li          $a0, 30
         li          $a1, 70
         jal         move_point_while_solving_generic
         jal         rotate_face_outside
@@ -229,7 +229,7 @@ next_1a:
         jal         drive_to_shared_counter
         jal         dropoff_all
 
-        li          $a0, 25
+        li          $a0, 30
         li          $a1, 150
         jal         move_point_while_solving_generic
         jal         rotate_face_outside
@@ -244,7 +244,7 @@ next_2:
         jal         drive_to_shared_counter
         jal         dropoff_all
 
-        li          $a0, 25
+        li          $a0, 30
         li          $a1, 150
         jal         move_point_while_solving_generic
         jal         rotate_face_outside
@@ -259,7 +259,7 @@ next_2a:
         jal         drive_to_shared_counter
         jal         dropoff_all
 
-        li          $a0, 25
+        li          $a0, 30
         li          $a1, 230
         jal         move_point_while_solving_generic
         jal         rotate_face_outside
@@ -274,7 +274,7 @@ next_3:
         jal         drive_to_shared_counter
         jal         dropoff_all
 
-        li          $a0, 25
+        li          $a0, 30
         li          $a1, 230
         jal         move_point_while_solving_generic
         jal         rotate_face_outside
