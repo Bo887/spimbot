@@ -753,6 +753,22 @@ fill_queue:
 	j	fq_finish_to_counter
 	
 fq_not_bread:
+	# should we get cheese?
+	lbu	$t0, T_BIN_CHEESE($t2)
+	beq	$t0, $zero, fq_not_cheese
+	lw	$t1, R_CHEESE($t3)
+	bge	$t1, 4, fq_not_cheese
+	li	$t1, 0x0B04	# go to cheese bin
+	sw	$t1, 0($s1)
+	li	$t1, OPQ_FACE_BIN
+	sw	$t1, 4($s1)
+	li	$t1, OPQ_LOAD_UP
+	sw	$t1, 8($s1)
+	li	$s0, 3		# three entries in queue
+	add	$s1, $s1, 12
+	j	fq_finish_to_counter
+
+fq_not_cheese:
 	# should we get meat?
 	lbu	$t5, T_BIN_MEAT($t2)
 	beq	$t5, $zero, fq_not_meat
