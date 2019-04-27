@@ -378,11 +378,56 @@ deploy:
 
 process_first_order:
         lw          $s0, first_order_magnitude     # $s0 = number of components in first order
-        li          $a0, 55
+        la          $s1, first_order_components
+
+        li          $t0, 4
+        div         $s0, $t0
+        mflo        $s2                             # s2 = quotient
+        mfhi        $s3                             # s3 = remainder
+        sne         $s3, $s3, $zero
+
+        add         $s2, $s2, $s3                   # s2 = number of iterations
+        li          $s4, 0
+process_first_order_for_begin:
+        bge         $s4, $s2, submit_first_order
+
+        li          $s5, 0
+process_first_order_inner_for_begin:
+        bge         $s5, 4, process_first_order_for_inc
+        ble         $s0, $zero, process_first_order_for_inc
+
+        mul         $t2, $s5, 4
+        add         $t2, $t2, $s1
+        mul         $s6, $s4, 16
+        add         $t2, $t2, $s6
+        lw          $t2, 0($t2)
+        sw          $t2, PICKUP
+        sub         $s0, $s0, 1
+
+process_first_order_inner_for_inc:
+        add         $s5, $s5, 1
+        j           process_first_order_inner_for_begin
+
+process_first_order_for_inc:
+        li          $a0, 110
         li          $a1, 275
         jal         move_point_while_solving_generic
+        li          $t0, 0
+        sw          $t0, DROPOFF
+        add         $t0, $t0, 1
+        sw          $t0, DROPOFF
+        add         $t0, $t0, 1
+        sw          $t0, DROPOFF
+        add         $t0, $t0, 1
+        sw          $t0, DROPOFF
 
-process_second_order:
+        jal         drive_to_shared_counter
+
+        add         $s4, $s4, 1
+        j           process_first_order_for_begin
+
+submit_first_order:
+        sw          $zero, SUBMIT_ORDER
 
 infinite:
         j           infinite
