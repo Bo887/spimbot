@@ -340,6 +340,10 @@ next_b:
         jal         dropoff_all
 
 process_items_begin:
+        lw,         $t0, TIMER
+        bge         $t0, 8500000, submit_first_order
+
+
         jal         update_shared_counter
         la          $s0, decoded_shared_counter
 
