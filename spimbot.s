@@ -550,7 +550,7 @@ OPQ_INITIAL_DOWN	= 1	# go down 2 tiles (from start)
 OPQ_INITIAL_ENTRY	= 2	# angle down into the relevant rectangle
 OPQ_STOP		= 3	# done moving for now
 OPQ_GOTO_TILE		= 4	# drive to a useful tile type (high 24)
-OPQ_GOTO_APPLIANCE_EDGE	= 5	# drive to an appliance tile (high 24) stopping at inner edge
+OPQ_GOTO_APPLIANCE_EDGE	= 5	# reserved/NYI
 OPQ_BOOST		= 6	# ensure enough boost for a time (high 24)
 OPQ_FACE_APPLIANCE	= 7	# stop and look at the appliance
 OPQ_FACE_BIN		= 8	# stop and look at the food bin
@@ -561,7 +561,8 @@ OPQ_DROPOFF		= 12	# drop an item of the specified type (high 24)
 OPQ_PROCESS		= 13	# wait for an item, if present, to wash or chop (20k cycles) to greater than the specified (high 24) prep level
 OPQ_LOAD_UP		= 14	# pick up as much as possible from the current tile
 OPQ_PROCESS_ASAP	= 15	# same as OPQ_PROCESS but will use instant finishing if possible
-OPQ_WAIT		= 16	# do nothing for a while - waiting for the partner bot
+OPQ_WAIT		= 16	# reserved/NYI - works the same as OPQ_NOTHING
+OPQ_GOTO_TURNIN		= 17	# drive to turn-in counter
 operations_queue:	.word OPQ_NOTHING OPQ_INITIAL_DOWN OPQ_INITIAL_ENTRY OPQ_STOP
 			.space 512
 			.word 0xF1EE0803
@@ -569,9 +570,9 @@ op_queue_pos:		.word 0
 op_queue_length:	.word 4
 
 			.align 4
-			#       NOTHING   INITIAL_DOWN    INITIAL_ENTRY    STOP    GOTO_TILE    GOTO_APPLIANCE_EDGE BOOST    FACE_APPLIANCE    FACE_BIN    DUMP    SIMPLE_PICKUP    GOTO_COUNTER    DROPOFF    PROCESS    LOAD_UP    PROCESS_ASAP    WAIT
-od_jump_table:		.word	od_yes    od_initial_down od_initial_entry od_stop od_goto_tile od_goto_app_edge    od_boost od_face_appliance od_face_bin od_dump od_simple_pickup od_goto_counter od_dropoff od_process od_load_up od_process_asap od_wait
-po_jump_table:		.word	po_done   po_initial_down po_initial_entry po_done po_goto_tile po_goto_app_edge    po_boost po_done           po_done     po_done po_done          po_goto_counter po_done    po_process po_done    po_process      po_done
+			#       NOTHING   INITIAL_DOWN    INITIAL_ENTRY    STOP    GOTO_TILE    GOTO_APPLIANCE_EDGE BOOST    FACE_APPLIANCE    FACE_BIN    DUMP    SIMPLE_PICKUP    GOTO_COUNTER    DROPOFF    PROCESS    LOAD_UP    PROCESS_ASAP    WAIT    GOTO_TURNIN
+od_jump_table:		.word	od_yes    od_initial_down od_initial_entry od_stop od_goto_tile od_goto_app_edge    od_boost od_face_appliance od_face_bin od_dump od_simple_pickup od_goto_counter od_dropoff od_process od_load_up od_process_asap od_yes  od_goto_turnin
+po_jump_table:		.word	po_done   po_initial_down po_initial_entry po_done po_goto_tile po_goto_app_edge    po_boost po_done           po_done     po_done po_done          po_goto_counter po_done    po_process po_done    po_process      po_done po_goto_turnin
 
 # constants for each side, indexed with bot_on_left
 entry_angles:		.word 110 70
@@ -936,7 +937,6 @@ fq_finish_to_counter:
 	li	$t0, OPQ_DUMP
 	sw	$t0, 4($s1)
 	add	$s0, $s0, 2
-	sw	$s0, op_queue_length
 	j	fq_done
 
 fq_raw_next:
@@ -1004,27 +1004,34 @@ fq_no_tomatoes:
 
 fq_no_sink:
 	# wait for partner to put more ingredients on
-	li	$t0, OPQ_WAIT
+	lw	$t0, TIMER
+	add	$t0, $t0, 50000
+	sw	$t0, TIMER
+	j	fq_done
+	
+fq_submission_time:
+	# already at the shared counter - go straight down to turn in counter
+	li	$t0, OPQ_GOTO_TURNIN
 	sw	$t0, 0($s1)
 	add	$s0, $s0, 1
 	j	fq_done
 	
-fq_submission_time:
-	# TODO
-	
 fq_done:
+	sw	$s0, op_queue_length
 	lw	$ra, 0($sp)
 	lw	$s0, 4($sp)
 	lw	$s1, 8($sp)
 	add	$sp, $sp, 12
 	jr	$ra
 	
+# -----------------------------------------------------------------------
 # queue_process_four enqueues four dropoff/process/pickup cycles
 # always advances 12 entries
 # trashes $t0 and $v0 but leaves all other registers intact
 # $a0: first empty queue address
 # $a1: drop command
 # $a2: process command (either OPQ_PROCESS or OPQ_PROCESS_ASAP)
+# -----------------------------------------------------------------------
 
 queue_process_four:
 	li	$t0, OPQ_LOAD_UP
@@ -1217,15 +1224,10 @@ od_process_asap:
 	sw	$zero, FINISH_APPLIANCE_INSTANT
 	j	od_yes
 	
-od_wait:
-	lw	$t0, TIMER
-	srl	$t2, $t0, 8
-	xor	$t0, $t0, $t2
-	and	$t1, $t0, 1	# randomly 0 or 1
-	beq	$t1, $zero, od_yes
-	add	$t0, $t0, 30000
-	sw	$t0, TIMER
-	j	od_no
+od_goto_turnin:
+	lw	$t0, BOT_Y
+	sgt	$v0, $t0, 277
+	j	od_done
 
 od_yes:
 	li	$v0, 1
@@ -1322,7 +1324,7 @@ pb_goto_tile_short:
 	j	po_done
 	
 po_goto_app_edge:
-	# TODO
+	# RESERVED
 	j	po_done
 	
 po_boost:
@@ -1341,7 +1343,7 @@ po_boost_loop_done:
 	j	po_done
 	
 po_goto_counter:
-	# angle set by operation_done
+	# angle was set by operation_done
 	li	$t0, 10
 	sw	$t0, VELOCITY
 	j	po_done
@@ -1350,6 +1352,15 @@ po_process:
 	lw	$t0, TIMER
 	add	$t0, $t0, 20000
 	sw	$t0, TIMER
+	j	po_done
+	
+po_goto_turnin:
+	li	$t0, 90
+	sw	$t0, ANGLE
+	li	$t0, 1	# absolute
+	sw	$t0, ANGLE_CONTROL
+	li	$t0, 10
+	sw	$t0, VELOCITY
 	j	po_done
 	
 po_done:
