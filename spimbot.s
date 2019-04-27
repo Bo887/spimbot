@@ -341,7 +341,7 @@ next_b:
 
 process_items_begin:
         lw,         $t0, TIMER
-        bge         $t0, 8500000, process_first_order
+        bge         $t0, 8000000, process_first_order
 
 
         jal         update_shared_counter
