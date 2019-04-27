@@ -765,7 +765,7 @@ OPQ_GOTO_APPLIANCE_EDGE	= 5	# drive to an appliance tile (high 16) stopping at i
 OPQ_BOOST		= 6	# ensure enough boost for a time (high 16)
 OPQ_FACE_APPLIANCE	= 7	# stop and look at the appliance
 OPQ_FACE_BIN		= 8	# stop and look at the food bin
-operations_queue:	.word OPQ_NOTHING OPQ_INITIAL_DOWN OPQ_INITIAL_ENTRY 0x00060004 OPQ_FACE_APPLIANCE
+operations_queue:	.word OPQ_NOTHING OPQ_INITIAL_DOWN OPQ_INITIAL_ENTRY 0x00070004 OPQ_FACE_BIN
 			.space 512
 			.word 0xF1EE0803
 op_queue_pos:		.word 0
@@ -776,10 +776,12 @@ op_queue_length:	.word 5
 od_jump_table:		.word	od_always od_initial_down od_initial_entry od_stop od_goto_tile od_goto_app_edge    od_boost od_face_appliance od_face_bin
 po_jump_table:		.word	po_done   po_initial_down po_initial_entry po_stop po_goto_tile po_goto_app_edge    po_boost po_done           po_done
 
-# constants for each side (right vs. left)
-entry_angles:		.byte 110 70
-bin_xs:			.byte 285 15
-bin_prox_xs:		.byte 286 17
+# constants for each side, indexed with bot_on_left
+entry_angles:		.word 110 70
+bin_xs:			.word 279 20
+bin_prox_xs:		.word 278 17
+face_counter_angles:	.word 180 0
+face_bin_angles:	.word 0   180
 
 boost_end_time:		.word 0
 
@@ -994,8 +996,9 @@ od_goto_tile_food:
 	bgt	$t0, $t1, od_no
 	la	$t0, bin_prox_xs
 	lw	$t1, bot_on_left
+	sll	$t1, $t1, 2
 	add	$t0, $t0, $t1	# &bin_prox_xs[bot_on_left]
-	lbu	$t0, 0($t0)	# target = bin_prox_xs[bot_on_left]
+	lw	$t0, 0($t0)	# target = bin_prox_xs[bot_on_left]
 	lw	$t1, BOT_X
 	sub	$t0, $t0, $t1	# margin = target - botX
 	slt	$v0, $t0, 3
@@ -1021,7 +1024,14 @@ od_face_appliance:
 
 od_face_bin:
 	sw	$zero, VELOCITY
-	# TODO
+	la	$t0, face_bin_angles
+	lw	$t1, bot_on_left
+	sll	$t1, $t1, 2
+	add	$t0, $t0, $t1	# &face_bin_angles[bot_on_left]
+	lw	$t0, 0($t0)	# face_bin_angles[bot_on_left]
+	sw	$t0, ANGLE
+	li	$t0, 1		# absolute
+	sw	$t0, ANGLE_CONTROL
 
 od_yes:
 	sw	$zero, VELOCITY
@@ -1063,9 +1073,10 @@ po_initial_down:
 	
 po_initial_entry:
 	lw	$t0, bot_on_left
+	sll	$t0, $t0, 2
 	la	$t1, entry_angles
-	add	$t1, $t1, $t0	# index into angles array
-	lbu	$t1, 0($t1)
+	add	$t1, $t1, $t0	# &entry_angles[bot_on_left]
+	lw	$t1, 0($t1)
 	sw	$t1, ANGLE
 	li	$t0, 1		# turn
 	sw	$t0, ANGLE_CONTROL
@@ -1096,8 +1107,9 @@ po_goto_tile:
 	
 	la	$t0, bin_xs
 	lw	$t1, bot_on_left
+	sll	$t1, $t1, 2
 	add	$t0, $t0, $t1	# &bin_xs[bot_on_left]
-	lbu	$a0, 0($t0)	# bin_xs[bot_on_left]
+	lw	$a0, 0($t0)	# bin_xs[bot_on_left]
 	add	$a1, $a1, 10	# target the middle (not the top)
 	j	pb_goto_tile_go
 	
