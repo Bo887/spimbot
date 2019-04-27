@@ -547,6 +547,7 @@ OPQ_GOTO_COUNTER	= 11	# go to the shared counter
 OPQ_DROPOFF		= 12	# drop an item of the specified type (high 24)
 OPQ_PROCESS		= 13	# wait for an item to wash or chop (20k cycles) to greater than the specified (high 24) prep level
 OPQ_LOAD_UP		= 14	# pick up as much as possible from the current tile
+OPQ_PROCESS_ASAP	= 15	# use instant finishing if possible to process to greater than the specified (high 24) prep level
 operations_queue:	.word OPQ_NOTHING OPQ_INITIAL_DOWN OPQ_INITIAL_ENTRY OPQ_STOP
 			.space 512
 			.word 0xF1EE0803
@@ -554,9 +555,9 @@ op_queue_pos:		.word 0
 op_queue_length:	.word 4
 
 			.align 4
-			#       NOTHING   INITIAL_DOWN    INITIAL_ENTRY    STOP    GOTO_TILE    GOTO_APPLIANCE_EDGE BOOST    FACE_APPLIANCE    FACE_BIN    DUMP    SIMPLE_PICKUP    GOTO_COUNTER    DROPOFF    PROCESS    LOAD_UP
-od_jump_table:		.word	od_always od_initial_down od_initial_entry od_stop od_goto_tile od_goto_app_edge    od_boost od_face_appliance od_face_bin od_dump od_simple_pickup od_goto_counter od_dropoff od_process od_load_up
-po_jump_table:		.word	po_done   po_initial_down po_initial_entry po_done po_goto_tile po_goto_app_edge    po_boost po_done           po_done     po_done po_done          po_goto_counter po_done    po_process po_done
+			#       NOTHING   INITIAL_DOWN    INITIAL_ENTRY    STOP    GOTO_TILE    GOTO_APPLIANCE_EDGE BOOST    FACE_APPLIANCE    FACE_BIN    DUMP    SIMPLE_PICKUP    GOTO_COUNTER    DROPOFF    PROCESS    LOAD_UP    PROCESS_ASAP
+od_jump_table:		.word	od_yes    od_initial_down od_initial_entry od_stop od_goto_tile od_goto_app_edge    od_boost od_face_appliance od_face_bin od_dump od_simple_pickup od_goto_counter od_dropoff od_process od_load_up od_process_asap
+po_jump_table:		.word	po_done   po_initial_down po_initial_entry po_done po_goto_tile po_goto_app_edge    po_boost po_done           po_done     po_done po_done          po_goto_counter po_done    po_process po_done    po_process
 
 # constants for each side, indexed with bot_on_left
 entry_angles:		.word 110 70
@@ -771,25 +772,10 @@ fq_not_bread:
 	
 	li	$t0, 0x0404	# go to oven
 	sw	$t0, 12($t4)
-	li	$t0, 0x0200000C	# drop uncooked meat
-	li	$t1, OPQ_PROCESS
-	li	$a0, OPQ_LOAD_UP
-	sw	$t0, 16($t4)
-	sw	$t1, 20($t4)
-	sw	$a0, 24($t4)
-	sw	$t0, 28($t4)
-	sw	$t1, 32($t4)
-	sw	$a0, 36($t4)
-	sw	$t0, 40($t4)
-	sw	$t1, 44($t4)
-	sw	$a0, 48($t4)
-	sw	$t0, 52($t4)
-	sw	$t1, 56($t4)
-	sw	$a0, 60($t4)
-	li	$t0, OPQ_GOTO_COUNTER
-	sw	$t0, 64($t4)
-	li	$t0, OPQ_DUMP
-	sw	$t0, 68($t4)
+	add	$a0, $t4, 16
+	li	$a1, 0x0200000C	# drop uncooked meat
+	li	$a2, OPQ_PROCESS_ASAP
+	jal	queue_process_four_to_counter
 	li	$t0, 18
 	sw	$t0, op_queue_length
 	j	fq_done
@@ -804,11 +790,88 @@ fq_raw_meat_to_counter:
 	j	fq_done
 	
 fq_not_meat:
+	# should we get onions?
+	lbu	$t0, T_BIN_ONION($t2)
+	beq	$t0, $zero, fq_not_onion
+	lw	$t0, R_ONIONS($t3)
+	lw	$t1, R_UNCUT_ONIONS($t3)
+	add	$t0, $t0, $t1	# total onions on counter
+	bge	$t0, 10, fq_not_onion
+	li	$t0, 0x0C04	# go to onion bin
+	sw	$t0, 0($t4)
+	li	$t0, OPQ_FACE_BIN
+	sw	$t0, 4($t4)
+	li	$t0, OPQ_LOAD_UP
+	sw	$t0, 8($t4)
+	lbu	$t1, T_CHOPPING_BOARD($t2)
+	beq	$t1, $zero, fq_uncut_onions_to_counter
+	
+	li	$t0, 0x0604	# go to chopping board
+	sw	$t0, 12($t4)
+	add	$a0, $t4, 16
+	li	$a1, 0x0400000C	# drop unchopped onion
+	li	$a2, OPQ_PROCESS
+	jal	queue_process_four_to_counter
+	li	$t0, 18
+	sw	$t0, op_queue_length
+	j	fq_done
+	
+fq_uncut_onions_to_counter:
+	li	$t1, OPQ_GOTO_COUNTER
+	sw	$t1, 12($t4)
+	li	$t1, OPQ_DUMP
+	sw	$t1, 16($t4)
+	li	$t0, 5
+	sw	$t0, op_queue_length
+	j	fq_done
+	
+fq_not_onion:
 	
 fq_submission_time:
 	# TODO
 	
 fq_done:
+	lw	$ra, 0($sp)
+	add	$sp, $sp, 4
+	jr	$ra
+	
+# queue_process_four enqueues four dropoff/process/pickup cycles
+# always advances 12 entries
+# trashes $t0 but leaves all other registers intact
+# $a0: first empty queue address
+# $a1: drop command
+# $a2: process command (either OPQ_PROCESS or OPQ_PROCESS_ASAP)
+
+queue_process_four:
+	li	$t0, OPQ_LOAD_UP
+	sw	$a1, 0($a0)
+	sw	$a2, 4($a0)
+	sw	$t0, 8($a0)
+	sw	$a1, 12($a0)
+	sw	$a2, 16($a0)
+	sw	$t0, 20($a0)
+	sw	$a1, 24($a0)
+	sw	$a2, 28($a0)
+	sw	$t0, 32($a0)
+	sw	$a1, 36($a0)
+	sw	$a2, 40($a0)
+	sw	$t0, 44($a0)
+	jr	$ra
+	
+# queue_process_four_to_counter enqueues the processing of 4 ingredients and a dropoff at the counter
+# always advances 14 entries
+# same signature as queue_process_four
+
+queue_process_four_to_counter:
+	sub	$sp, $sp, 4
+	sw	$ra, 0($sp)
+	
+	jal	queue_process_four
+	li	$t0, OPQ_GOTO_COUNTER
+	sw	$t0, 48($a0)
+	li	$t0, OPQ_DUMP
+	sw	$t0, 52($a0)
+	
 	lw	$ra, 0($sp)
 	add	$sp, $sp, 4
 	jr	$ra
@@ -829,10 +892,6 @@ operation_done:
 	add	$t0, $t0, $t1	# address in jump table to load
 	lw	$t0, 0($t0)	# subfunction address
 	jr	$t0
-	
-od_always:
-	li	$v0, 1
-	j	od_done
 	
 od_initial_down:
 	lw	$t0, BOT_Y
@@ -978,6 +1037,14 @@ od_load_up:
 	sw	$zero, PICKUP
 	sw	$zero, PICKUP
 	sw	$zero, PICKUP	# assumes we have enough money
+	j	od_yes
+	
+od_process_asap:
+	lw	$t0, GET_TILE_INFO
+	bgt	$t0, $a1, od_yes
+	lw	$t0, GET_MONEY
+	blt	$t0, 13, od_no
+	sw	$zero, FINISH_APPLIANCE_INSTANT
 	j	od_yes
 
 od_yes:
