@@ -48,7 +48,9 @@ FINISH_APPLIANCE_INSTANT= 0xffff0078
 
 puzzle:			.space 1832     # space allocated for the puzzle
 map:			.space 225      # stores the map from GET_LAYOUT
+test_a: .word 0xdeadbeef
 tile_types:		.space 5        # 5 bytes for a 5-element char array representing what is in the 5 item locations.
+test_b: .word 0xdeadbeef
 
 			.align 2	# force the following to be word-aligned
 
@@ -73,13 +75,9 @@ third_order_magnitude:  .word 0
 food_groups_idx_to_id:  .word 0x50002 0x50001 0x50000 0x40001 0x4000 0x30001 0x30000 0x20002 0x20001 0x20000 0x10000 0
 
 .align 2
-test_a: .word 0xdeadbeef
 first_order_components: .space 36
-test_b: .word 0xdeadbeef
 second_order_components:.space 36
-test_c: .word 0xdeadbeef
 third_order_components: .space 36
-test_d: .word 0xdeadbeef
 
 ### PRECOMPUTED PUZZLE SOLVING TABLES ###
 
@@ -245,6 +243,27 @@ place_ingredients_on_sc:
         jal         pickup_all_unprocessed
         jal         drive_to_shared_counter
         jal         dropoff_all
+        la          $t1, tile_types
+        lb          $t0, 2($t1)
+        bne         $t0, 7, next_a
+
+
+        li          $a0, 30
+        li          $a1, 70
+        jal         move_point_while_solving_generic
+        jal         rotate_face_outside
+        jal         pickup_all_unprocessed
+        jal         drive_to_shared_counter
+        jal         dropoff_all
+        li          $a0, 30
+        li          $a1, 70
+        jal         move_point_while_solving_generic
+        jal         rotate_face_outside
+        jal         pickup_all_unprocessed
+        jal         drive_to_shared_counter
+        jal         dropoff_all
+
+next_a:
 
         li          $a0, 30
         li          $a1, 150
@@ -261,6 +280,48 @@ place_ingredients_on_sc:
         jal         pickup_all_unprocessed
         jal         drive_to_shared_counter
         jal         dropoff_all
+
+        la          $t1, tile_types
+        lb          $t0, 1($t1)
+        bne         $t0, 7, next_b
+
+        li          $a0, 30
+        li          $a1, 150
+        jal         move_point_while_solving_generic
+        jal         rotate_face_outside
+        jal         pickup_all_unprocessed
+        jal         drive_to_shared_counter
+        jal         dropoff_all
+
+        li          $a0, 30
+        li          $a1, 150
+        jal         move_point_while_solving_generic
+        jal         rotate_face_outside
+        jal         pickup_all_unprocessed
+        jal         drive_to_shared_counter
+        jal         dropoff_all
+
+next_b:
+
+        li          $a0, 30
+        li          $a1, 230
+        jal         move_point_while_solving_generic
+        jal         rotate_face_outside
+        jal         pickup_all_unprocessed
+        jal         drive_to_shared_counter
+        jal         dropoff_all
+
+        li          $a0, 30
+        li          $a1, 230
+        jal         move_point_while_solving_generic
+        jal         rotate_face_outside
+        jal         pickup_all_unprocessed
+        jal         drive_to_shared_counter
+        jal         dropoff_all
+
+        la          $t1, tile_types
+        lb          $t0, 0($t1)
+        bne         $t0, 7, process_items_begin
 
         li          $a0, 30
         li          $a1, 230
@@ -412,6 +473,10 @@ process_first_order_for_inc:
         li          $a0, 110
         li          $a1, 275
         jal         move_point_while_solving_generic
+        li          $t0, 90
+        sw          $t0, ANGLE
+        li          $t0, 1
+        sw          $t0, ANGLE_CONTROL
         li          $t0, 0
         sw          $t0, DROPOFF
         add         $t0, $t0, 1
@@ -427,6 +492,169 @@ process_first_order_for_inc:
         j           process_first_order_for_begin
 
 submit_first_order:
+        li          $a0, 110
+        li          $a1, 275
+        jal         move_point_while_solving_generic
+        li          $t0, 90
+        sw          $t0, ANGLE
+        li          $t0, 1
+        sw          $t0, ANGLE_CONTROL
+        li          $t0, 0
+
+        sw          $zero, SUBMIT_ORDER
+
+process_second_order:
+        jal         drive_to_shared_counter
+        li          $t0, 0
+        sw          $t0, DROPOFF
+        add         $t0, $t0, 1
+        sw          $t0, DROPOFF
+        add         $t0, $t0, 1
+        sw          $t0, DROPOFF
+        add         $t0, $t0, 1
+        sw          $t0, DROPOFF
+
+
+        lw          $s0, second_order_magnitude
+        la          $s1, second_order_components
+
+        li          $t0, 4
+        div         $s0, $t0
+        mflo        $s2                             # s2 = quotient
+        mfhi        $s3                             # s3 = remainder
+        sne         $s3, $s3, $zero
+
+        add         $s2, $s2, $s3                   # s2 = number of iterations
+        li          $s4, 0
+process_second_order_for_begin:
+        bge         $s4, $s2, submit_second_order
+
+        li          $s5, 0
+process_second_order_inner_for_begin:
+        bge         $s5, 4, process_second_order_for_inc
+        ble         $s0, $zero, process_second_order_for_inc
+
+        mul         $t2, $s5, 4
+        add         $t2, $t2, $s1
+        mul         $s6, $s4, 16
+        add         $t2, $t2, $s6
+        lw          $t2, 0($t2)
+        sw          $t2, PICKUP
+        sub         $s0, $s0, 1
+
+process_second_order_inner_for_inc:
+        add         $s5, $s5, 1
+        j           process_second_order_inner_for_begin
+
+process_second_order_for_inc:
+        li          $a0, 90
+        li          $a1, 275
+        jal         move_point_while_solving_generic
+        li          $t0, 90
+        sw          $t0, ANGLE
+        li          $t0, 1
+        sw          $t0, ANGLE_CONTROL
+        li          $t0, 0
+        sw          $t0, DROPOFF
+        add         $t0, $t0, 1
+        sw          $t0, DROPOFF
+        add         $t0, $t0, 1
+        sw          $t0, DROPOFF
+        add         $t0, $t0, 1
+        sw          $t0, DROPOFF
+
+        jal         drive_to_shared_counter
+
+        add         $s4, $s4, 1
+        j           process_second_order_for_begin
+
+submit_second_order:
+        li          $a0, 90
+        li          $a1, 275
+        jal         move_point_while_solving_generic
+        li          $t0, 90
+        sw          $t0, ANGLE
+        li          $t0, 1
+        sw          $t0, ANGLE_CONTROL
+        li          $t0, 0
+
+        sw          $zero, SUBMIT_ORDER
+
+process_third_order:
+        jal         drive_to_shared_counter
+        li          $t0, 0
+        sw          $t0, DROPOFF
+        add         $t0, $t0, 1
+        sw          $t0, DROPOFF
+        add         $t0, $t0, 1
+        sw          $t0, DROPOFF
+        add         $t0, $t0, 1
+        sw          $t0, DROPOFF
+
+
+        lw          $s0, third_order_magnitude
+        la          $s1, third_order_components
+
+        li          $t0, 4
+        div         $s0, $t0
+        mflo        $s2                             # s2 = quotient
+        mfhi        $s3                             # s3 = remainder
+        sne         $s3, $s3, $zero
+
+        add         $s2, $s2, $s3                   # s2 = number of iterations
+        li          $s4, 0
+process_third_order_for_begin:
+        bge         $s4, $s2, submit_third_order
+
+        li          $s5, 0
+process_third_order_inner_for_begin:
+        bge         $s5, 4, process_third_order_for_inc
+        ble         $s0, $zero, process_third_order_for_inc
+
+        mul         $t2, $s5, 4
+        add         $t2, $t2, $s1
+        mul         $s6, $s4, 16
+        add         $t2, $t2, $s6
+        lw          $t2, 0($t2)
+        sw          $t2, PICKUP
+        sub         $s0, $s0, 1
+
+process_third_order_inner_for_inc:
+        add         $s5, $s5, 1
+        j           process_third_order_inner_for_begin
+
+process_third_order_for_inc:
+        li          $a0, 50
+        li          $a1, 275
+        jal         move_point_while_solving_generic
+        li          $t0, 90
+        sw          $t0, ANGLE
+        li          $t0, 1
+        sw          $t0, ANGLE_CONTROL
+        li          $t0, 0
+        sw          $t0, DROPOFF
+        add         $t0, $t0, 1
+        sw          $t0, DROPOFF
+        add         $t0, $t0, 1
+        sw          $t0, DROPOFF
+        add         $t0, $t0, 1
+        sw          $t0, DROPOFF
+
+        jal         drive_to_shared_counter
+
+        add         $s4, $s4, 1
+        j           process_third_order_for_begin
+
+submit_third_order:
+        li          $a0, 50
+        li          $a1, 275
+        jal         move_point_while_solving_generic
+        li          $t0, 90
+        sw          $t0, ANGLE
+        li          $t0, 1
+        sw          $t0, ANGLE_CONTROL
+        li          $t0, 0
+
         sw          $zero, SUBMIT_ORDER
 
 infinite:
