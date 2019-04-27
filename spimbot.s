@@ -558,9 +558,9 @@ OPQ_DUMP		= 9	# drop off all items
 OPQ_SIMPLE_PICKUP	= 10	# take from a bin or appliance
 OPQ_GOTO_COUNTER	= 11	# go to the shared counter
 OPQ_DROPOFF		= 12	# drop an item of the specified type (high 24)
-OPQ_PROCESS		= 13	# wait for an item to wash or chop (20k cycles) to greater than the specified (high 24) prep level
+OPQ_PROCESS		= 13	# wait for an item, if present, to wash or chop (20k cycles) to greater than the specified (high 24) prep level
 OPQ_LOAD_UP		= 14	# pick up as much as possible from the current tile
-OPQ_PROCESS_ASAP	= 15	# use instant finishing if possible to process to greater than the specified (high 24) prep level
+OPQ_PROCESS_ASAP	= 15	# same as OPQ_PROCESS but will use instant finishing if possible
 operations_queue:	.word OPQ_NOTHING OPQ_INITIAL_DOWN OPQ_INITIAL_ENTRY OPQ_STOP
 			.space 512
 			.word 0xF1EE0803
@@ -580,8 +580,9 @@ face_counter_angles:	.word 180 0
 face_bin_angles:	.word 0   180
 counter_prox_xs:	.word 158 139
 
-boost_end_time:		.word 0
-food_bins_finished:	.word 0
+boost_end_time:		.word 0		# cycle number at which last boost will end
+food_bins_finished:	.word 0		# what index in food_bin_tiles we're currently taking raw ingredients from
+placed_on_appliance:	.word 0		# whether the last OPQ_DROPOFF actually placed anything
 
 non_intrpt_str:		.asciiz "Non-interrupt exception\n"
 unhandled_str:		.asciiz "Unhandled interrupt type\n"
@@ -1110,6 +1111,7 @@ od_goto_counter_positive:
 	j	od_done
 	
 od_dropoff:
+	sw	$zero, placed_on_appliance
 	jal	update_inventory
 	la	$t1, inventory
 	li	$t0, 3		# i = 3
@@ -1117,6 +1119,7 @@ od_dropoff_loop_top:
 	lw	$t2, 12($t1)	# inventory[i]
 	bne	$t2, $a1, od_dropoff_loop_next
 	sw	$t0, DROPOFF	# drop from index i
+	sw	$t2, placed_on_appliance
 	j	od_yes
 od_dropoff_loop_next:
 	beq	$t0, $zero, od_yes
@@ -1125,6 +1128,8 @@ od_dropoff_loop_next:
 	j	od_dropoff_loop_top
 	
 od_process:
+	lw	$t0, placed_on_appliance
+	beq	$t0, $zero, od_yes
 	lw	$t0, GET_TILE_INFO
 	slt	$v0, $a1, $t0
 	j	od_done
