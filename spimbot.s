@@ -167,13 +167,12 @@ puzzle_contact:		.space 200
 			
 d_puzzle_pending:	.word 0
 d_solving_puzzle:	.word 0	    # nonzero when working on puzzle2
-timer_int_active:	.word 0         # global flag that is non-zero when the timer interrupt is active
 
 bot_on_left:		.word 0         # true if the bot is on the left side, false if bot is on the right side
 useful_locations:	.space 13	# locations of each type of interesting tile (zero if absent on this side)
 
 # constants for arctan
-			.align 4
+		    .align 4
 PI:                 .float 3.14
 three:              .float 3.0
 five:               .float 5.0
@@ -687,57 +686,6 @@ pb_cont:
         add         $sp, $sp, 20
         jr          $ra
 
-# -----------------------------------------------------------------------
-# wait_for_timer_int - waits for timer interrupts to finish
-# It really just checks the state of timer_int_active.
-# Returns the address of timer_int_active in $v0
-# Returns the value of timer_int_active in $v1
-# -----------------------------------------------------------------------
-wait_for_timer_int:
-        la          $v0, timer_int_active
-        lw          $v1, 0($v0)
-        bne         $v1, 0, wait_for_timer_int
-        jr          $ra
-
-# -----------------------------------------------------------------------
-# move_dist_poll - moves the SPIMBot a given distance by constantly
-# polling the current position
-# It (currently) only returns after the bot has reached the given position
-# $a0 - dist
-# -----------------------------------------------------------------------
-move_dist_poll:
-        sub         $sp, $sp, 16
-        sw          $ra, 0($sp)
-        sw          $s0, 4($sp)
-        sw          $s1, 8($sp)
-        sw          $s2, 12($sp)
-
-        lw          $s0, BOT_X      # $s0 = start_x
-        lw          $s1, BOT_Y      # $s1 = start_y
-
-        move        $s2, $a0        # $s2 = dist
-
-        li          $t0, 10
-        sw          $t0, VELOCITY
-
-_move_dist_loop:
-        lw          $a2, BOT_X      # $a2 = curr_x
-        lw          $a3, BOT_Y      # $a2 = curr_y
-        move        $a0, $s0
-        move        $a1, $s1
-        #jal         euc_dist        # $v0 = dist # TEMP: disabled
-        bge         $v0, $s2, _move_dist_ret        # did we hit the distance?
-        j _move_dist_loop
-
-_move_dist_ret:
-        sw          $0, VELOCITY
-        lw          $ra, 0($sp)
-        lw          $s0, 4($sp)
-        lw          $s1, 8($sp)
-        lw          $s2, 12($sp)
-        add         $sp, $sp, 16
-
-
 	
 	
 	
@@ -769,12 +717,12 @@ OPQ_DUMP		= 9	# drop off all items
 OPQ_SIMPLE_PICKUP	= 10	# take from a bin or appliance
 OPQ_GOTO_COUNTER	= 11	# go to the shared counter
 OPQ_DROPOFF		= 12	# drop an item of the specified type (high 24)
-OPQ_PROCESS		= 13	# wait for an item to wash or chop (20k cycles)
-operations_queue:	.word OPQ_NOTHING OPQ_INITIAL_DOWN OPQ_INITIAL_ENTRY 0x0C04 OPQ_FACE_BIN OPQ_SIMPLE_PICKUP 0x0604 0x0400000C OPQ_PROCESS OPQ_SIMPLE_PICKUP
+OPQ_PROCESS		= 13	# wait for an item to wash or chop (20k cycles) to greater than the specified (high 24) prep level
+operations_queue:	.word OPQ_NOTHING OPQ_INITIAL_DOWN OPQ_INITIAL_ENTRY 0x0804 OPQ_FACE_BIN OPQ_SIMPLE_PICKUP 0x0404 0x0200000C OPQ_PROCESS OPQ_SIMPLE_PICKUP OPQ_GOTO_COUNTER OPQ_DUMP
 			.space 512
 			.word 0xF1EE0803
 op_queue_pos:		.word 0
-op_queue_length:	.word 10
+op_queue_length:	.word 12
 
 			.align 4
 			#       NOTHING   INITIAL_DOWN    INITIAL_ENTRY    STOP    GOTO_TILE    GOTO_APPLIANCE_EDGE BOOST    FACE_APPLIANCE    FACE_BIN    DUMP    SIMPLE_PICKUP    GOTO_COUNTER    DROPOFF    PROCESS
@@ -1097,7 +1045,8 @@ od_dropoff_loop_next:
 	j	od_dropoff_loop_top
 	
 od_process:
-	lw	$v0, GET_TILE_INFO
+	lw	$t0, GET_TILE_INFO
+	slt	$v0, $a1, $t0
 	j	od_done
 
 od_yes:
