@@ -713,12 +713,16 @@ ih_done:
 # -----------------------------------------------------------------------
 
 fill_queue:
-	sub	$sp, $sp, 4
+	sub	$sp, $sp, 12
 	sw	$ra, 0($sp)
+	sw	$s0, 4($sp)	# stores new queue length
+	sw	$s1, 8($sp)	# stores next free queue entry
 	
 	# clear the queue
 	sw	$zero, op_queue_pos
 	sw	$zero, op_queue_length
+	li	$s0, 0
+	la	$s1, operations_queue
 	
 	# see if we're nearing the end of the match
 	lw	$t0, TIMER
@@ -732,112 +736,189 @@ fill_queue:
 	jal	decode_request_in_mem
 	la	$t2, useful_locations
 	la	$t3, decoded_request
-	la	$t4, operations_queue
 	
 	# should we get bread?
 	lbu	$t0, T_BIN_BREAD($t2)
 	beq	$t0, $zero, fq_not_bread
 	lw	$t1, R_BREAD($t3)
-	bge	$t1, 24, fq_not_bread
+	bge	$t1, 26, fq_not_bread
 	li	$t1, 0x0704	# go to bread bin
-	sw	$t1, 0($t4)
+	sw	$t1, 0($s1)
 	li	$t1, OPQ_FACE_BIN
-	sw	$t1, 4($t4)
+	sw	$t1, 4($s1)
 	li	$t1, OPQ_LOAD_UP
-	sw	$t1, 8($t4)
-	li	$t1, OPQ_GOTO_COUNTER
-	sw	$t1, 12($t4)
-	li	$t1, OPQ_DUMP
-	sw	$t1, 16($t4)
-	li	$t0, 5
-	sw	$t0, op_queue_length
-	j	fq_done
+	sw	$t1, 8($s1)
+	li	$s0, 3		# three entries in queue
+	add	$s1, $s1, 12
+	j	fq_finish_to_counter
 	
 fq_not_bread:
 	# should we get meat?
-	lbu	$t0, T_BIN_MEAT($t2)
-	beq	$t0, $zero, fq_not_meat
+	lbu	$t5, T_BIN_MEAT($t2)
+	beq	$t5, $zero, fq_not_meat
 	lw	$t0, R_MEAT($t3)
 	lw	$t1, R_UNCOOKED_MEAT($t3)
 	add	$t0, $t0, $t1	# total meat on counter
-	bge	$t0, 12, fq_not_meat
+	bge	$t0, 16, fq_not_meat
 	li	$t0, 0x0804	# go to meat bin
-	sw	$t0, 0($t4)
+	sw	$t0, 0($s1)
 	li	$t0, OPQ_FACE_BIN
-	sw	$t0, 4($t4)
+	sw	$t0, 4($s1)
 	li	$t0, OPQ_LOAD_UP
-	sw	$t0, 8($t4)
+	sw	$t0, 8($s1)
+	li	$s0, 3		# three entries in queue
+	add	$s1, $s1, 12
+	bgt	$t5, 60, fq_finish_to_counter
 	lbu	$t1, T_OVEN($t2)
-	beq	$t1, $zero, fq_raw_meat_to_counter
+	beq	$t1, $zero, fq_finish_to_counter
 	
 	li	$t0, 0x0404	# go to oven
-	sw	$t0, 12($t4)
-	add	$a0, $t4, 16
+	sw	$t0, 0($s1)
+	li	$t0, OPQ_FACE_APPLIANCE
+	sw	$t0, 4($s1)
+	add	$a0, $s1, 8
 	li	$a1, 0x0200000C	# drop uncooked meat
 	li	$a2, OPQ_PROCESS_ASAP
-	jal	queue_process_four_to_counter
-	li	$t0, 18
-	sw	$t0, op_queue_length
-	j	fq_done
-	
-fq_raw_meat_to_counter:
-	li	$t1, OPQ_GOTO_COUNTER
-	sw	$t1, 12($t4)
-	li	$t1, OPQ_DUMP
-	sw	$t1, 16($t4)
-	li	$t0, 5
-	sw	$t0, op_queue_length
-	j	fq_done
+	jal	queue_process_four
+	add	$s0, $s0, 14	# added 14 more
+	add	$s1, $s1, 56
+	j	fq_finish_to_counter
 	
 fq_not_meat:
 	# should we get onions?
-	lbu	$t0, T_BIN_ONION($t2)
-	beq	$t0, $zero, fq_not_onion
+	lbu	$t5, T_BIN_ONION($t2)
+	beq	$t5, $zero, fq_not_onion
 	lw	$t0, R_ONIONS($t3)
 	lw	$t1, R_UNCUT_ONIONS($t3)
 	add	$t0, $t0, $t1	# total onions on counter
 	bge	$t0, 10, fq_not_onion
 	li	$t0, 0x0C04	# go to onion bin
-	sw	$t0, 0($t4)
+	sw	$t0, 0($s1)
 	li	$t0, OPQ_FACE_BIN
-	sw	$t0, 4($t4)
+	sw	$t0, 4($s1)
 	li	$t0, OPQ_LOAD_UP
-	sw	$t0, 8($t4)
+	sw	$t0, 8($s1)
+	li	$s0, 3		# enqueued three items
+	add	$s1, $s1, 12
+	bgt	$t5, 60, fq_finish_to_counter
 	lbu	$t1, T_CHOPPING_BOARD($t2)
-	beq	$t1, $zero, fq_uncut_onions_to_counter
+	beq	$t1, $zero, fq_finish_to_counter
 	
 	li	$t0, 0x0604	# go to chopping board
-	sw	$t0, 12($t4)
-	add	$a0, $t4, 16
+	sw	$t0, 0($s1)
+	li	$t0, OPQ_FACE_APPLIANCE
+	sw	$t0, 4($s1)
+	add	$a0, $s1, 8
 	li	$a1, 0x0400000C	# drop unchopped onion
 	li	$a2, OPQ_PROCESS
-	jal	queue_process_four_to_counter
-	li	$t0, 18
-	sw	$t0, op_queue_length
-	j	fq_done
-	
-fq_uncut_onions_to_counter:
-	li	$t1, OPQ_GOTO_COUNTER
-	sw	$t1, 12($t4)
-	li	$t1, OPQ_DUMP
-	sw	$t1, 16($t4)
-	li	$t0, 5
-	sw	$t0, op_queue_length
-	j	fq_done
+	jal	queue_process_four
+	add	$s0, $s0, 14	# added 14 more
+	add	$s1, $s1, 56
+	j	fq_finish_to_counter
 	
 fq_not_onion:
+	# should we get tomatoes?
+	lbu	$t5, T_BIN_TOMATO($t2)
+	beq	$t5, $zero, fq_not_tomato
+	lw	$t0, R_TOMATOES($t3)
+	lw	$t1, R_UNWASHED_TOMATOES($t3)
+	add	$t0, $t0, $t1	# total tomatoes on counter
+	bge	$t0, 10, fq_not_tomato
+	li	$t0, 0x0A04	# go to tomato bin
+	sw	$t0, 0($s1)
+	li	$t0, OPQ_FACE_BIN
+	sw	$t0, 4($s1)
+	li	$t0, OPQ_LOAD_UP
+	sw	$t0, 8($s1)
+	li	$s0, 3		# enqueued 3
+	add	$s1, $s1, 12
+	bgt	$t5, 60, fq_finish_to_counter
+	lbu	$t1, T_SINK($t2)
+	beq	$t1, $zero, fq_finish_to_counter
+	
+	li	$t0, 0x0504	# go to sink
+	sw	$t0, 0($s1)
+	li	$t0, OPQ_FACE_APPLIANCE
+	sw	$t0, 4($s1)
+	add	$a0, $s1, 8
+	li	$a1, 0x0300000C	# drop unwashed tomato
+	li	$a2, OPQ_PROCESS
+	jal	queue_process_four
+	add	$s0, $s0, 14
+	add	$s1, $s1, 56
+	j	fq_finish_to_counter
+	
+fq_not_tomato:
+	# should we get lettuce?
+	lbu	$t5, T_BIN_LETTUCE($t2)
+	beq	$t5, $zero, fq_not_lettuce
+	lw	$t0, R_LETTUCE($t3)
+	lw	$t1, R_UNPROCESSED_LETTUCE($t3)
+	add	$t0, $t0, $t1
+	lw	$t1, R_UNWASHED_LETTUCE($t3)
+	add	$t0, $t0, $t1	# total lettuce on counter
+	bge	$t0, 14, fq_not_lettuce
+	li	$t0, 0x0904	# go to lettuce bin
+	sw	$t0, 0($s1)
+	li	$t0, OPQ_FACE_BIN
+	sw	$t0, 4($s1)
+	li	$t0, OPQ_LOAD_UP
+	sw	$t0, 8($s1)
+	li	$s0, 3		# enqueued 3
+	add	$s1, $s1, 12
+	bgt	$t5, 60, fq_finish_to_counter
+	lbu	$t1, T_SINK($t2)
+	beq	$t1, $zero, fq_finish_to_counter
+	
+	li	$t0, 0x0504	# go to sink
+	sw	$t0, 0($s1)
+	li	$t0, OPQ_FACE_APPLIANCE
+	sw	$t0, 4($s1)
+	add	$a0, $s1, 8
+	li	$a1, 0x0500000C	# drop unwashed lettuce
+	li	$a2, OPQ_PROCESS
+	jal	queue_process_four
+	add	$s0, $s0, 14	# added 14 more
+	add	$s1, $s1, 56
+	lbu	$t1, T_CHOPPING_BOARD($t2)
+	beq	$t1, $zero, fq_finish_to_counter
+	
+	li	$t0, 0x0604	# go to chopping board
+	sw	$t0, 0($s1)
+	li	$t0, OPQ_FACE_APPLIANCE
+	sw	$t0, 4($s1)
+	add	$a0, $s1, 8
+	li	$a1, 0x0500010C	# drop washed lettuce
+	li	$a2, 0x010D	# process to level 2
+	jal	queue_process_four
+	add	$s0, $s0, 14	# added 14 more
+	add	$s1, $s1, 56
+	j	fq_finish_to_counter
+	
+fq_finish_to_counter:
+	li	$t0, OPQ_GOTO_COUNTER
+	sw	$t0, 0($s1)
+	li	$t0, OPQ_DUMP
+	sw	$t0, 4($s1)
+	add	$s0, $s0, 2
+	sw	$s0, op_queue_length
+	j	fq_done
+	
+fq_not_lettuce:
 	
 fq_submission_time:
 	# TODO
 	
 fq_done:
 	lw	$ra, 0($sp)
-	add	$sp, $sp, 4
+	lw	$s0, 4($sp)
+	lw	$s1, 8($sp)
+	add	$sp, $sp, 12
 	jr	$ra
 	
 # queue_process_four enqueues four dropoff/process/pickup cycles
 # always advances 12 entries
-# trashes $t0 but leaves all other registers intact
+# trashes $t0 and $v0 but leaves all other registers intact
 # $a0: first empty queue address
 # $a1: drop command
 # $a2: process command (either OPQ_PROCESS or OPQ_PROCESS_ASAP)
@@ -1125,7 +1206,7 @@ po_goto_tile:
 	j	pb_goto_tile_go
 	
 pb_goto_tile_appliance:	
-	add	$a1, $a1, 22	# target the bottom of the appliance (not the top)
+	li	$a1, 62		# target the bottom of the appliance (not the top)
 	mul	$a0, $a0, $t2
 	add	$a0, $a0, 10	# target the middle (not the left)
 
