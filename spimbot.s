@@ -760,21 +760,24 @@ OPQ_NOTHING		= 0	# no-op
 OPQ_INITIAL_DOWN	= 1	# go down 2 tiles (from start)
 OPQ_INITIAL_ENTRY	= 2	# angle down into the relevant rectangle
 OPQ_STOP		= 3	# done moving for now
-OPQ_GOTO_TILE		= 4	# drive to a useful tile type (high 16)
-OPQ_GOTO_APPLIANCE_EDGE	= 5	# drive to an appliance tile (high 16) stopping at inner edge
-OPQ_BOOST		= 6	# ensure enough boost for a time (high 16)
+OPQ_GOTO_TILE		= 4	# drive to a useful tile type (high 24)
+OPQ_GOTO_APPLIANCE_EDGE	= 5	# drive to an appliance tile (high 24) stopping at inner edge
+OPQ_BOOST		= 6	# ensure enough boost for a time (high 24)
 OPQ_FACE_APPLIANCE	= 7	# stop and look at the appliance
 OPQ_FACE_BIN		= 8	# stop and look at the food bin
-operations_queue:	.word OPQ_NOTHING OPQ_INITIAL_DOWN OPQ_INITIAL_ENTRY 0x00070004 OPQ_FACE_BIN
+OPQ_DUMP		= 9	# drop off all items
+OPQ_SIMPLE_PICKUP	= 10	# take from a bin or appliance
+OPQ_GOTO_COUNTER	= 11	# go to the shared counter
+operations_queue:	.word OPQ_NOTHING OPQ_INITIAL_DOWN OPQ_INITIAL_ENTRY 0x0C04 OPQ_FACE_BIN OPQ_SIMPLE_PICKUP OPQ_GOTO_COUNTER OPQ_DUMP 0x0604
 			.space 512
 			.word 0xF1EE0803
 op_queue_pos:		.word 0
-op_queue_length:	.word 5
+op_queue_length:	.word 9
 
 			.align 4
-			#       NOTHING   INITIAL_DOWN    INITIAL_ENTRY    STOP    GOTO_TILE    GOTO_APPLIANCE_EDGE BOOST    FACE_APPLIANCE    FACE_BIN
-od_jump_table:		.word	od_always od_initial_down od_initial_entry od_stop od_goto_tile od_goto_app_edge    od_boost od_face_appliance od_face_bin
-po_jump_table:		.word	po_done   po_initial_down po_initial_entry po_stop po_goto_tile po_goto_app_edge    po_boost po_done           po_done
+			#       NOTHING   INITIAL_DOWN    INITIAL_ENTRY    STOP    GOTO_TILE    GOTO_APPLIANCE_EDGE BOOST    FACE_APPLIANCE    FACE_BIN    DUMP    SIMPLE_PICKUP    GOTO_COUNTER
+od_jump_table:		.word	od_always od_initial_down od_initial_entry od_stop od_goto_tile od_goto_app_edge    od_boost od_face_appliance od_face_bin od_dump od_simple_pickup od_goto_counter
+po_jump_table:		.word	po_done   po_initial_down po_initial_entry po_stop po_goto_tile po_goto_app_edge    po_boost po_done           po_done     po_done po_done          po_goto_counter
 
 # constants for each side, indexed with bot_on_left
 entry_angles:		.word 110 70
@@ -782,6 +785,7 @@ bin_xs:			.word 279 20
 bin_prox_xs:		.word 278 17
 face_counter_angles:	.word 180 0
 face_bin_angles:	.word 0   180
+counter_prox_xs:	.word 158 139
 
 boost_end_time:		.word 0
 
@@ -871,8 +875,8 @@ ih_queue_ready:
 	la	$t1, operations_queue
 	add	$t1, $t1, $t0	# &opQueue[opQueuePos]
 	lw	$s0, 0($t1)	# current operation
-	srl	$a1, $s0, 16	# high bits (extra data)
-	and	$a0, $s0, 0xFFFF
+	srl	$a1, $s0, 8	# high bits (extra data)
+	and	$a0, $s0, 0xFF
 	jal	operation_done	# check whether a task was just completed
 	beq	$v0, $zero, ih_operation_incomplete
 	
@@ -882,8 +886,8 @@ ih_queue_ready:
 	j	ih_perform_operation
 	
 ih_operation_incomplete:
-	srl	$a1, $s0, 16	# prepare arguments again
-	and	$a0, $s0, 0xFFFF
+	srl	$a1, $s0, 8	# prepare arguments again
+	and	$a0, $s0, 0xFF
 	jal	perform_operation
 	j	ih_interrupt_dispatch
 
@@ -977,7 +981,7 @@ od_goto_tile:
 	bgt	$t0, 2, od_goto_tile_food
 	
 	lw	$t0, BOT_Y	# make sure we're vertically at the appliance
-	bge	$t0, 62, od_no
+	bge	$t0, 64, od_no
 	mfhi	$t1		# x = tileId % 15
 	li	$t0, 20		# 20 px per tile
 	mul	$t1, $t1, $t0
@@ -1001,8 +1005,9 @@ od_goto_tile_food:
 	lw	$t0, 0($t0)	# target = bin_prox_xs[bot_on_left]
 	lw	$t1, BOT_X
 	sub	$t0, $t0, $t1	# margin = target - botX
-	slt	$v0, $t0, 3
-	j	od_done
+	bgt	$t0, 3, od_no
+	blt	$t0, -3, od_no
+	j	od_yes
 	
 od_goto_app_edge:
 	# TODO
@@ -1032,6 +1037,41 @@ od_face_bin:
 	sw	$t0, ANGLE
 	li	$t0, 1		# absolute
 	sw	$t0, ANGLE_CONTROL
+	j	od_yes
+	
+od_dump:
+	sw	$zero, DROPOFF
+	li	$t0, 1
+	sw	$t0, DROPOFF
+	li	$t0, 2
+	sw	$t0, DROPOFF
+	li	$t0, 3
+	sw	$t0, DROPOFF
+	j	od_yes
+	
+od_simple_pickup:
+	sw	$zero, PICKUP
+	j	od_yes
+	
+od_goto_counter:
+	la	$t0, face_counter_angles
+	lw	$t2, bot_on_left
+	sll	$t2, $t2, 2
+	add	$t0, $t0, $t2	# &face_counter_angles[bot_on_left]
+	lw	$t0, 0($t0)	# face_counter_angles[bot_on_left]
+	sw	$t0, ANGLE
+	li	$t0, 1		# absolute
+	sw	$t0, ANGLE_CONTROL
+	la	$t0, counter_prox_xs
+	add	$t0, $t0, $t2	# &counter_prox_xs[bot_on_left]
+	lw	$t0, 0($t0)	# counter_prox_xs[bot_on_left]
+	lw	$t1, BOT_X	# x
+	sub	$t1, $t1, $t0	# difference between x positions
+	bgez	$t1, od_goto_counter_positive
+	sub	$t1, $zero, $t1	# negate to get absolute value
+od_goto_counter_positive:
+	slt	$v0, $t1, 3
+	j	od_done
 
 od_yes:
 	sw	$zero, VELOCITY
@@ -1114,12 +1154,17 @@ po_goto_tile:
 	j	pb_goto_tile_go
 	
 pb_goto_tile_appliance:	
-	add	$a1, $a1, 21	# target the bottom of the appliance (not the top)
+	add	$a1, $a1, 22	# target the bottom of the appliance (not the top)
 	mul	$a0, $a0, $t2
 	add	$a0, $a0, 10	# target the middle (not the left)
 
 pb_goto_tile_go:
 	jal	set_move_point_target
+	li	$t0, 10
+	sw	$t0, VELOCITY
+	bge	$v0, 10000, pb_goto_tile_short
+	srl	$v0, $v0, 1	# "checkpoint" halfway in the middle to correct for arctan inaccuracy
+pb_goto_tile_short:
 	lw	$t0, TIMER
 	add	$t0, $t0, $v0
 	sw	$t0, TIMER	# request timer when arrived
@@ -1142,6 +1187,12 @@ po_boost_loop_top:
 	j	po_boost_loop_top
 po_boost_loop_done:
 	sw	$t1, boost_end_time
+	j	po_done
+	
+po_goto_counter:
+	# angle set by operation_done
+	li	$t0, 10
+	sw	$t0, VELOCITY
 	j	po_done
 	
 po_done:
