@@ -59,10 +59,27 @@ inventory:              .space 16       # 4 elements (each an integer) in the in
 encoded_shared_counter: .space 8
 decoded_shared_counter: .space 48
 has_oven:               .word 0
-testa: .word 0xdeadbeef
 has_sink:               .word 0
-testb: .word 0xdeadbeef
 has_chop:               .word 0
+done_processing:        .word 0
+
+encoded_order:          .space 24       # same as encoded_request
+decoded_order:          .space 144      # same as decoded_request
+
+first_order_magnitude:  .word 0
+second_order_magnitude: .word 0
+third_order_magnitude:  .word 0
+
+food_groups_idx_to_id:  .word 0x50002 0x50001 0x50000 0x40001 0x4000 0x30001 0x30000 0x20002 0x20001 0x20000 0x10000 0
+
+.align 2
+test_a: .word 0xdeadbeef
+first_order_components: .space 36
+test_b: .word 0xdeadbeef
+second_order_components:.space 36
+test_c: .word 0xdeadbeef
+third_order_components: .space 36
+test_d: .word 0xdeadbeef
 
 ### PRECOMPUTED PUZZLE SOLVING TABLES ###
 
@@ -265,34 +282,13 @@ process_items_begin:
         jal         update_shared_counter
         la          $s0, decoded_shared_counter
 
-        # check uncooked meat
-        lw          $s1, 36($s0)        # $s1 = # of uncooked_meat
-        lw          $a0, has_oven       # $a0 = do we have an oven ? pos int : 0
-        sne         $t1, $s1, 0
-        sne         $t2, $a0, 0
-        and         $t1, $t2, $t1
-        bne         $t1, 0, cook_meat
-
-        # check unwashed tomatoes
-        lw          $s1, 24($s0)
-        lw          $a0, has_sink
-        sne         $t1, $s1, 0
-        sne         $t2, $a0, 0
-        and         $t1, $t2, $t1
-        bne         $t1, 0, wash_tomatoes
-
-        # check unchopped onion
-        lw          $s1, 16($s0)
-        lw          $a0, has_chop
-        sne         $t1, $s1, 0
-        sne         $t2, $a0, 0
-        and         $t1, $t2, $t1
-        bne         $t1, 0, chop_onion
+        li          $s2, 0
 
         # check unwashed unchopped lettuce
         lw          $s1, 8($s0)
         lw          $a0, has_sink
         sne         $t1, $s1, 0
+        add         $s2, $t1, $s2
         sne         $t2, $a0, 0
         and         $t1, $t2, $t1
         bne         $t1, 0, wash_lettuce
@@ -301,9 +297,40 @@ process_items_begin:
         lw          $s1, 4($s0)
         lw          $a0, has_chop
         sne         $t1, $s1, 0
+        add         $s2, $t1, $s2
         sne         $t2, $a0, 0
         and         $t1, $t2, $t1
         bne         $t1, 0, chop_lettuce
+
+        # check uncooked meat
+        lw          $s1, 36($s0)        # $s1 = # of uncooked_meat
+        lw          $a0, has_oven       # $a0 = do we have an oven ? pos int : 0
+        sne         $t1, $s1, 0         # $t1 = # of uncooked_meat is not 0 ? 1 : 0
+        add         $s2, $t1, $s2
+        sne         $t2, $a0, 0
+        and         $t1, $t2, $t1
+        bne         $t1, 0, cook_meat
+
+        # check unwashed tomatoes
+        lw          $s1, 24($s0)
+        lw          $a0, has_sink
+        sne         $t1, $s1, 0
+        add         $s2, $t1, $s2
+        sne         $t2, $a0, 0
+        and         $t1, $t2, $t1
+        bne         $t1, 0, wash_tomatoes
+
+        # check unchopped onion
+        lw          $s1, 16($s0)
+        lw          $a0, has_chop
+        sne         $t1, $s1, 0
+        add         $s2, $t1, $s2
+        sne         $t2, $a0, 0
+        and         $t1, $t2, $t1
+        bne         $t1, 0, chop_onion
+
+        beq         $s2, 0, deploy
+        
         j           process_items_begin
 
 cook_meat:
@@ -346,8 +373,19 @@ chop_lettuce:
         sw          $zero, DROPOFF
         j           process_items_begin
 
+deploy:
+        jal         update_orders
+
+process_first_order:
+        lw          $s0, first_order_magnitude     # $s0 = number of components in first order
+        li          $a0, 55
+        li          $a1, 275
+        jal         move_point_while_solving_generic
+
+process_second_order:
+
 infinite:
-	j	    infinite
+        j           infinite
 
 # -----------------------------------------------------------------------
 # update_flags - function that updates the utility flags
@@ -375,6 +413,92 @@ _update_flags_chop:
         # fall thru
 
 _update_flags_ret:
+        jr          $ra
+
+# -----------------------------------------------------------------------
+# update_order_mem - function that updates the information about the order
+# in memory
+# $a0 - base address of order struct
+# $a1 - base address to save the number of components
+# $a2 - base address to save the components
+# -----------------------------------------------------------------------
+update_order_mem:
+        li          $v0, 0      # $v0 = 0
+
+        li          $t0, 0      # $t0 = 0 (i)
+        li          $t2, 0      # $t2 = 0 (j)
+_update_order_mem_for_begin:
+        bge         $t0, 12, _update_order_mem_ret
+        mul         $t1, $t0, 4     # $t1 = i*sizeof(int)
+        add         $t3, $t1, $a0   # $t3 = food_groups + i * sizeof(int)
+        lw          $t3, 0($t3)     # $t3 = food_groups[i]
+        add         $v0, $v0, $t3
+
+        beq         $t3, $zero, _update_order_mem_for_inc   # if there are no items (i.e. food_groups[i] == 0), go to next iteration
+
+_update_order_inner_for_begin:          # handle the case where there are multiple of the same element
+        beq         $t3, $zero, _update_order_mem_for_inc
+        mul         $t5, $t2, 4     # $t5 = j*sizeof(int)
+        la          $t4, food_groups_idx_to_id
+        add         $t4, $t4, $t1   # $t4 = food_groups_idx_to_id + i * sizeof(int)
+        lw          $t4, 0($t4)     # $t4 = food_groups_idx_to_id[i]
+        add         $t5, $a2, $t5   # $t5 = base_addr_components + j * sizeof(int)
+
+        sw          $t4, 0($t5)
+        add         $t2, $t2, 1     # j++
+        sub         $t3, $t3, 1     # $t3--
+        j           _update_order_inner_for_begin
+        
+_update_order_mem_for_inc:
+        add         $t0, $t0, 1
+        j           _update_order_mem_for_begin
+
+_update_order_mem_ret:
+        sw          $v0, 0($a1)
+        jr          $ra
+
+# -----------------------------------------------------------------------
+# update_orders - function that updates the orders requested 
+# (the decoded_orders struct in .data)
+# -----------------------------------------------------------------------
+update_orders:
+        sub         $sp, $sp, 12
+        sw          $ra, 0($sp)
+        sw          $s0, 4($sp)
+        sw          $s1, 8($sp)
+
+        la          $s0, encoded_order
+        sw          $s0, GET_TURNIN_ORDER
+        la          $s1, decoded_order
+        
+        add         $a0, $s0, 0
+        add         $a1, $s1, 0
+        jal         decode_request_in_mem
+        add         $a0, $s1, 0
+        la          $a1, first_order_magnitude
+        la          $a2, first_order_components
+        jal         update_order_mem
+    
+        add         $a0, $s0, 8
+        add         $a1, $s1, 48
+        jal         decode_request_in_mem
+        add         $a0, $s1, 48
+        la          $a1, second_order_magnitude
+        la          $a2, second_order_components
+        jal         update_order_mem
+    
+        add         $a0, $s0, 16
+        add         $a1, $s1, 96
+        jal         decode_request_in_mem
+        add         $a0, $s1, 96
+        la          $a1, third_order_magnitude
+        la          $a2, third_order_components
+        jal         update_order_mem
+
+        lw          $ra, 0($sp)
+        lw          $s0, 4($sp)
+        lw          $s1, 8($sp)
+        add         $sp, $sp, 12
         jr          $ra
 
 # -----------------------------------------------------------------------
