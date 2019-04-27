@@ -71,7 +71,7 @@ F_LETTUCE		= 5
 
 # request offsets
 R_LETTUCE		= 0
-R_UNWASHED_LETTUCE	= 4
+R_UNCUT_LETTUCE		= 4
 R_UNPROCESSED_LETTUCE	= 8
 R_ONIONS		= 12
 R_UNCUT_ONIONS		= 16
@@ -561,6 +561,7 @@ OPQ_DROPOFF		= 12	# drop an item of the specified type (high 24)
 OPQ_PROCESS		= 13	# wait for an item, if present, to wash or chop (20k cycles) to greater than the specified (high 24) prep level
 OPQ_LOAD_UP		= 14	# pick up as much as possible from the current tile
 OPQ_PROCESS_ASAP	= 15	# same as OPQ_PROCESS but will use instant finishing if possible
+OPQ_WAIT		= 16	# do nothing for a while - waiting for the partner bot
 operations_queue:	.word OPQ_NOTHING OPQ_INITIAL_DOWN OPQ_INITIAL_ENTRY OPQ_STOP
 			.space 512
 			.word 0xF1EE0803
@@ -568,9 +569,9 @@ op_queue_pos:		.word 0
 op_queue_length:	.word 4
 
 			.align 4
-			#       NOTHING   INITIAL_DOWN    INITIAL_ENTRY    STOP    GOTO_TILE    GOTO_APPLIANCE_EDGE BOOST    FACE_APPLIANCE    FACE_BIN    DUMP    SIMPLE_PICKUP    GOTO_COUNTER    DROPOFF    PROCESS    LOAD_UP    PROCESS_ASAP
-od_jump_table:		.word	od_yes    od_initial_down od_initial_entry od_stop od_goto_tile od_goto_app_edge    od_boost od_face_appliance od_face_bin od_dump od_simple_pickup od_goto_counter od_dropoff od_process od_load_up od_process_asap
-po_jump_table:		.word	po_done   po_initial_down po_initial_entry po_done po_goto_tile po_goto_app_edge    po_boost po_done           po_done     po_done po_done          po_goto_counter po_done    po_process po_done    po_process
+			#       NOTHING   INITIAL_DOWN    INITIAL_ENTRY    STOP    GOTO_TILE    GOTO_APPLIANCE_EDGE BOOST    FACE_APPLIANCE    FACE_BIN    DUMP    SIMPLE_PICKUP    GOTO_COUNTER    DROPOFF    PROCESS    LOAD_UP    PROCESS_ASAP    WAIT
+od_jump_table:		.word	od_yes    od_initial_down od_initial_entry od_stop od_goto_tile od_goto_app_edge    od_boost od_face_appliance od_face_bin od_dump od_simple_pickup od_goto_counter od_dropoff od_process od_load_up od_process_asap od_wait
+po_jump_table:		.word	po_done   po_initial_down po_initial_entry po_done po_goto_tile po_goto_app_edge    po_boost po_done           po_done     po_done po_done          po_goto_counter po_done    po_process po_done    po_process      po_done
 
 # constants for each side, indexed with bot_on_left
 entry_angles:		.word 110 70
@@ -810,6 +811,7 @@ fq_try_meat:
 	lbu	$t1, T_OVEN($t2)
 	beq	$t1, $zero, fq_finish_to_counter
 	
+fq_process_meat:
 	li	$t0, 0x0404	# go to oven
 	sw	$t0, 0($s1)
 	li	$t0, OPQ_FACE_APPLIANCE
@@ -839,6 +841,7 @@ fq_try_onion:
 	lbu	$t1, T_CHOPPING_BOARD($t2)
 	beq	$t1, $zero, fq_finish_to_counter
 	
+fq_process_onion:
 	li	$t0, 0x0604	# go to chopping board
 	sw	$t0, 0($s1)
 	li	$t0, OPQ_FACE_APPLIANCE
@@ -868,6 +871,7 @@ fq_try_tomato:
 	lbu	$t1, T_SINK($t2)
 	beq	$t1, $zero, fq_finish_to_counter
 	
+fq_process_tomato:
 	li	$t0, 0x0504	# go to sink
 	sw	$t0, 0($s1)
 	li	$t0, OPQ_FACE_APPLIANCE
@@ -884,7 +888,7 @@ fq_try_lettuce:
 	lw	$t0, R_LETTUCE($t3)
 	lw	$t1, R_UNPROCESSED_LETTUCE($t3)
 	add	$t0, $t0, $t1
-	lw	$t1, R_UNWASHED_LETTUCE($t3)
+	lw	$t1, R_UNCUT_LETTUCE($t3)
 	add	$t0, $t0, $t1	# total lettuce on counter
 	bge	$t0, 14, fq_raw_next
 	li	$t0, 0x0904	# go to lettuce bin
@@ -899,6 +903,7 @@ fq_try_lettuce:
 	lbu	$t1, T_SINK($t2)
 	beq	$t1, $zero, fq_finish_to_counter
 	
+fq_process_raw_lettuce:
 	li	$t0, 0x0504	# go to sink
 	sw	$t0, 0($s1)
 	li	$t0, OPQ_FACE_APPLIANCE
@@ -912,6 +917,7 @@ fq_try_lettuce:
 	lbu	$t1, T_CHOPPING_BOARD($t2)
 	beq	$t1, $zero, fq_finish_to_counter
 	
+fq_process_washed_lettuce:
 	li	$t0, 0x0604	# go to chopping board
 	sw	$t0, 0($s1)
 	li	$t0, OPQ_FACE_APPLIANCE
@@ -940,6 +946,68 @@ fq_raw_next:
 	j	fq_raw_top
 	
 fq_raw_done:
+	# if here, we're definitely at the shared counter - try to process ingredients
+	lbu	$t0, T_OVEN($t2)
+	beq	$t0, $zero, fq_no_oven
+	lw	$t0, R_UNCOOKED_MEAT($t3)
+	beq	$t0, $zero, fq_no_oven
+	li	$t0, 0x020000	# raw meat
+	sw	$t0, PICKUP
+	sw	$t0, PICKUP
+	sw	$t0, PICKUP
+	sw	$t0, PICKUP
+	j	fq_process_meat
+	
+fq_no_oven:
+	lbu	$t0, T_CHOPPING_BOARD($t2)
+	beq	$t0, $zero, fq_no_chop
+	lw	$t0, R_UNCUT_ONIONS($t3)
+	beq	$t0, $zero, fq_no_onions
+	li	$t0, 0x040000	# raw onion
+	sw	$t0, PICKUP
+	sw	$t0, PICKUP
+	sw	$t0, PICKUP
+	sw	$t0, PICKUP
+	j	fq_process_onion
+	
+fq_no_onions:
+	lw	$t0, R_UNCUT_LETTUCE($t3)
+	beq	$t0, $zero, fq_no_chop
+	li	$t0, 0x050001	# washed but unchopped lettuce
+	sw	$t0, PICKUP
+	sw	$t0, PICKUP
+	sw	$t0, PICKUP
+	sw	$t0, PICKUP
+	j	fq_process_washed_lettuce
+	
+fq_no_chop:
+	lbu	$t0, T_SINK($t2)
+	beq	$t0, $zero, fq_no_sink
+	lw	$t0, R_UNWASHED_TOMATOES($t3)
+	beq	$t0, $zero, fq_no_tomatoes
+	li	$t0, 0x030000	# raw tomatoes
+	sw	$t0, PICKUP
+	sw	$t0, PICKUP
+	sw	$t0, PICKUP
+	sw	$t0, PICKUP
+	j	fq_process_tomato
+	
+fq_no_tomatoes:
+	lw	$t0, R_UNPROCESSED_LETTUCE($t3)
+	beq	$t0, $zero, fq_no_sink
+	li	$t0, 0x050000	# raw lettuce
+	sw	$t0, PICKUP
+	sw	$t0, PICKUP
+	sw	$t0, PICKUP
+	sw	$t0, PICKUP
+	j	fq_process_raw_lettuce
+
+fq_no_sink:
+	# wait for partner to put more ingredients on
+	li	$t0, OPQ_WAIT
+	sw	$t0, 0($s1)
+	add	$s0, $s0, 1
+	j	fq_done
 	
 fq_submission_time:
 	# TODO
@@ -1145,9 +1213,19 @@ od_process_asap:
 	lw	$t0, GET_TILE_INFO
 	bgt	$t0, $a1, od_yes
 	lw	$t0, GET_MONEY
-	blt	$t0, 13, od_no
+	blt	$t0, 15, od_no
 	sw	$zero, FINISH_APPLIANCE_INSTANT
 	j	od_yes
+	
+od_wait:
+	lw	$t0, TIMER
+	srl	$t2, $t0, 8
+	xor	$t0, $t0, $t2
+	and	$t1, $t0, 1	# randomly 0 or 1
+	beq	$t1, $zero, od_yes
+	add	$t0, $t0, 30000
+	sw	$t0, TIMER
+	j	od_no
 
 od_yes:
 	li	$v0, 1
