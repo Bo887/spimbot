@@ -56,11 +56,13 @@ encoded_request:	.space 24	# 3 orders, 2 words per packed request
 decoded_request:	.space 144	# 3 orders, 12 words per unpacked request (ingredients array)
 inventory:              .space 16       # 4 elements (each an integer) in the inventory -> 16 bytes total
 
-testa: .word 0xdeadbeef
 encoded_shared_counter: .space 8
-testc: .word 0xdeadbeef
-decoded_shared_counter:         .space 48
+decoded_shared_counter: .space 48
+has_oven:               .word 0
+testa: .word 0xdeadbeef
+has_sink:               .word 0
 testb: .word 0xdeadbeef
+has_chop:               .word 0
 
 ### PRECOMPUTED PUZZLE SOLVING TABLES ###
 
@@ -166,35 +168,43 @@ main:
         sw          $t1, 0($t0)    # save to global variable
 
         # fill tile_types
-        la          $t0, map
-        sw          $t0, GET_LAYOUT     # $t0 = struct layout {char map[15][15];};
-        la          $t2, tile_types     # $t2 = &tile_types
+        la          $s0, map
+        sw          $s0, GET_LAYOUT     # $s0 = struct layout {char map[15][15];};
+        la          $s1, tile_types     # $s1 = &tile_types
         bne         $t1, 1, fill_right_tiles    # when bot_on_left is false, branch to fill_right_tiles
 
 fill_left_tiles:
-        lbu         $t3, 165($t0)       # hardcoded locations for the relevent tiles on the left side
-        sb          $t3, 0($t2)         # save all 5 of them to the tile_types array
-        lbu         $t3, 105($t0)
-        sb          $t3, 1($t2)
-        lbu         $t3, 45($t0)
-        sb          $t3, 2($t2)
-        lbu         $t3, 32($t0)
-        sb          $t3, 3($t2)
-        lbu         $t3, 35($t0)
-        sb          $t3, 4($t2)
+        lbu         $t3, 165($s0)       # hardcoded locations for the relevent tiles on the left side
+        sb          $t3, 0($s1)         # save all 5 of them to the tile_types array
+        lbu         $t3, 105($s0)
+        sb          $t3, 1($s1)
+        lbu         $t3, 45($s0)
+        sb          $t3, 2($s1)
+        lbu         $a0, 32($s0)
+        sb          $a0, 3($s1)
+        li          $a1, 3
+        jal         update_flags
+        lbu         $a0, 35($s0)
+        sb          $a0, 4($s1)
+        li          $a1, 4
+        jal         update_flags
         j           place_ingredients_on_sc
 
 fill_right_tiles:
-        lbu         $t3, 179($t0)       # hardcoded locations for the relevent tiles on the right side
-        sb          $t3, 0($t2)         # save all 5 of them to the tile_types array
-        lbu         $t3, 119($t0)
-        sb          $t3, 1($t2)
-        lbu         $t3, 59($t0)
-        sb          $t3, 2($t2)
-        lbu         $t3, 42($t0)
-        sb          $t3, 3($t2)
-        lbu         $t3, 39($t0)
-        sb          $t3, 4($t2)
+        lbu         $t3, 179($s0)       # hardcoded locations for the relevent tiles on the right side
+        sb          $t3, 0($s1)         # save all 5 of them to the tile_types array
+        lbu         $t3, 119($s0)
+        sb          $t3, 1($s1)
+        lbu         $t3, 59($s0)
+        sb          $t3, 2($s1)
+        lbu         $a0, 42($s0)
+        sb          $a0, 3($s1)
+        li          $a1, 3
+        jal         update_flags
+        lbu         $a0, 39($s0)
+        sb          $a0, 4($s1)
+        li          $a1, 4
+        jal         update_flags
 
 place_ingredients_on_sc:
         li          $a0, 10
@@ -251,24 +261,150 @@ place_ingredients_on_sc:
         jal         drive_to_shared_counter
         jal         dropoff_all
 
-process_items:
-        la          $a0, encoded_shared_counter
-        sw          $a0, GET_SHARED
-        la          $a1, decoded_shared_counter
-        jal         decode_request_in_mem
-        add         $0, $0, $0
+process_items_begin:
+        jal         update_shared_counter
+        la          $s0, decoded_shared_counter
+
+        # check uncooked meat
+        lw          $s1, 36($s0)        # $s1 = # of uncooked_meat
+        lw          $a0, has_oven       # $a0 = do we have an oven ? pos int : 0
+        sne         $t1, $s1, 0
+        sne         $t2, $a0, 0
+        and         $t1, $t2, $t1
+        bne         $t1, 0, cook_meat
+
+        # check unwashed tomatoes
+        lw          $s1, 24($s0)
+        lw          $a0, has_sink
+        sne         $t1, $s1, 0
+        sne         $t2, $a0, 0
+        and         $t1, $t2, $t1
+        bne         $t1, 0, wash_tomatoes
+
+        # check unchopped onion
+        lw          $s1, 16($s0)
+        lw          $a0, has_chop
+        sne         $t1, $s1, 0
+        sne         $t2, $a0, 0
+        and         $t1, $t2, $t1
+        bne         $t1, 0, chop_onion
+
+        # check unwashed unchopped lettuce
+        lw          $s1, 8($s0)
+        lw          $a0, has_sink
+        sne         $t1, $s1, 0
+        sne         $t2, $a0, 0
+        and         $t1, $t2, $t1
+        bne         $t1, 0, wash_lettuce
+
+        # check unchopped lettuce
+        lw          $s1, 4($s0)
+        lw          $a0, has_chop
+        sne         $t1, $s1, 0
+        sne         $t2, $a0, 0
+        and         $t1, $t2, $t1
+        bne         $t1, 0, chop_lettuce
+        j           process_items_begin
+
+cook_meat:
+        li          $a1, 0x20000
+        sw          $a1, PICKUP
+        jal         process_single_item
+        jal         drive_to_shared_counter
+        sw          $zero, DROPOFF
+        j           process_items_begin
+
+wash_tomatoes:
+        li          $a1, 0x30000
+        sw          $a1, PICKUP
+        jal         process_single_item
+        jal         drive_to_shared_counter
+        sw          $zero, DROPOFF
+        j           process_items_begin
+
+chop_onion:
+        li          $a1, 0x40000
+        sw          $a1, PICKUP
+        jal         process_single_item
+        jal         drive_to_shared_counter
+        sw          $zero, DROPOFF
+        j           process_items_begin
+
+wash_lettuce:
+        li          $a1, 0x50000
+        sw          $a1, PICKUP
+        jal         process_single_item
+        jal         drive_to_shared_counter
+        sw          $zero, DROPOFF
+        j           process_items_begin
+
+chop_lettuce:
+        li          $a1, 0x50001
+        sw          $a1, PICKUP
+        jal         process_single_item
+        jal         drive_to_shared_counter
+        sw          $zero, DROPOFF
+        j           process_items_begin
 
 infinite:
 	j	    infinite
 
 # -----------------------------------------------------------------------
-# process_item - function that makes the bot go process a set of items
-# $a0 - location (index of tile_types) of the item
+# update_flags - function that updates the utility flags
+# has_oven, has_sink, has_chop
+# $a0 - value of the utility
+# $a1 - index of the utility in tile_types
 # -----------------------------------------------------------------------
-process_item:
+update_flags:
+        beq         $a0, 4, _update_flags_oven
+        beq         $a0, 5, _update_flags_sink
+        beq         $a0, 6, _update_flags_chop
+        j           _update_flags_ret
+_update_flags_oven:
+        la          $t0, has_oven
+        sw          $a1, 0($t0)
+        j           _update_flags_ret
+_update_flags_sink:
+        la          $t0, has_sink
+        sw          $a1, 0($t0)
+        j           _update_flags_ret
+_update_flags_chop:
+        la          $t0, has_chop
+        sw          $a1, 0($t0)
+
+        # fall thru
+
+_update_flags_ret:
+        jr          $ra
+
+# -----------------------------------------------------------------------
+# update_shared_counter - function that updates the contents of the shared counter
+# (the decoded_shared_counter struct in .data)
+# -----------------------------------------------------------------------
+update_shared_counter:
+        sub         $sp, $sp, 4
+        sw          $ra, 0($sp)
+
+        la          $a0, encoded_shared_counter
+        sw          $a0, GET_SHARED
+        la          $a1, decoded_shared_counter
+        jal         decode_request_in_mem
+
+        lw          $ra, 0($sp)
+        add         $sp, $sp, 4
+        jr          $ra
+
+# -----------------------------------------------------------------------
+# process_single_item - function that makes the bot go process a single item
+# $a0 - location (index of tile_types) of the item
+# $a1 - type of item to process
+# -----------------------------------------------------------------------
+process_single_item:
         sub         $sp, $sp, 8
         sw          $ra, 0($sp)
         sw          $s0, 4($sp)
+
+        move        $s0, $a1
         li          $a1, 62         # height, all utilities are at height 60, so go a bit lower
 
         bne         $a0, 3, _process_item_idx_4
@@ -281,52 +417,48 @@ _process_item_go:
         jal         move_point_while_solving_generic
         jal         rotate_face_up
 
-        lw          $t2, inventory
-        beq         $t2, 0x20000, _process_item_oven    # uncooked meat
-        beq         $t2, 0x30000, _process_item_sink    # unwashed tomato
-        beq         $t2, 0x40000, _process_item_chop    # unchopped onion
-        beq         $t2, 0x40000, _process_item_sink    # unwashed unchopped lettuce
-        beq         $t2, 0x40001, _process_item_chop    # unchopped lettuce
+        beq         $s0, 0x20000, _process_item_oven    # uncooked meat
+        beq         $s0, 0x30000, _process_item_sink    # unwashed tomato
+        beq         $s0, 0x40000, _process_item_chop_onion    # unchopped onion
+        beq         $s0, 0x50000, _process_item_sink    # unwashed unchopped lettuce
+        beq         $s0, 0x50001, _process_item_chop_lettuce    # unchopped lettuce
         j           _process_item_return
 
 _process_item_oven:
-        li          $s0, 0
-_process_item_oven_for_begin:
-        bge         $s0, 4, _process_item_return
-        sw          $s0, DROPOFF
         jal         wait_for_timer_int
+        sw          $zero, DROPOFF
         li          $a0, 100000
         jal         set_wait_cycles
         jal         wait_for_timer_int
-        add         $s0, $s0, 1
         sw          $0, PICKUP
-        j           _process_item_oven_for_begin
+        j           _process_item_return
 
 _process_item_sink:
-        li          $s0, 0
-_process_item_sink_for_begin:
-        bge         $s0, 4, _process_item_return
-        sw          $s0, DROPOFF
         jal         wait_for_timer_int
+        sw          $zero, DROPOFF
         li          $a0, 20000
         jal         set_wait_cycles
         jal         wait_for_timer_int
-        add         $s0, $s0, 1
         sw          $0, PICKUP
-        j           _process_item_sink_for_begin
+        j           _process_item_return
 
-_process_item_chop:
-        li          $s0, 0
-_process_item_chop_for_begin:
-        bge         $s0, 4, _process_item_return
-        sw          $s0, DROPOFF
+_process_item_chop_onion:
         jal         wait_for_timer_int
+        sw          $zero, DROPOFF
         li          $a0, 20000
         jal         set_wait_cycles
         jal         wait_for_timer_int
-        add         $s0, $s0, 1
         sw          $0, PICKUP
-        j           _process_item_chop_for_begin
+        j           _process_item_return
+
+_process_item_chop_lettuce:
+        jal         wait_for_timer_int
+        sw          $zero, DROPOFF
+        li          $a0, 40000
+        jal         set_wait_cycles
+        jal         wait_for_timer_int
+        sw          $0, PICKUP
+        # fall thru
 
 _process_item_return:
         lw          $ra, 0($sp)
@@ -476,7 +608,7 @@ _move_point_generic_move:
         jr          $ra
 
 # -----------------------------------------------------------------------
-# pickup_all - pickups 4 (inventory max) unprocessed ingredients
+# pickup_all_unprocessed - pickups 4 (inventory max) unprocessed ingredients
 # -----------------------------------------------------------------------
 pickup_all_unprocessed:
         sub         $sp, $sp, 4
