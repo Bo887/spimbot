@@ -768,16 +768,18 @@ OPQ_FACE_BIN		= 8	# stop and look at the food bin
 OPQ_DUMP		= 9	# drop off all items
 OPQ_SIMPLE_PICKUP	= 10	# take from a bin or appliance
 OPQ_GOTO_COUNTER	= 11	# go to the shared counter
-operations_queue:	.word OPQ_NOTHING OPQ_INITIAL_DOWN OPQ_INITIAL_ENTRY 0x0C04 OPQ_FACE_BIN OPQ_SIMPLE_PICKUP OPQ_GOTO_COUNTER OPQ_DUMP 0x0604
+OPQ_DROPOFF		= 12	# drop an item of the specified type (high 24)
+OPQ_PROCESS		= 13	# wait for an item to wash or chop (20k cycles)
+operations_queue:	.word OPQ_NOTHING OPQ_INITIAL_DOWN OPQ_INITIAL_ENTRY 0x0C04 OPQ_FACE_BIN OPQ_SIMPLE_PICKUP 0x0604 0x0400000C OPQ_PROCESS OPQ_SIMPLE_PICKUP
 			.space 512
 			.word 0xF1EE0803
 op_queue_pos:		.word 0
-op_queue_length:	.word 9
+op_queue_length:	.word 10
 
 			.align 4
-			#       NOTHING   INITIAL_DOWN    INITIAL_ENTRY    STOP    GOTO_TILE    GOTO_APPLIANCE_EDGE BOOST    FACE_APPLIANCE    FACE_BIN    DUMP    SIMPLE_PICKUP    GOTO_COUNTER
-od_jump_table:		.word	od_always od_initial_down od_initial_entry od_stop od_goto_tile od_goto_app_edge    od_boost od_face_appliance od_face_bin od_dump od_simple_pickup od_goto_counter
-po_jump_table:		.word	po_done   po_initial_down po_initial_entry po_stop po_goto_tile po_goto_app_edge    po_boost po_done           po_done     po_done po_done          po_goto_counter
+			#       NOTHING   INITIAL_DOWN    INITIAL_ENTRY    STOP    GOTO_TILE    GOTO_APPLIANCE_EDGE BOOST    FACE_APPLIANCE    FACE_BIN    DUMP    SIMPLE_PICKUP    GOTO_COUNTER    DROPOFF    PROCESS
+od_jump_table:		.word	od_always od_initial_down od_initial_entry od_stop od_goto_tile od_goto_app_edge    od_boost od_face_appliance od_face_bin od_dump od_simple_pickup od_goto_counter od_dropoff od_process
+po_jump_table:		.word	po_done   po_initial_down po_initial_entry po_stop po_goto_tile po_goto_app_edge    po_boost po_done           po_done     po_done po_done          po_goto_counter po_done    po_process
 
 # constants for each side, indexed with bot_on_left
 entry_angles:		.word 110 70
@@ -946,6 +948,9 @@ fill_queue:
 # -----------------------------------------------------------------------
 
 operation_done:
+	sub	$sp, $sp, 4
+	sw	$ra, 0($sp)
+
 	la	$t0, od_jump_table
 	sll	$t1, $a0, 2	# [i]
 	add	$t0, $t0, $t1	# address in jump table to load
@@ -978,11 +983,14 @@ od_goto_tile:
 	li	$t1, 15		# width = 15
 	div	$t0, $t1
 	mflo	$t0		# y = tileID / 15
+	mfhi	$t1		# x = tileId % 15
+	sll	$t2, $t0, 16	# y << 16
+	or	$t2, $t2, $t1	# (y << 16) | x
+	sw	$t2, SET_TILE
 	bgt	$t0, 2, od_goto_tile_food
 	
 	lw	$t0, BOT_Y	# make sure we're vertically at the appliance
 	bge	$t0, 64, od_no
-	mfhi	$t1		# x = tileId % 15
 	li	$t0, 20		# 20 px per tile
 	mul	$t1, $t1, $t0
 	lw	$t0, BOT_X
@@ -1072,9 +1080,27 @@ od_goto_counter:
 od_goto_counter_positive:
 	slt	$v0, $t1, 3
 	j	od_done
+	
+od_dropoff:
+	jal	update_inventory
+	la	$t1, inventory
+	li	$t0, 3		# i = 3
+od_dropoff_loop_top:
+	lw	$t2, 12($t1)	# inventory[i]
+	bne	$t2, $a1, od_dropoff_loop_next
+	sw	$t0, DROPOFF	# drop from index i
+	j	od_yes
+od_dropoff_loop_next:
+	beq	$t0, $zero, od_yes
+	sub	$t0, $t0, 1	# i--
+	sub	$t1, $t1, 4	# update address
+	j	od_dropoff_loop_top
+	
+od_process:
+	lw	$v0, GET_TILE_INFO
+	j	od_done
 
 od_yes:
-	sw	$zero, VELOCITY
 	li	$v0, 1
 	j	od_done
 	
@@ -1083,6 +1109,8 @@ od_no:
 	# fall through to done
 	
 od_done:
+	lw	$ra, 0($sp)
+	add	$sp, $sp, 4
 	jr	$ra
 	
 # -----------------------------------------------------------------------
@@ -1193,6 +1221,12 @@ po_goto_counter:
 	# angle set by operation_done
 	li	$t0, 10
 	sw	$t0, VELOCITY
+	j	po_done
+	
+po_process:
+	lw	$t0, TIMER
+	add	$t0, $t0, 20000
+	sw	$t0, TIMER
 	j	po_done
 	
 po_done:
