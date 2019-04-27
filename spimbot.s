@@ -170,6 +170,7 @@ d_solving_puzzle:	.word 0	    # nonzero when working on puzzle2
 
 bot_on_left:		.word 0         # true if the bot is on the left side, false if bot is on the right side
 useful_locations:	.space 13	# locations of each type of interesting tile (zero if absent on this side)
+food_bin_tiles:		.space 4	# tile types of each food bin, from bottom to top (last is trash)
 
 # constants for arctan
 		    .align 4
@@ -206,16 +207,21 @@ main:
         la          $s0, map
         sw          $s0, GET_LAYOUT     # $s0 = struct layout {char map[15][15];};
 	la	$s1, useful_locations
+	la	$s2, food_bin_tiles
         beq     $t1, $zero, fill_right_tiles    # when bot_on_left is false, branch to fill_right_tiles
 
 fill_left_tiles:
 	li	$a0, 165
+	li	$a1, 0
 	jal	examine_location
         li	$a0, 105
+	li	$a1, 1
 	jal	examine_location
 	li	$a0, 45
+	li	$a1, 2
 	jal	examine_location
 	li	$a0, 32
+	li	$a1, 3
 	jal	examine_location
 	li	$a0, 35
 	jal	examine_location
@@ -223,12 +229,16 @@ fill_left_tiles:
 
 fill_right_tiles:
 	li	$a0, 179
+	li	$a1, 0
 	jal	examine_location
 	li	$a0, 119
+	li	$a1, 1
 	jal	examine_location
 	li	$a0, 59
+	li	$a1, 2
 	jal	examine_location
 	li	$a0, 42
+	li	$a1, 3
 	jal	examine_location
 	li	$a0, 39
 	jal	examine_location
@@ -269,6 +279,7 @@ use_puzzle1:
 # $a0: offset in layout array
 # $s0: layout array base address
 # $s1: useful_locations base address
+# $s2: food_bin_tiles base address
 # -----------------------------------------------------------------------
 
 .globl examine_location
@@ -277,6 +288,8 @@ examine_location:
 	lbu	$t0, 0($t0)	# type = map[tile]
 	add	$t1, $s1, $t0	# &useful_locations[type]
 	sb	$a0, 0($t1)	# useful_locations[type] = tile
+	add	$t1, $s2, $a1	# &food_bin_tiles[foodpos]
+	sb	$t0, 0($t1)	# food_bin_tiles[foodpos] = type
 	jr	$ra
 	
 # -----------------------------------------------------------------------
@@ -568,6 +581,7 @@ face_bin_angles:	.word 0   180
 counter_prox_xs:	.word 158 139
 
 boost_end_time:		.word 0
+food_bins_finished:	.word 0
 
 non_intrpt_str:		.asciiz "Non-interrupt exception\n"
 unhandled_str:		.asciiz "Unhandled interrupt type\n"
@@ -737,11 +751,24 @@ fill_queue:
 	la	$t2, useful_locations
 	la	$t3, decoded_request
 	
-	# should we get bread?
-	lbu	$t0, T_BIN_BREAD($t2)
-	beq	$t0, $zero, fq_not_bread
+fq_raw_top:
+	# find the farthest bin that hasn't been adequately used
+	lw	$t4, food_bins_finished
+	beq	$t4, 3, fq_raw_done
+	la	$t1, food_bin_tiles
+	add	$t1, $t1, $t4	# &food_bin_tiles[food_bins_finished]
+	lbu	$t1, 0($t1)	# bin tile to consider
+	beq	$t1, T_BIN_BREAD, fq_try_bread
+	beq	$t1, T_BIN_LETTUCE, fq_try_lettuce
+	beq	$t1, T_BIN_CHEESE, fq_try_cheese
+	beq	$t1, T_BIN_TOMATO, fq_try_tomato
+	beq	$t1, T_BIN_ONION, fq_try_onion
+	beq	$t1, T_BIN_MEAT, fq_try_meat
+	j	fq_raw_done	# !!! didn't match any
+	
+fq_try_bread:
 	lw	$t1, R_BREAD($t3)
-	bge	$t1, 26, fq_not_bread
+	bge	$t1, 26, fq_raw_next
 	li	$t1, 0x0704	# go to bread bin
 	sw	$t1, 0($s1)
 	li	$t1, OPQ_FACE_BIN
@@ -752,12 +779,9 @@ fill_queue:
 	add	$s1, $s1, 12
 	j	fq_finish_to_counter
 	
-fq_not_bread:
-	# should we get cheese?
-	lbu	$t0, T_BIN_CHEESE($t2)
-	beq	$t0, $zero, fq_not_cheese
+fq_try_cheese:
 	lw	$t1, R_CHEESE($t3)
-	bge	$t1, 4, fq_not_cheese
+	bge	$t1, 4, fq_raw_next
 	li	$t1, 0x0B04	# go to cheese bin
 	sw	$t1, 0($s1)
 	li	$t1, OPQ_FACE_BIN
@@ -768,14 +792,11 @@ fq_not_bread:
 	add	$s1, $s1, 12
 	j	fq_finish_to_counter
 
-fq_not_cheese:
-	# should we get meat?
-	lbu	$t5, T_BIN_MEAT($t2)
-	beq	$t5, $zero, fq_not_meat
+fq_try_meat:
 	lw	$t0, R_MEAT($t3)
 	lw	$t1, R_UNCOOKED_MEAT($t3)
 	add	$t0, $t0, $t1	# total meat on counter
-	bge	$t0, 16, fq_not_meat
+	bge	$t0, 16, fq_raw_next
 	li	$t0, 0x0804	# go to meat bin
 	sw	$t0, 0($s1)
 	li	$t0, OPQ_FACE_BIN
@@ -784,7 +805,7 @@ fq_not_cheese:
 	sw	$t0, 8($s1)
 	li	$s0, 3		# three entries in queue
 	add	$s1, $s1, 12
-	bgt	$t5, 60, fq_finish_to_counter
+	bne	$t4, 2, fq_finish_to_counter
 	lbu	$t1, T_OVEN($t2)
 	beq	$t1, $zero, fq_finish_to_counter
 	
@@ -800,14 +821,11 @@ fq_not_cheese:
 	add	$s1, $s1, 56
 	j	fq_finish_to_counter
 	
-fq_not_meat:
-	# should we get onions?
-	lbu	$t5, T_BIN_ONION($t2)
-	beq	$t5, $zero, fq_not_onion
+fq_try_onion:
 	lw	$t0, R_ONIONS($t3)
 	lw	$t1, R_UNCUT_ONIONS($t3)
 	add	$t0, $t0, $t1	# total onions on counter
-	bge	$t0, 10, fq_not_onion
+	bge	$t0, 10, fq_raw_next
 	li	$t0, 0x0C04	# go to onion bin
 	sw	$t0, 0($s1)
 	li	$t0, OPQ_FACE_BIN
@@ -816,7 +834,7 @@ fq_not_meat:
 	sw	$t0, 8($s1)
 	li	$s0, 3		# enqueued three items
 	add	$s1, $s1, 12
-	bgt	$t5, 60, fq_finish_to_counter
+	bne	$t4, 2, fq_finish_to_counter
 	lbu	$t1, T_CHOPPING_BOARD($t2)
 	beq	$t1, $zero, fq_finish_to_counter
 	
@@ -832,14 +850,11 @@ fq_not_meat:
 	add	$s1, $s1, 56
 	j	fq_finish_to_counter
 	
-fq_not_onion:
-	# should we get tomatoes?
-	lbu	$t5, T_BIN_TOMATO($t2)
-	beq	$t5, $zero, fq_not_tomato
+fq_try_tomato:
 	lw	$t0, R_TOMATOES($t3)
 	lw	$t1, R_UNWASHED_TOMATOES($t3)
 	add	$t0, $t0, $t1	# total tomatoes on counter
-	bge	$t0, 10, fq_not_tomato
+	bge	$t0, 10, fq_raw_next
 	li	$t0, 0x0A04	# go to tomato bin
 	sw	$t0, 0($s1)
 	li	$t0, OPQ_FACE_BIN
@@ -848,7 +863,7 @@ fq_not_onion:
 	sw	$t0, 8($s1)
 	li	$s0, 3		# enqueued 3
 	add	$s1, $s1, 12
-	bgt	$t5, 60, fq_finish_to_counter
+	bne	$t4, 2, fq_finish_to_counter
 	lbu	$t1, T_SINK($t2)
 	beq	$t1, $zero, fq_finish_to_counter
 	
@@ -864,16 +879,13 @@ fq_not_onion:
 	add	$s1, $s1, 56
 	j	fq_finish_to_counter
 	
-fq_not_tomato:
-	# should we get lettuce?
-	lbu	$t5, T_BIN_LETTUCE($t2)
-	beq	$t5, $zero, fq_not_lettuce
+fq_try_lettuce:
 	lw	$t0, R_LETTUCE($t3)
 	lw	$t1, R_UNPROCESSED_LETTUCE($t3)
 	add	$t0, $t0, $t1
 	lw	$t1, R_UNWASHED_LETTUCE($t3)
 	add	$t0, $t0, $t1	# total lettuce on counter
-	bge	$t0, 14, fq_not_lettuce
+	bge	$t0, 14, fq_raw_next
 	li	$t0, 0x0904	# go to lettuce bin
 	sw	$t0, 0($s1)
 	li	$t0, OPQ_FACE_BIN
@@ -882,7 +894,7 @@ fq_not_tomato:
 	sw	$t0, 8($s1)
 	li	$s0, 3		# enqueued 3
 	add	$s1, $s1, 12
-	bgt	$t5, 60, fq_finish_to_counter
+	bne	$t4, 2, fq_finish_to_counter
 	lbu	$t1, T_SINK($t2)
 	beq	$t1, $zero, fq_finish_to_counter
 	
@@ -919,8 +931,14 @@ fq_finish_to_counter:
 	add	$s0, $s0, 2
 	sw	$s0, op_queue_length
 	j	fq_done
+
+fq_raw_next:
+	lw	$t0, food_bins_finished
+	add	$t0, $t0, 1
+	sw	$t0, food_bins_finished
+	j	fq_raw_top
 	
-fq_not_lettuce:
+fq_raw_done:
 	
 fq_submission_time:
 	# TODO
@@ -953,24 +971,6 @@ queue_process_four:
 	sw	$a1, 36($a0)
 	sw	$a2, 40($a0)
 	sw	$t0, 44($a0)
-	jr	$ra
-	
-# queue_process_four_to_counter enqueues the processing of 4 ingredients and a dropoff at the counter
-# always advances 14 entries
-# same signature as queue_process_four
-
-queue_process_four_to_counter:
-	sub	$sp, $sp, 4
-	sw	$ra, 0($sp)
-	
-	jal	queue_process_four
-	li	$t0, OPQ_GOTO_COUNTER
-	sw	$t0, 48($a0)
-	li	$t0, OPQ_DUMP
-	sw	$t0, 52($a0)
-	
-	lw	$ra, 0($sp)
-	add	$sp, $sp, 4
 	jr	$ra
 	
 # -----------------------------------------------------------------------
