@@ -69,19 +69,19 @@ F_TOMATO		= 3
 F_ONION			= 4
 F_LETTUCE		= 5
 
-# request constants
+# request offsets
 R_LETTUCE		= 0
-R_UNWASHED_LETTUCE	= 1
-R_UNPROCESSED_LETTUCE	= 2
-R_ONIONS		= 3
-R_UNCUT_ONIONS		= 4
-R_TOMATOES		= 5
-R_UNWASHED_TOMATOES	= 6
-R_BURNED_MEAT		= 7
-R_MEAT			= 8
-R_UNCOOKED_MEAT		= 9
-R_CHEESE		= 10
-R_BREAD			= 11
+R_UNWASHED_LETTUCE	= 4
+R_UNPROCESSED_LETTUCE	= 8
+R_ONIONS		= 12
+R_UNCUT_ONIONS		= 16
+R_TOMATOES		= 20
+R_UNWASHED_TOMATOES	= 24
+R_BURNED_MEAT		= 28
+R_MEAT			= 32
+R_UNCOOKED_MEAT		= 36
+R_CHEESE		= 40
+R_BREAD			= 44
 
 puzzle1:		.space 1832     # space allocated for the puzzle
 puzzle2:		.space 1832
@@ -514,178 +514,6 @@ pb_outer_loop_done:
 	add         $sp, $sp, 44
 	jr	    $ra
 
-# -----------------------------------------------------------------------
-# request/order/counter encoding and decoding functions
-# -----------------------------------------------------------------------
-
-# decode_request turns two ints (packed request) into a 12-long int array
-# $a0: request low word
-# $a1: request high word
-# $a2: result array base address
-
-.globl decode_request
-decode_request:
-	li	$t0, 0
-	
-dr_first_loop:
-	bge	$t0, 6, dr_intermediate_bits
-	and	$t1, $a0, 0x1f		# array[i] = lo & 0x0000001f;
-	mul	$t2, $t0, 4		# Calculate array[i]
-	add	$t3, $a2, $t2
-	sw	$t1, 0($t3)		# Save array[i]
-	srl	$a0, $a0, 5		# lo = lo >> 5;
-	add	$t0, $t0, 1
-	j	dr_first_loop
-	
-dr_intermediate_bits:
-	sll	$t0, $a1, 2		# unsigned upper_three_bits = (hi << 2) & 0x0000001f;
-	and	$t0, $t0, 0x1f
-	or	$t0, $t0, $a0		# array[6] = upper_three_bits | lo;
-	sw	$t0, 24($a2)
-	srl	$a1, $a1, 3		# hi = hi >> 3;
-	
-	li	$t0, 7
-	
-dr_second_loop:
-	bge 	$t0, 12, dr_end		# for (int i = 7; i < 12; ++i)
-	and	$t1, $a1, 0x1f		# array[i] = hi & 0x0000001f;
-	mul	$t2, $t0, 4		# Calculate array[i]
-	add	$t3, $a2, $t2
-	sw	$t1, 0($t3)		# Save array[i]
-	srl	$a1, $a1, 5		# hi = hi >> 5;
-	add	$t0, $t0, 1
-	j	dr_second_loop
-	
-dr_end:
-	jr	$ra
-	
-# decode_request_in_mem unpacks a request from memory into an ingredient array in memory
-# $a0: base address of request structure
-# $a1: result array base address
-
-.globl decode_request_in_mem
-decode_request_in_mem:
-	move	$a2, $a1	# result address
-	lw	$a1, 4($a0)	# high - documentation is a lie
-	lw	$a0, 0($a0)	# low
-	j	decode_request	# will use current $ra
-	
-# create_request turns an array of 12 ingredient counts (words) into a two-word (packed) request
-# $a0: array base address
-# $v0: low word of result
-# $v1: high word of result
-	
-.globl create_request
-create_request:
-	lw	$v0, 24($a0)	# unsigned lo = ((array[6] << 30) >> 30);
-	sll	$v0, $v0, 30
-	srl	$v0, $v0, 30
-	
-	li	$t0, 5
-cr_first_loop:
-	blt 	$t0, 0, cr_second_loop_start	# for (int i = 5; i >= 0; --i) {
-	sll	$v0, $v0, 5	# lo = lo << 5;
-	mul	$t1, $t0, 4	# Calculate array[i]
-	add	$t2, $a0, $t1	
-	lw	$t1, 0($t2)	# Load array[i]
-	or	$v0, $v0, $t1	# lo |= array[i];
-	sub	$t0, $t0, 1
-	j	cr_first_loop
-	
-cr_second_loop_start:
-	li	$t0, 12
-	li	$v1, 0
-	
-cr_second_loop:
-	ble 	$t0, 7, cr_intermediate_bits	# for (int i = 12; i > 7; --i) {
-	mul	$t1, $t0, 4	# Calculate array[i]
-	add	$t2, $a0, $t1	
-	lw	$t1, 0($t2)	# Load array[i]
-	or	$v1, $v1, $t1	# hi |= array[i];
-	sll	$v1, $v1, 5	# hi = hi << 5;
-	
-	sub	$t0, $t0, 1
-	j	cr_second_loop
-	
-cr_intermediate_bits:	
-	lw	$t1, 28($a0)	# Load array[7]
-	or	$v1, $v1, $t1	# hi |= array[i];
-	sll	$v1, $v1, 3	# hi = hi << 3;
-	lw	$t1, 24($a0)	# Load array[6]
-	srl	$t1, $t1, 2	# (array[6] >> 2)
-	or	$v1, $v1, $t1	# hi |= (array[6] >> 2);
-	
-cr_end:
-	jr	$ra
-	
-# create_request_in_mem packs an ingredients list into a request structure in memory
-# $a0: base address of (output) request structure
-# $a1: input (unpacked) array base address
-
-.globl create_request_in_mem
-create_request_in_mem:
-	sub	$sp, $sp, 8
-	sw	$ra, 0($sp)
-	sw	$s0, 4($sp)	# saves $a0
-	
-	move	$s0, $a0
-	move	$a0, $a1
-	jal	create_request
-	sw	$v0, 0($s0)	# low
-	sw	$v1, 4($s0)	# high
-	
-	lw	$ra, 0($sp)
-	lw	$s0, 4($sp)
-	add	$sp, $sp, 8
-	jr	$ra
-
-# print board ##################################################
-#
-# argument $a0: board to print
-.globl print_board
-print_board:
-        sub         $sp, $sp, 20
-        sw          $ra, 0($sp)     # save $ra and free up 4 $s registers for
-        sw          $s0, 4($sp)     # i
-        sw          $s1, 8($sp)     # j
-        sw          $s2, 12($sp)    # the address
-        sw          $s3, 16($sp)    # the line number
-        move        $s2, $a0
-        li          $s0, 0          # i
-pb_loop1:
-        li          $s1, 0          # j
-pb_loop2:
-
-        lw          $t0, 0($s2)     # NUM_ROWS
-        lw          $t1, 4($s2)     # NUM_COLS
-
-        mul         $t2, $s0, $t1   # i * NUM_COLS
-        add         $t2, $t2, $s1   # i * NUM_COLS + j
-        add         $t2, $t2, 8
-        add         $t2, $t2, $s2
-
-
-        lb          $a0, 0($t2)     # num = &board[i][j]
-        li          $v0, 11
-        syscall
-        j           pb_cont
-pb_cont:
-        add         $s1, $s1, 1     # j++
-        blt         $s1, 8, pb_loop2
-        li          $v0, 11         # at the end of a line, print a newline char.
-        li          $a0, '\n'
-        syscall
-
-        add         $s0, $s0, 1     # i++
-        blt         $s0, 8, pb_loop1
-        lw          $ra, 0($sp)     # restore registers and return
-        lw          $s0, 4($sp)
-        lw          $s1, 8($sp)
-        lw          $s2, 12($sp)
-        lw          $s3, 16($sp)
-        add         $sp, $sp, 20
-        jr          $ra
-
 	
 	
 	
@@ -718,16 +546,17 @@ OPQ_SIMPLE_PICKUP	= 10	# take from a bin or appliance
 OPQ_GOTO_COUNTER	= 11	# go to the shared counter
 OPQ_DROPOFF		= 12	# drop an item of the specified type (high 24)
 OPQ_PROCESS		= 13	# wait for an item to wash or chop (20k cycles) to greater than the specified (high 24) prep level
-operations_queue:	.word OPQ_NOTHING OPQ_INITIAL_DOWN OPQ_INITIAL_ENTRY 0x0804 OPQ_FACE_BIN OPQ_SIMPLE_PICKUP 0x0404 0x0200000C OPQ_PROCESS OPQ_SIMPLE_PICKUP OPQ_GOTO_COUNTER OPQ_DUMP
+OPQ_LOAD_UP		= 14	# pick up as much as possible from the current tile
+operations_queue:	.word OPQ_NOTHING OPQ_INITIAL_DOWN OPQ_INITIAL_ENTRY OPQ_STOP
 			.space 512
 			.word 0xF1EE0803
 op_queue_pos:		.word 0
-op_queue_length:	.word 12
+op_queue_length:	.word 4
 
 			.align 4
-			#       NOTHING   INITIAL_DOWN    INITIAL_ENTRY    STOP    GOTO_TILE    GOTO_APPLIANCE_EDGE BOOST    FACE_APPLIANCE    FACE_BIN    DUMP    SIMPLE_PICKUP    GOTO_COUNTER    DROPOFF    PROCESS
-od_jump_table:		.word	od_always od_initial_down od_initial_entry od_stop od_goto_tile od_goto_app_edge    od_boost od_face_appliance od_face_bin od_dump od_simple_pickup od_goto_counter od_dropoff od_process
-po_jump_table:		.word	po_done   po_initial_down po_initial_entry po_stop po_goto_tile po_goto_app_edge    po_boost po_done           po_done     po_done po_done          po_goto_counter po_done    po_process
+			#       NOTHING   INITIAL_DOWN    INITIAL_ENTRY    STOP    GOTO_TILE    GOTO_APPLIANCE_EDGE BOOST    FACE_APPLIANCE    FACE_BIN    DUMP    SIMPLE_PICKUP    GOTO_COUNTER    DROPOFF    PROCESS    LOAD_UP
+od_jump_table:		.word	od_always od_initial_down od_initial_entry od_stop od_goto_tile od_goto_app_edge    od_boost od_face_appliance od_face_bin od_dump od_simple_pickup od_goto_counter od_dropoff od_process od_load_up
+po_jump_table:		.word	po_done   po_initial_down po_initial_entry po_done po_goto_tile po_goto_app_edge    po_boost po_done           po_done     po_done po_done          po_goto_counter po_done    po_process po_done
 
 # constants for each side, indexed with bot_on_left
 entry_angles:		.word 110 70
@@ -883,9 +712,54 @@ ih_done:
 # -----------------------------------------------------------------------
 
 fill_queue:
+	sub	$sp, $sp, 4
+	sw	$ra, 0($sp)
+	
+	# clear the queue
 	sw	$zero, op_queue_pos
 	sw	$zero, op_queue_length
+	
+	# see if we're nearing the end of the match
+	lw	$t0, TIMER
+	li	$t1, 9200000
+	blt	$t1, $t0, fq_submission_time
+	
+	# see what's on the shared counter
+	la	$a0, encoded_request
+	sw	$a0, GET_SHARED
+	la	$a1, decoded_request
+	jal	decode_request_in_mem
+	la	$t2, useful_locations
+	
+	# should we get bread?
+	lbu	$t0, T_BIN_BREAD($t2)
+	beq	$t0, $zero, fq_not_bread
+	la	$t0, decoded_request
+	lw	$t1, R_BREAD($t0)
+	bge	$t1, 20, fq_not_bread
+	la	$t0, operations_queue
+	li	$t1, 0x0704	# go to bread bin
+	sw	$t1, 0($t0)
+	li	$t1, OPQ_FACE_BIN
+	sw	$t1, 4($t0)
+	li	$t1, OPQ_LOAD_UP
+	sw	$t1, 8($t0)
+	li	$t1, OPQ_GOTO_COUNTER
+	sw	$t1, 12($t0)
+	li	$t1, OPQ_DUMP
+	sw	$t1, 16($t0)
+	li	$t0, 5
+	sw	$t0, op_queue_length
+	j	fq_done
+	
+fq_not_bread:
+	
+fq_submission_time:
 	# TODO
+	
+fq_done:
+	lw	$ra, 0($sp)
+	add	$sp, $sp, 4
 	jr	$ra
 	
 # -----------------------------------------------------------------------
@@ -920,9 +794,8 @@ od_initial_entry:
 	j	od_done
 	
 od_stop:
-	lw	$t0, VELOCITY
-	seq	$v0, $t0, $zero	# return (velocity == 0)
-	j	od_done
+	sw	$zero, VELOCITY
+	j	od_yes
 	
 od_goto_tile:
 	la	$t0, useful_locations
@@ -1048,6 +921,13 @@ od_process:
 	lw	$t0, GET_TILE_INFO
 	slt	$v0, $a1, $t0
 	j	od_done
+	
+od_load_up:
+	sw	$zero, PICKUP
+	sw	$zero, PICKUP
+	sw	$zero, PICKUP
+	sw	$zero, PICKUP	# assumes we have enough money
+	j	od_yes
 
 od_yes:
 	li	$v0, 1
@@ -1104,10 +984,6 @@ po_initial_entry:
 	sll	$t1, $t1, 2	# cycles = 36000
 	add	$t0, $t0, $t1
 	sw	$t0, TIMER
-	j	po_done
-	
-po_stop:
-	sw	$zero, VELOCITY
 	j	po_done
 	
 po_goto_tile:
@@ -1316,3 +1192,128 @@ update_inventory:
         la          $t0, inventory
         sw          $t0, GET_INVENTORY
         jr          $ra
+	
+# -----------------------------------------------------------------------
+# request/order/counter encoding and decoding functions
+# -----------------------------------------------------------------------
+
+# decode_request turns two ints (packed request) into a 12-long int array
+# $a0: request low word
+# $a1: request high word
+# $a2: result array base address
+
+.globl decode_request
+decode_request:
+	li	$t0, 0
+	
+dr_first_loop:
+	bge	$t0, 6, dr_intermediate_bits
+	and	$t1, $a0, 0x1f		# array[i] = lo & 0x0000001f;
+	mul	$t2, $t0, 4		# Calculate array[i]
+	add	$t3, $a2, $t2
+	sw	$t1, 0($t3)		# Save array[i]
+	srl	$a0, $a0, 5		# lo = lo >> 5;
+	add	$t0, $t0, 1
+	j	dr_first_loop
+	
+dr_intermediate_bits:
+	sll	$t0, $a1, 2		# unsigned upper_three_bits = (hi << 2) & 0x0000001f;
+	and	$t0, $t0, 0x1f
+	or	$t0, $t0, $a0		# array[6] = upper_three_bits | lo;
+	sw	$t0, 24($a2)
+	srl	$a1, $a1, 3		# hi = hi >> 3;
+	
+	li	$t0, 7
+	
+dr_second_loop:
+	bge 	$t0, 12, dr_end		# for (int i = 7; i < 12; ++i)
+	and	$t1, $a1, 0x1f		# array[i] = hi & 0x0000001f;
+	mul	$t2, $t0, 4		# Calculate array[i]
+	add	$t3, $a2, $t2
+	sw	$t1, 0($t3)		# Save array[i]
+	srl	$a1, $a1, 5		# hi = hi >> 5;
+	add	$t0, $t0, 1
+	j	dr_second_loop
+	
+dr_end:
+	jr	$ra
+	
+# decode_request_in_mem unpacks a request from memory into an ingredient array in memory
+# $a0: base address of request structure
+# $a1: result array base address
+
+.globl decode_request_in_mem
+decode_request_in_mem:
+	move	$a2, $a1	# result address
+	lw	$a1, 4($a0)	# high - documentation is a lie
+	lw	$a0, 0($a0)	# low
+	j	decode_request	# will use current $ra
+	
+# create_request turns an array of 12 ingredient counts (words) into a two-word (packed) request
+# $a0: array base address
+# $v0: low word of result
+# $v1: high word of result
+	
+.globl create_request
+create_request:
+	lw	$v0, 24($a0)	# unsigned lo = ((array[6] << 30) >> 30);
+	sll	$v0, $v0, 30
+	srl	$v0, $v0, 30
+	
+	li	$t0, 5
+cr_first_loop:
+	blt 	$t0, 0, cr_second_loop_start	# for (int i = 5; i >= 0; --i) {
+	sll	$v0, $v0, 5	# lo = lo << 5;
+	mul	$t1, $t0, 4	# Calculate array[i]
+	add	$t2, $a0, $t1	
+	lw	$t1, 0($t2)	# Load array[i]
+	or	$v0, $v0, $t1	# lo |= array[i];
+	sub	$t0, $t0, 1
+	j	cr_first_loop
+	
+cr_second_loop_start:
+	li	$t0, 12
+	li	$v1, 0
+	
+cr_second_loop:
+	ble 	$t0, 7, cr_intermediate_bits	# for (int i = 12; i > 7; --i) {
+	mul	$t1, $t0, 4	# Calculate array[i]
+	add	$t2, $a0, $t1	
+	lw	$t1, 0($t2)	# Load array[i]
+	or	$v1, $v1, $t1	# hi |= array[i];
+	sll	$v1, $v1, 5	# hi = hi << 5;
+	
+	sub	$t0, $t0, 1
+	j	cr_second_loop
+	
+cr_intermediate_bits:	
+	lw	$t1, 28($a0)	# Load array[7]
+	or	$v1, $v1, $t1	# hi |= array[i];
+	sll	$v1, $v1, 3	# hi = hi << 3;
+	lw	$t1, 24($a0)	# Load array[6]
+	srl	$t1, $t1, 2	# (array[6] >> 2)
+	or	$v1, $v1, $t1	# hi |= (array[6] >> 2);
+	
+cr_end:
+	jr	$ra
+	
+# create_request_in_mem packs an ingredients list into a request structure in memory
+# $a0: base address of (output) request structure
+# $a1: input (unpacked) array base address
+
+.globl create_request_in_mem
+create_request_in_mem:
+	sub	$sp, $sp, 8
+	sw	$ra, 0($sp)
+	sw	$s0, 4($sp)	# saves $a0
+	
+	move	$s0, $a0
+	move	$a0, $a1
+	jal	create_request
+	sw	$v0, 0($s0)	# low
+	sw	$v1, 4($s0)	# high
+	
+	lw	$ra, 0($sp)
+	lw	$s0, 4($sp)
+	add	$sp, $sp, 8
+	jr	$ra
