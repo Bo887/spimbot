@@ -730,29 +730,80 @@ fill_queue:
 	la	$a1, decoded_request
 	jal	decode_request_in_mem
 	la	$t2, useful_locations
+	la	$t3, decoded_request
+	la	$t4, operations_queue
 	
 	# should we get bread?
 	lbu	$t0, T_BIN_BREAD($t2)
 	beq	$t0, $zero, fq_not_bread
-	la	$t0, decoded_request
-	lw	$t1, R_BREAD($t0)
-	bge	$t1, 20, fq_not_bread
-	la	$t0, operations_queue
+	lw	$t1, R_BREAD($t3)
+	bge	$t1, 24, fq_not_bread
 	li	$t1, 0x0704	# go to bread bin
-	sw	$t1, 0($t0)
+	sw	$t1, 0($t4)
 	li	$t1, OPQ_FACE_BIN
-	sw	$t1, 4($t0)
+	sw	$t1, 4($t4)
 	li	$t1, OPQ_LOAD_UP
-	sw	$t1, 8($t0)
+	sw	$t1, 8($t4)
 	li	$t1, OPQ_GOTO_COUNTER
-	sw	$t1, 12($t0)
+	sw	$t1, 12($t4)
 	li	$t1, OPQ_DUMP
-	sw	$t1, 16($t0)
+	sw	$t1, 16($t4)
 	li	$t0, 5
 	sw	$t0, op_queue_length
 	j	fq_done
 	
 fq_not_bread:
+	# should we get meat?
+	lbu	$t0, T_BIN_MEAT($t2)
+	beq	$t0, $zero, fq_not_meat
+	lw	$t0, R_MEAT($t3)
+	lw	$t1, R_UNCOOKED_MEAT($t3)
+	add	$t0, $t0, $t1	# total meat on counter
+	bge	$t0, 12, fq_not_meat
+	li	$t0, 0x0804	# go to meat bin
+	sw	$t0, 0($t4)
+	li	$t0, OPQ_FACE_BIN
+	sw	$t0, 4($t4)
+	li	$t0, OPQ_LOAD_UP
+	sw	$t0, 8($t4)
+	lbu	$t1, T_OVEN($t2)
+	beq	$t1, $zero, fq_raw_meat_to_counter
+	
+	li	$t0, 0x0404	# go to oven
+	sw	$t0, 12($t4)
+	li	$t0, 0x0200000C	# drop uncooked meat
+	li	$t1, OPQ_PROCESS
+	li	$a0, OPQ_LOAD_UP
+	sw	$t0, 16($t4)
+	sw	$t1, 20($t4)
+	sw	$a0, 24($t4)
+	sw	$t0, 28($t4)
+	sw	$t1, 32($t4)
+	sw	$a0, 36($t4)
+	sw	$t0, 40($t4)
+	sw	$t1, 44($t4)
+	sw	$a0, 48($t4)
+	sw	$t0, 52($t4)
+	sw	$t1, 56($t4)
+	sw	$a0, 60($t4)
+	li	$t0, OPQ_GOTO_COUNTER
+	sw	$t0, 64($t4)
+	li	$t0, OPQ_DUMP
+	sw	$t0, 68($t4)
+	li	$t0, 18
+	sw	$t0, op_queue_length
+	j	fq_done
+	
+fq_raw_meat_to_counter:
+	li	$t1, OPQ_GOTO_COUNTER
+	sw	$t1, 12($t4)
+	li	$t1, OPQ_DUMP
+	sw	$t1, 16($t4)
+	li	$t0, 5
+	sw	$t0, op_queue_length
+	j	fq_done
+	
+fq_not_meat:
 	
 fq_submission_time:
 	# TODO
