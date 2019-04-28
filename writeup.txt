@@ -1,0 +1,12 @@
+BOLT gets its name from its main optimization: the Big Ol' Lookup Tables used
+in puzzle solving. The solver processes the puzzle in 8x1 strips using the 
+bitmap. It keeps another bitmap indicating which positions might be touching
+the yet-explored part of the current island. At each step, the remaining land
+in the current strip is combined with the corresponding "touching" strip to
+get an index into the two 64KB lookup tables that were generated with a C#
+program. The "transition" table determines what the new land value at the 
+current position should be; the other determines the mask to binary-OR with
+the vertically adjacent "touching" strips. Neighboring land-containing strips
+are visited in a BFS (using a queue, no recursion). This strategy provides is
+5.5 to 9 times faster than the given solver code and, since it's running nearly
+all the time, gives BOLT a lot of money to work with.
