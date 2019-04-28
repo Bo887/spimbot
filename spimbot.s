@@ -91,6 +91,9 @@ map:			.space 225      # stores the map from GET_LAYOUT
 
 encoded_request:	.space 24	# 3 orders, 2 words per packed request
 decoded_request:	.space 144	# 3 orders, 12 words per unpacked request (ingredients array)
+encoded_progress:	.space 24	# 3 order requests
+decoded_progress:	.space 48	# one order list
+decoded_order:		.space 48	# one order list
 inventory:              .space 16       # 4 elements (each an integer) in the inventory -> 16 bytes total
 
 ### PRECOMPUTED PUZZLE SOLVING TABLES ###
@@ -563,6 +566,7 @@ OPQ_LOAD_UP		= 14	# pick up as much as possible from the current tile
 OPQ_PROCESS_ASAP	= 15	# same as OPQ_PROCESS but will use instant finishing if possible
 OPQ_WAIT		= 16	# reserved/NYI - works the same as OPQ_NOTHING
 OPQ_GOTO_TURNIN		= 17	# drive to turn-in counter
+OPQ_SUBMIT		= 18	# make as many sandwiches as possible while standing in the corner
 operations_queue:	.word OPQ_NOTHING OPQ_INITIAL_DOWN OPQ_INITIAL_ENTRY OPQ_STOP
 			.space 512
 			.word 0xF1EE0803
@@ -570,21 +574,32 @@ op_queue_pos:		.word 0
 op_queue_length:	.word 4
 
 			.align 4
-			#       NOTHING   INITIAL_DOWN    INITIAL_ENTRY    STOP    GOTO_TILE    GOTO_APPLIANCE_EDGE BOOST    FACE_APPLIANCE    FACE_BIN    DUMP    SIMPLE_PICKUP    GOTO_COUNTER    DROPOFF    PROCESS    LOAD_UP    PROCESS_ASAP    WAIT    GOTO_TURNIN
-od_jump_table:		.word	od_yes    od_initial_down od_initial_entry od_stop od_goto_tile od_goto_app_edge    od_boost od_face_appliance od_face_bin od_dump od_simple_pickup od_goto_counter od_dropoff od_process od_load_up od_process_asap od_yes  od_goto_turnin
-po_jump_table:		.word	po_done   po_initial_down po_initial_entry po_done po_goto_tile po_goto_app_edge    po_boost po_done           po_done     po_done po_done          po_goto_counter po_done    po_process po_done    po_process      po_done po_goto_turnin
+			#       NOTHING   INITIAL_DOWN    INITIAL_ENTRY    STOP    GOTO_TILE    GOTO_APPLIANCE_EDGE BOOST    FACE_APPLIANCE    FACE_BIN    DUMP    SIMPLE_PICKUP    GOTO_COUNTER    DROPOFF    PROCESS    LOAD_UP    PROCESS_ASAP    WAIT    GOTO_TURNIN    SUBMIT
+od_jump_table:		.word	od_yes    od_initial_down od_initial_entry od_stop od_goto_tile od_goto_app_edge    od_boost od_face_appliance od_face_bin od_dump od_simple_pickup od_goto_counter od_dropoff od_process od_load_up od_process_asap od_yes  od_goto_turnin od_submit
+po_jump_table:		.word	po_done   po_initial_down po_initial_entry po_done po_goto_tile po_goto_app_edge    po_boost po_done           po_done     po_done po_done          po_goto_counter po_done    po_process po_done    po_process      po_done po_goto_turnin po_done
 
 # constants for each side, indexed with bot_on_left
-entry_angles:		.word 110 70
-bin_xs:			.word 279 20
-bin_prox_xs:		.word 278 17
-face_counter_angles:	.word 180 0
-face_bin_angles:	.word 0   180
-counter_prox_xs:	.word 158 139
+entry_angles:		.word	110 70
+bin_xs:			.word	279 20
+bin_prox_xs:		.word	278 17
+face_counter_angles:	.word	180 0
+face_bin_angles:	.word	0   180
+counter_prox_xs:	.word	158 139
+corner_order_offsets:	.word	0   16
 
-boost_end_time:		.word 0		# cycle number at which last boost will end
-food_bins_finished:	.word 0		# what index in food_bin_tiles we're currently taking raw ingredients from
-placed_on_appliance:	.word 0		# whether the last OPQ_DROPOFF actually placed anything
+boost_end_time:		.word	0	# cycle number at which last boost will end
+food_bins_finished:	.word	0	# what index in food_bin_tiles we're currently taking raw ingredients from
+placed_on_appliance:	.word	0	# whether the last OPQ_DROPOFF actually placed anything
+
+# internal food IDs and tables used by make_sandwiches
+IID_BREAD		= 0
+IID_CHEESE		= 1
+IID_MEAT		= 2
+IID_TOMATO		= 3
+IID_ONION		= 4
+IID_LETTUCE		= 5
+food_pickup_ids:	.word	0	0x010000 0x020001 0x030001   0x040001 0x050002
+food_req_positions:	.byte	R_BREAD R_CHEESE R_MEAT   R_TOMATOES R_ONIONS R_LETTUCE
 
 non_intrpt_str:		.asciiz "Non-interrupt exception\n"
 unhandled_str:		.asciiz "Unhandled interrupt type\n"
@@ -743,7 +758,7 @@ fill_queue:
 	
 	# see if we're nearing the end of the match
 	lw	$t0, TIMER
-	li	$t1, 9200000
+	li	$t1, 4500000	# TODO: fine-tune this
 	blt	$t1, $t0, fq_submission_time
 	
 	# see what's on the shared counter
@@ -1013,7 +1028,9 @@ fq_submission_time:
 	# already at the shared counter - go straight down to turn in counter
 	li	$t0, OPQ_GOTO_TURNIN
 	sw	$t0, 0($s1)
-	add	$s0, $s0, 1
+	li	$t0, OPQ_SUBMIT
+	sw	$t0, 4($s1)
+	add	$s0, $s0, 2
 	j	fq_done
 	
 fq_done:
@@ -1228,6 +1245,10 @@ od_goto_turnin:
 	lw	$t0, BOT_Y
 	sgt	$v0, $t0, 277
 	j	od_done
+	
+od_submit:
+	jal	make_sandwiches
+	j	od_yes
 
 od_yes:
 	li	$v0, 1
@@ -1626,3 +1647,130 @@ create_request_in_mem:
 	lw	$s0, 4($sp)
 	add	$sp, $sp, 8
 	jr	$ra
+	
+# -----------------------------------------------------------------------
+# make_sandwiches fulfills and submits as many orders as possible
+# bot must be wedged in the corner of the shared and turn-in counters
+# -----------------------------------------------------------------------
+	
+make_sandwiches:
+	sub	$sp, $sp, 32
+	sw	$ra, 0($sp)
+	sw	$s0, 4($sp)	# ingr
+	sw	$s1, 8($sp)	# &decoded_order
+	sw	$s2, 12($sp)	# &decoded_progress
+	sw	$s3, 16($sp)	# food_req_positions[ingr]
+	sw	$s4, 20($sp)	# decoded_order[ingr]
+	sw	$s5, 24($sp)	# food_pickup_ids[ingr]
+	sw	$s6, 28($sp)	# angle to face counter
+	
+	la	$s1, decoded_order
+	la	$s2, decoded_progress
+	la	$t0, face_counter_angles
+	lw	$t2, bot_on_left
+	sll	$t2, $t2, 2
+	add	$t0, $t0, $t2	# &face_counter_angles[bot_on_left]
+	lw	$s6, 0($t0)	# face_counter_angles[bot_on_left]
+ms_outer_loop_top:
+	# get the order in the corner
+	la	$t0, encoded_request
+	sw	$t0, GET_TURNIN_ORDER
+	la	$t2, corner_order_offsets
+	lw	$t1, bot_on_left
+	sll	$t1, $t1, 2
+	add	$t2, $t2, $t1	# &corner_order_offsets[bot_on_left]
+	lw	$t2, 0($t2)	# corner_order_offsets[bot_on_left]
+	add	$a0, $t0, $t2	# &order[orderID]
+	move	$a1, $s1
+	jal	decode_request_in_mem
+	
+	li	$s0, 5		# ingr = 5 (goes down)
+ms_ingr_loop_top:
+	bltz	$s0, ms_ingr_loop_done
+	jal	update_corner_progress
+	la	$s3, food_req_positions
+	add	$s3, $s3, $s0	# &food_req_positions[ingr]
+	lbu	$s3, 0($s3)	# food_req_positions[ingr]
+	add	$s4, $s1, $s3	# &decoded_order[ingrPos]
+	lw	$s4, 0($s4)	# decoded_order[ingr]
+	la	$s5, food_pickup_ids
+	sll	$t0, $s0, 2
+	add	$s5, $s5, $t0	# &food_pickup_ids[ingr]
+	lw	$s5, 0($s5)	# food_pickup_ids[ingr]
+	
+ms_item_loop_top:
+	add	$t0, $s2, $s3	# &decoded_progress[ingr]
+	lw	$t0, 0($t0)	# decoded_progress[ingr]
+	sub	$t0, $s4, $t0	# decoded_order[ingr] - decoded_progress[ingr]
+	beq	$t0, $zero, ms_ingr_loop_next
+	
+	# see if this ingredient can be obtained by magic
+	lw	$t0, GET_MONEY
+	blt	$t0, 20, ms_cant_magic
+	bne	$s0, IID_BREAD, ms_not_bread
+	
+	# instantly get bread (F_BREAD = 0)
+	sw	$zero, GET_INGREDIENT_INSTANT
+	j	ms_add_item
+	
+ms_not_bread:
+	bne	$s0, IID_CHEESE, ms_cant_magic
+	
+	# instantly get cheese
+	li	$t0, F_CHEESE
+	sw	$t0, GET_INGREDIENT_INSTANT
+	j	ms_add_item
+	
+ms_cant_magic:
+	sw	$s6, ANGLE	# face the shared counter
+	li	$t0, 1		# absolute
+	sw	$t0, ANGLE_CONTROL
+	sw	$s5, PICKUP	# take from shared counter
+	jal	update_inventory
+	lw	$t0, inventory	# see what we're now carrying
+	bne	$t0, $s5, ms_done
+	
+ms_add_item:
+	li	$t0, 90		# face the turn-in counter
+	sw	$t0, ANGLE
+	li	$t0, 1		# absolute
+	sw	$t0, ANGLE_CONTROL
+	sw	$zero, DROPOFF	# drop the item
+	jal	update_corner_progress
+	j	ms_item_loop_top
+	
+ms_ingr_loop_next:
+	sub	$s0, $s0, 1	# ingr--
+	j	ms_ingr_loop_top
+	
+ms_ingr_loop_done:
+	sw	$zero, SUBMIT_ORDER
+	j	ms_outer_loop_top
+	
+ms_done:
+	lw	$ra, 0($sp)
+	lw	$s0, 4($sp)
+	lw	$s1, 8($sp)
+	lw	$s2, 12($sp)
+	lw	$s3, 16($sp)
+	lw	$s4, 20($sp)
+	lw	$s5, 24($sp)
+	lw	$s6, 28($sp)
+	add	$sp, $sp, 32
+	jr	$ra
+	
+# -----------------------------------------------------------------------
+# update_corner_progress writes the progress list to decoded_progress
+# -----------------------------------------------------------------------
+update_corner_progress:	
+	la	$a0, encoded_progress
+	sw	$a0, GET_TURNIN_USERS
+	la	$t2, corner_order_offsets
+	lw	$t1, bot_on_left
+	sll	$t1, $t1, 2
+	add	$t2, $t2, $t1	# &corner_order_offsets[bot_on_left]
+	lw	$t2, 0($t2)	# corner_order_offsets[bot_on_left]
+	add	$a0, $a0, $t2	# &encoded_progress[orderID]
+	la	$a1, decoded_progress
+	j	decode_request_in_mem	# uses current $ra
+	
