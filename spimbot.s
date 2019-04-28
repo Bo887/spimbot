@@ -92,8 +92,11 @@ map:			.space 225      # stores the map from GET_LAYOUT
 encoded_request:	.space 24	# 3 orders, 2 words per packed request
 decoded_request:	.space 144	# 3 orders, 12 words per unpacked request (ingredients array)
 encoded_progress:	.space 24	# 3 order requests
+			.word 0xF1EEAA01
 decoded_progress:	.space 48	# one order list
+			.word 0xF1EEAA02
 decoded_order:		.space 48	# one order list
+			.word 0xF1EEAA03
 inventory:              .space 16       # 4 elements (each an integer) in the inventory -> 16 bytes total
 
 ### PRECOMPUTED PUZZLE SOLVING TABLES ###
@@ -585,7 +588,7 @@ bin_prox_xs:		.word	278 17
 face_counter_angles:	.word	180 0
 face_bin_angles:	.word	0   180
 counter_prox_xs:	.word	158 139
-corner_order_offsets:	.word	0   16
+corner_order_offsets:	.word	0   0
 
 boost_end_time:		.word	0	# cycle number at which last boost will end
 food_bins_finished:	.word	0	# what index in food_bin_tiles we're currently taking raw ingredients from
