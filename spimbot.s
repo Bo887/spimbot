@@ -588,7 +588,6 @@ bin_prox_xs:		.word	278 17
 face_counter_angles:	.word	180 0
 face_bin_angles:	.word	0   180
 counter_prox_xs:	.word	158 139
-corner_order_offsets:	.word	0   0
 
 boost_end_time:		.word	0	# cycle number at which last boost will end
 food_bins_finished:	.word	0	# what index in food_bin_tiles we're currently taking raw ingredients from
@@ -761,7 +760,7 @@ fill_queue:
 	
 	# see if we're nearing the end of the match
 	lw	$t0, TIMER
-	li	$t1, 4500000	# TODO: fine-tune this
+	li	$t1, 9000000	# TODO: fine-tune this
 	blt	$t1, $t0, fq_submission_time
 	
 	# see what's on the shared counter
@@ -1676,14 +1675,8 @@ make_sandwiches:
 	lw	$s6, 0($t0)	# face_counter_angles[bot_on_left]
 ms_outer_loop_top:
 	# get the order in the corner
-	la	$t0, encoded_request
-	sw	$t0, GET_TURNIN_ORDER
-	la	$t2, corner_order_offsets
-	lw	$t1, bot_on_left
-	sll	$t1, $t1, 2
-	add	$t2, $t2, $t1	# &corner_order_offsets[bot_on_left]
-	lw	$t2, 0($t2)	# corner_order_offsets[bot_on_left]
-	add	$a0, $t0, $t2	# &order[orderID]
+	la	$a0, encoded_request
+	sw	$a0, GET_TURNIN_ORDER
 	move	$a1, $s1
 	jal	decode_request_in_mem
 	
@@ -1768,12 +1761,6 @@ ms_done:
 update_corner_progress:	
 	la	$a0, encoded_progress
 	sw	$a0, GET_TURNIN_USERS
-	la	$t2, corner_order_offsets
-	lw	$t1, bot_on_left
-	sll	$t1, $t1, 2
-	add	$t2, $t2, $t1	# &corner_order_offsets[bot_on_left]
-	lw	$t2, 0($t2)	# corner_order_offsets[bot_on_left]
-	add	$a0, $a0, $t2	# &encoded_progress[orderID]
 	la	$a1, decoded_progress
 	j	decode_request_in_mem	# uses current $ra
 	
