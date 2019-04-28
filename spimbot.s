@@ -866,7 +866,7 @@ fq_process_onion:
 	sw	$t0, 4($s1)
 	add	$a0, $s1, 8
 	li	$a1, 0x0400000C	# drop unchopped onion
-	li	$a2, OPQ_PROCESS
+	li	$a2, OPQ_PROCESS_ASAP
 	jal	queue_process_four
 	add	$s0, $s0, 14	# added 14 more
 	add	$s1, $s1, 56
@@ -896,7 +896,7 @@ fq_process_tomato:
 	sw	$t0, 4($s1)
 	add	$a0, $s1, 8
 	li	$a1, 0x0300000C	# drop unwashed tomato
-	li	$a2, OPQ_PROCESS
+	li	$a2, OPQ_PROCESS_ASAP
 	jal	queue_process_four
 	add	$s0, $s0, 14
 	add	$s1, $s1, 56
@@ -928,7 +928,7 @@ fq_process_raw_lettuce:
 	sw	$t0, 4($s1)
 	add	$a0, $s1, 8
 	li	$a1, 0x0500000C	# drop unwashed lettuce
-	li	$a2, OPQ_PROCESS
+	li	$a2, OPQ_PROCESS_ASAP
 	jal	queue_process_four
 	add	$s0, $s0, 14	# added 14 more
 	add	$s1, $s1, 56
@@ -942,7 +942,7 @@ fq_process_washed_lettuce:
 	sw	$t0, 4($s1)
 	add	$a0, $s1, 8
 	li	$a1, 0x0500010C	# drop washed lettuce
-	li	$a2, 0x010D	# process to level 2
+	li	$a2, 0x010F	# process ASAP to level 2
 	jal	queue_process_four
 	add	$s0, $s0, 14	# added 14 more
 	add	$s1, $s1, 56
