@@ -1352,7 +1352,6 @@ pb_goto_tile_go:
 	sw	$zero, GET_BOOST
 	sw	$zero, GET_BOOST
 	sw	$zero, GET_BOOST
-	sw	$zero, GET_BOOST
 	sw	$t0, used_boost	# anything nonzero will work
 pb_goto_tile_short:
 	lw	$t0, TIMER
