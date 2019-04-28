@@ -801,7 +801,7 @@ fq_try_bread:
 	
 fq_try_cheese:
 	lw	$t1, R_CHEESE($t3)
-	bge	$t1, 4, fq_raw_next
+	bge	$t1, 6, fq_raw_next
 	li	$t1, 0x0B04	# go to cheese bin
 	sw	$t1, 0($s1)
 	li	$t1, OPQ_FACE_BIN
@@ -816,7 +816,7 @@ fq_try_meat:
 	lw	$t0, R_MEAT($t3)
 	lw	$t1, R_UNCOOKED_MEAT($t3)
 	add	$t0, $t0, $t1	# total meat on counter
-	bge	$t0, 16, fq_raw_next
+	bge	$t0, 22, fq_raw_next
 	li	$t0, 0x0804	# go to meat bin
 	sw	$t0, 0($s1)
 	li	$t0, OPQ_FACE_BIN
@@ -846,7 +846,7 @@ fq_try_onion:
 	lw	$t0, R_ONIONS($t3)
 	lw	$t1, R_UNCUT_ONIONS($t3)
 	add	$t0, $t0, $t1	# total onions on counter
-	bge	$t0, 10, fq_raw_next
+	bge	$t0, 12, fq_raw_next
 	li	$t0, 0x0C04	# go to onion bin
 	sw	$t0, 0($s1)
 	li	$t0, OPQ_FACE_BIN
@@ -876,7 +876,7 @@ fq_try_tomato:
 	lw	$t0, R_TOMATOES($t3)
 	lw	$t1, R_UNWASHED_TOMATOES($t3)
 	add	$t0, $t0, $t1	# total tomatoes on counter
-	bge	$t0, 10, fq_raw_next
+	bge	$t0, 18, fq_raw_next
 	li	$t0, 0x0A04	# go to tomato bin
 	sw	$t0, 0($s1)
 	li	$t0, OPQ_FACE_BIN
@@ -908,7 +908,7 @@ fq_try_lettuce:
 	add	$t0, $t0, $t1
 	lw	$t1, R_UNCUT_LETTUCE($t3)
 	add	$t0, $t0, $t1	# total lettuce on counter
-	bge	$t0, 14, fq_raw_next
+	bge	$t0, 18, fq_raw_next
 	li	$t0, 0x0904	# go to lettuce bin
 	sw	$t0, 0($s1)
 	li	$t0, OPQ_FACE_BIN
