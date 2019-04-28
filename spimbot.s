@@ -1340,6 +1340,12 @@ pb_goto_tile_go:
 	sw	$t0, VELOCITY
 	bge	$v0, 10000, pb_goto_tile_short
 	srl	$v0, $v0, 1	# "checkpoint" halfway in the middle to correct for arctan inaccuracy
+	lw	$t0, GET_MONEY	# boost a bit if we have enough money
+	blt	$t0, 15, pb_goto_tile_short
+	sw	$zero, GET_BOOST
+	sw	$zero, GET_BOOST
+	sw	$zero, GET_BOOST
+	sw	$zero, GET_BOOST
 pb_goto_tile_short:
 	lw	$t0, TIMER
 	add	$t0, $t0, $v0
