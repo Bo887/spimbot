@@ -592,6 +592,7 @@ counter_prox_xs:	.word	158 139
 boost_end_time:		.word	0	# cycle number at which last boost will end
 food_bins_finished:	.word	0	# what index in food_bin_tiles we're currently taking raw ingredients from
 placed_on_appliance:	.word	0	# whether the last OPQ_DROPOFF actually placed anything
+used_boost:		.word	0	# whether we used boost on the current OPQ_GOTO_TILE trip
 
 # internal food IDs and tables used by make_sandwiches
 IID_BREAD		= 0
@@ -1120,6 +1121,7 @@ od_goto_tile:
 	blt	$t0, $t1, od_no
 	add	$t1, $t1, 20	# make sure we're not more than 20 px to right of tile
 	bgt	$t0, $t1, od_no
+	sw	$zero, used_boost
 	j	od_yes
 	
 od_goto_tile_food:
@@ -1138,6 +1140,7 @@ od_goto_tile_food:
 	sub	$t0, $t0, $t1	# margin = target - botX
 	bgt	$t0, 3, od_no
 	blt	$t0, -3, od_no
+	sw	$zero, used_boost
 	j	od_yes
 	
 od_goto_app_edge:
@@ -1338,14 +1341,19 @@ pb_goto_tile_go:
 	jal	set_move_point_target
 	li	$t0, 10
 	sw	$t0, VELOCITY
-	bge	$v0, 10000, pb_goto_tile_short
+	blt	$v0, 15000, pb_goto_tile_short
 	srl	$v0, $v0, 1	# "checkpoint" halfway in the middle to correct for arctan inaccuracy
+	blt	$v0, 30000, pb_goto_tile_short
+	lw	$t0, used_boost	# only boost once per trip to save money
+	bne	$t0, $zero, pb_goto_tile_short
 	lw	$t0, GET_MONEY	# boost a bit if we have enough money
-	blt	$t0, 15, pb_goto_tile_short
+	blt	$t0, 240, pb_goto_tile_short
 	sw	$zero, GET_BOOST
 	sw	$zero, GET_BOOST
 	sw	$zero, GET_BOOST
 	sw	$zero, GET_BOOST
+	sw	$zero, GET_BOOST
+	sw	$t0, used_boost	# anything nonzero will work
 pb_goto_tile_short:
 	lw	$t0, TIMER
 	add	$t0, $t0, $v0
