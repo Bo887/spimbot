@@ -585,7 +585,7 @@ op_queue_length:	.word 4
 			.align 4
 			#       NOTHING   INITIAL_DOWN    INITIAL_ENTRY    STOP    GOTO_TILE    GOTO_APPLIANCE_EDGE BOOST    FACE_APPLIANCE    FACE_BIN    DUMP    SIMPLE_PICKUP    GOTO_COUNTER    DROPOFF    PROCESS    LOAD_UP    PROCESS_ASAP    WAIT    GOTO_TURNIN    SUBMIT
 od_jump_table:		.word	od_yes    od_initial_down od_initial_entry od_stop od_goto_tile od_goto_app_edge    od_boost od_face_appliance od_face_bin od_dump od_simple_pickup od_goto_counter od_dropoff od_process od_load_up od_process_asap od_yes  od_goto_turnin od_submit
-po_jump_table:		.word	po_done   po_initial_down po_initial_entry po_done po_goto_tile po_goto_app_edge    po_boost po_done           po_done     po_done po_done          po_goto_counter po_done    po_process po_done    po_process      po_done po_goto_turnin po_done
+po_jump_table:		.word	po_done   po_initial_down po_initial_entry po_done po_goto_tile po_goto_app_edge    po_boost po_done           po_done     po_done po_done          po_goto_counter po_done    po_process po_done    po_process_asap po_done po_goto_turnin po_done
 
 # constants for each side, indexed with bot_on_left
 entry_angles:		.word	110 70
@@ -599,6 +599,7 @@ boost_end_time:		.word	0	# cycle number at which last boost will end
 food_bins_finished:	.word	0	# what index in food_bin_tiles we're currently taking raw ingredients from
 placed_on_appliance:	.word	0	# whether the last OPQ_DROPOFF actually placed anything
 used_boost:		.word	0	# whether we used boost on the current OPQ_GOTO_TILE trip
+started_slow_process:	.word	0	# whether the current OPQ_PROCESS_ASAP had to wait for money
 
 # internal food IDs and tables used by make_sandwiches and usable_supplies
 IID_BREAD		= 0
@@ -1255,10 +1256,16 @@ od_load_up:
 	
 od_process_asap:
 	lw	$t0, GET_TILE_INFO
-	bgt	$t0, $a1, od_yes
+	bgt	$t0, $a1, od_process_asap_done
 	lw	$t0, GET_MONEY
 	blt	$t0, 15, od_no
+	lw	$t0, started_slow_process
+	bne	$t0, $zero, od_no
 	sw	$zero, FINISH_APPLIANCE_INSTANT
+	# fall through
+	
+od_process_asap_done:
+	sw	$zero, started_slow_process
 	j	od_yes
 	
 od_goto_turnin:
@@ -1399,6 +1406,11 @@ po_goto_counter:
 	li	$t0, 10
 	sw	$t0, VELOCITY
 	j	po_done
+	
+po_process_asap:
+	li	$t0, 1
+	sw	$t0, started_slow_process
+	# fall through to po_process
 	
 po_process:
 	lw	$t0, TIMER
