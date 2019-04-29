@@ -83,6 +83,14 @@ R_UNCOOKED_MEAT		= 36
 R_CHEESE		= 40
 R_BREAD			= 44
 
+# amount of each kind of food to prepare/request
+DESIRED_BREAD		= 26
+DESIRED_CHEESE		= 6
+DESIRED_MEAT		= 22
+DESIRED_ONION		= 12
+DESIRED_TOMATO		= 18
+DESIRED_LETTUCE		= 18
+
 puzzle1:		.space 1832     # space allocated for the puzzle
 puzzle2:		.space 1832
 map:			.space 225      # stores the map from GET_LAYOUT
@@ -92,11 +100,9 @@ map:			.space 225      # stores the map from GET_LAYOUT
 encoded_request:	.space 24	# 3 orders, 2 words per packed request
 decoded_request:	.space 144	# 3 orders, 12 words per unpacked request (ingredients array)
 encoded_progress:	.space 24	# 3 order requests
-			.word 0xF1EEAA01
-decoded_progress:	.space 48	# one order list
-			.word 0xF1EEAA02
+decoded_progress:	.space 48	# one order/progress list
 decoded_order:		.space 48	# one order list
-			.word 0xF1EEAA03
+desired_items:		.space 48	# one request list
 inventory:              .space 16       # 4 elements (each an integer) in the inventory -> 16 bytes total
 
 ### PRECOMPUTED PUZZLE SOLVING TABLES ###
@@ -552,12 +558,12 @@ kstack_bottom:		.word 0
 			.word 0xF1EE0802
 			
 OPQ_NOTHING		= 0	# no-op
-OPQ_INITIAL_DOWN	= 1	# go down 2 tiles (from start)
+OPQ_INITIAL_DOWN	= 1	# go down 2 tiles (from start) and decide request
 OPQ_INITIAL_ENTRY	= 2	# angle down into the relevant rectangle
 OPQ_STOP		= 3	# done moving for now
 OPQ_GOTO_TILE		= 4	# drive to a useful tile type (high 24)
 OPQ_GOTO_APPLIANCE_EDGE	= 5	# reserved/NYI
-OPQ_BOOST		= 6	# ensure enough boost for a time (high 24)
+OPQ_BOOST		= 6	# reserved/NYI (untested)
 OPQ_FACE_APPLIANCE	= 7	# stop and look at the appliance
 OPQ_FACE_BIN		= 8	# stop and look at the food bin
 OPQ_DUMP		= 9	# drop off all items
@@ -567,9 +573,9 @@ OPQ_DROPOFF		= 12	# drop an item of the specified type (high 24)
 OPQ_PROCESS		= 13	# wait for an item, if present, to wash or chop (20k cycles) to greater than the specified (high 24) prep level
 OPQ_LOAD_UP		= 14	# pick up as much as possible from the current tile
 OPQ_PROCESS_ASAP	= 15	# same as OPQ_PROCESS but will use instant finishing if possible
-OPQ_WAIT		= 16	# reserved/NYI - works the same as OPQ_NOTHING
+OPQ_WAIT		= 16	# reserved/NYI (works the same as OPQ_NOTHING)
 OPQ_GOTO_TURNIN		= 17	# drive to turn-in counter
-OPQ_SUBMIT		= 18	# make as many sandwiches as possible while standing in the corner
+OPQ_SUBMIT		= 18	# make as many sandwiches as possible while parked in the corner
 operations_queue:	.word OPQ_NOTHING OPQ_INITIAL_DOWN OPQ_INITIAL_ENTRY OPQ_STOP
 			.space 512
 			.word 0xF1EE0803
@@ -789,7 +795,7 @@ fq_raw_top:
 	
 fq_try_bread:
 	lw	$t1, R_BREAD($t3)
-	bge	$t1, 26, fq_raw_next
+	bge	$t1, DESIRED_BREAD, fq_raw_next
 	li	$t1, 0x0704	# go to bread bin
 	sw	$t1, 0($s1)
 	li	$t1, OPQ_FACE_BIN
@@ -802,7 +808,7 @@ fq_try_bread:
 	
 fq_try_cheese:
 	lw	$t1, R_CHEESE($t3)
-	bge	$t1, 6, fq_raw_next
+	bge	$t1, DESIRED_CHEESE, fq_raw_next
 	li	$t1, 0x0B04	# go to cheese bin
 	sw	$t1, 0($s1)
 	li	$t1, OPQ_FACE_BIN
@@ -817,7 +823,7 @@ fq_try_meat:
 	lw	$t0, R_MEAT($t3)
 	lw	$t1, R_UNCOOKED_MEAT($t3)
 	add	$t0, $t0, $t1	# total meat on counter
-	bge	$t0, 22, fq_raw_next
+	bge	$t0, DESIRED_MEAT, fq_raw_next
 	li	$t0, 0x0804	# go to meat bin
 	sw	$t0, 0($s1)
 	li	$t0, OPQ_FACE_BIN
@@ -847,7 +853,7 @@ fq_try_onion:
 	lw	$t0, R_ONIONS($t3)
 	lw	$t1, R_UNCUT_ONIONS($t3)
 	add	$t0, $t0, $t1	# total onions on counter
-	bge	$t0, 12, fq_raw_next
+	bge	$t0, DESIRED_ONION, fq_raw_next
 	li	$t0, 0x0C04	# go to onion bin
 	sw	$t0, 0($s1)
 	li	$t0, OPQ_FACE_BIN
@@ -877,7 +883,7 @@ fq_try_tomato:
 	lw	$t0, R_TOMATOES($t3)
 	lw	$t1, R_UNWASHED_TOMATOES($t3)
 	add	$t0, $t0, $t1	# total tomatoes on counter
-	bge	$t0, 18, fq_raw_next
+	bge	$t0, DESIRED_TOMATO, fq_raw_next
 	li	$t0, 0x0A04	# go to tomato bin
 	sw	$t0, 0($s1)
 	li	$t0, OPQ_FACE_BIN
@@ -909,7 +915,7 @@ fq_try_lettuce:
 	add	$t0, $t0, $t1
 	lw	$t1, R_UNCUT_LETTUCE($t3)
 	add	$t0, $t0, $t1	# total lettuce on counter
-	bge	$t0, 18, fq_raw_next
+	bge	$t0, DESIRED_LETTUCE, fq_raw_next
 	li	$t0, 0x0904	# go to lettuce bin
 	sw	$t0, 0($s1)
 	li	$t0, OPQ_FACE_BIN
@@ -1292,6 +1298,7 @@ po_initial_down:
 	sll	$t1, $t1, 2	# cycles = 20000
 	add	$t0, $t0, $t1
 	sw	$t0, TIMER
+	jal	request_ingredients
 	j	po_done
 	
 po_initial_entry:
@@ -1776,4 +1783,100 @@ update_corner_progress:
 	sw	$a0, GET_TURNIN_USERS
 	la	$a1, decoded_progress
 	j	decode_request_in_mem	# uses current $ra
+	
+# -----------------------------------------------------------------------
+# request_ingredients makes the request to the partner bot
+# requires the layout to be ready
+# -----------------------------------------------------------------------
+request_ingredients:
+	sub	$sp, $sp, 4
+	sw	$ra, 0($sp)
+	
+	la	$t2, desired_items
+	la	$t3, useful_locations
+	
+	# bread
+	lbu	$t0, T_BIN_BREAD($t3)
+	bne	$t0, $zero, ri_has_bread
+	li	$t1, DESIRED_BREAD
+	sw	$t1, R_BREAD($t2)
+	
+ri_has_bread:
+	# cheese
+	lbu	$t0, T_BIN_CHEESE($t3)
+	bne	$t0, $zero, ri_has_cheese
+	li	$t1, DESIRED_CHEESE
+	sw	$t1, R_CHEESE($t2)
+	
+ri_has_cheese:
+	# raw meat
+	lbu	$t0, T_BIN_MEAT($t3)
+	bne	$t0, $zero, ri_has_raw_meat
+	li	$t1, DESIRED_MEAT
+	sw	$t1, R_UNCOOKED_MEAT($t2)
+	
+ri_has_raw_meat:
+	# cooked meat (need oven)
+	lbu	$t0, T_OVEN($t3)
+	bne	$t0, $zero, ri_has_oven
+	li	$t1, DESIRED_MEAT
+	sw	$t1, R_MEAT($t2)
+	# raw meat is useless if we don't have an oven
+	sw	$zero, R_UNCOOKED_MEAT($t2)
+	
+ri_has_oven:
+	# raw tomato
+	lbu	$t0, T_BIN_TOMATO($t3)
+	bne	$t0, $zero, ri_has_raw_tomato
+	li	$t1, DESIRED_TOMATO
+	sw	$t1, R_UNWASHED_TOMATOES($t2)
+	
+ri_has_raw_tomato:
+	# raw onion
+	lbu	$t0, T_BIN_ONION($t3)
+	bne	$t0, $zero, ri_has_raw_onion
+	li	$t1, DESIRED_ONION
+	sw	$t1, R_UNCUT_ONIONS($t2)
+	
+ri_has_raw_onion:
+	# raw lettuce
+	lbu	$t0, T_BIN_LETTUCE($t3)
+	bne	$t0, $zero, ri_check_apps
+	li	$t1, DESIRED_LETTUCE
+	sw	$t1, R_UNPROCESSED_LETTUCE($t2)
+	
+ri_check_apps:
+	# sink
+	lbu	$t5, T_SINK($t3)
+	bne	$t5, $zero, ri_has_sink
+	li	$t1, DESIRED_TOMATO
+	sw	$t1, R_TOMATOES($t2)
+	li	$t1, DESIRED_LETTUCE
+	sw	$t1, R_UNCUT_LETTUCE($t2)
+	# unwashed ingredients are useless if we don't have a sink
+	sw	$zero, R_UNWASHED_TOMATOES($t2)
+	sw	$zero, R_UNPROCESSED_LETTUCE($t2)
+	
+ri_has_sink:
+	# sink
+	lbu	$t4, T_CHOPPING_BOARD($t3)
+	bne	$t4, $zero, ri_done
+	li	$t1, DESIRED_ONION
+	sw	$t1, R_ONIONS($t2)
+	li	$t1, DESIRED_LETTUCE
+	sw	$t1, R_LETTUCE($t2)
+	# unchopped ingredients are useless if we don't have a chopping board
+	sw	$zero, R_UNCUT_ONIONS($t2)
+	sw	$zero, R_UNCUT_LETTUCE($t2)
+	
+ri_done:
+	la	$a0, encoded_request
+	move	$a1, $t2
+	jal	create_request_in_mem
+	la	$t0, encoded_request
+	sw	$t0, SET_REQUEST
+
+	lw	$ra, 0($sp)
+	add	$sp, $sp, 4
+	jr	$ra
 	
