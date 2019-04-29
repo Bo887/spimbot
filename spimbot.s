@@ -768,7 +768,7 @@ fill_queue:
 	
 	# see if we're nearing the end of the match
 	lw	$t0, TIMER
-	li	$t1, 9400000	# TODO: fine-tune this
+	li	$t1, 9400000
 	blt	$t1, $t0, fq_submission_time
 	
 	# see what's on the shared counter
@@ -1159,7 +1159,7 @@ od_goto_tile_food:
 	j	od_yes
 	
 od_goto_app_edge:
-	# TODO
+	# reserved
 	j	od_done
 
 od_boost:
