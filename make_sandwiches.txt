@@ -1,0 +1,19 @@
+// psuedocode for sandwich submission routine
+
+outer : while (true) {
+	getCornerOrder();
+	for (int ingr = 0; ingr < 6; ingr++) {
+		updateProgress();
+		while (order[ingr] - progress[ingr] > 0) {
+			if (canMagic(ingr)) {
+				magic(ingr);
+			} else {
+				pickup(ingr);
+				if (!pickedUp) break outer;
+			}
+			dumpToTurnin();
+			updateProgress();
+		}
+	}
+	submit();
+}
