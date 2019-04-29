@@ -48,13 +48,36 @@ FINISH_APPLIANCE_INSTANT= 0xffff0078
 
 puzzle:			.space 1832     # space allocated for the puzzle
 map:			.space 225      # stores the map from GET_LAYOUT
+test_a: .word 0xdeadbeef
 tile_types:		.space 5        # 5 bytes for a 5-element char array representing what is in the 5 item locations.
+test_b: .word 0xdeadbeef
 
 			.align 2	# force the following to be word-aligned
 
 encoded_request:	.space 24	# 3 orders, 2 words per packed request
 decoded_request:	.space 144	# 3 orders, 12 words per unpacked request (ingredients array)
 inventory:              .space 16       # 4 elements (each an integer) in the inventory -> 16 bytes total
+
+encoded_shared_counter: .space 8
+decoded_shared_counter: .space 48
+has_oven:               .word 0
+has_sink:               .word 0
+has_chop:               .word 0
+done_processing:        .word 0
+
+encoded_order:          .space 24       # same as encoded_request
+decoded_order:          .space 144      # same as decoded_request
+
+first_order_magnitude:  .word 0
+second_order_magnitude: .word 0
+third_order_magnitude:  .word 0
+
+food_groups_idx_to_id:  .word 0x50002 0x50001 0x50000 0x40001 0x4000 0x30001 0x30000 0x20002 0x20001 0x20000 0x10000 0
+
+.align 2
+first_order_components: .space 36
+second_order_components:.space 36
+third_order_components: .space 36
 
 ### PRECOMPUTED PUZZLE SOLVING TABLES ###
 
@@ -137,6 +160,8 @@ three:              .float 3.0
 five:               .float 5.0
 F180:               .float 180.0
 
+shared_counter_x:   .word 170 130   # 2-element array, shared_counter_x[bot_on_left] will give the corresponding one to use
+
 .text
 
 # -----------------------------------------------------------------------
@@ -158,75 +183,881 @@ main:
         sw          $t1, 0($t0)    # save to global variable
 
         # fill tile_types
-        la          $t0, map
-        sw          $t0, GET_LAYOUT     # $t0 = struct layout {char map[15][15];};
-        la          $t2, tile_types     # $t2 = &tile_types
+        la          $s0, map
+        sw          $s0, GET_LAYOUT     # $s0 = struct layout {char map[15][15];};
+        la          $s1, tile_types     # $s1 = &tile_types
         bne         $t1, 1, fill_right_tiles    # when bot_on_left is false, branch to fill_right_tiles
 
 fill_left_tiles:
-        lbu         $t3, 165($t0)       # hardcoded locations for the relevent tiles on the left side
-        sb          $t3, 0($t2)         # save all 5 of them to the tile_types array
-        lbu         $t3, 105($t0)
-        sb          $t3, 1($t2)
-        lbu         $t3, 45($t0)
-        sb          $t3, 2($t2)
-        lbu         $t3, 32($t0)
-        sb          $t3, 3($t2)
-        lbu         $t3, 35($t0)
-        sb          $t3, 4($t2)
+        lbu         $t3, 165($s0)       # hardcoded locations for the relevent tiles on the left side
+        sb          $t3, 0($s1)         # save all 5 of them to the tile_types array
+        lbu         $t3, 105($s0)
+        sb          $t3, 1($s1)
+        lbu         $t3, 45($s0)
+        sb          $t3, 2($s1)
+        lbu         $a0, 32($s0)
+        sb          $a0, 3($s1)
+        li          $a1, 3
+        jal         update_flags
+        lbu         $a0, 35($s0)
+        sb          $a0, 4($s1)
+        li          $a1, 4
+        jal         update_flags
+        j           place_ingredients_on_sc
 
 fill_right_tiles:
-        lbu         $t3, 179($t0)       # hardcoded locations for the relevent tiles on the right side
-        sb          $t3, 0($t2)         # save all 5 of them to the tile_types array
-        lbu         $t3, 119($t0)
-        sb          $t3, 1($t2)
-        lbu         $t3, 59($t0)
-        sb          $t3, 2($t2)
-        lbu         $t3, 42($t0)
-        sb          $t3, 3($t2)
-        lbu         $t3, 39($t0)
-        sb          $t3, 4($t2)
+        lbu         $t3, 179($s0)       # hardcoded locations for the relevent tiles on the right side
+        sb          $t3, 0($s1)         # save all 5 of them to the tile_types array
+        lbu         $t3, 119($s0)
+        sb          $t3, 1($s1)
+        lbu         $t3, 59($s0)
+        sb          $t3, 2($s1)
+        lbu         $a0, 42($s0)
+        sb          $a0, 3($s1)
+        li          $a1, 3
+        jal         update_flags
+        lbu         $a0, 39($s0)
+        sb          $a0, 4($s1)
+        li          $a1, 4
+        jal         update_flags
 
-        lw          $t0, bot_on_left
-        beq         $t0, 0, right_main  # jump to the corresponsind "main" depending on which side we are
-left_main:
-	#Fill in your code here
+place_ingredients_on_sc:
         li          $a0, 10
         li          $a1, 55
-        jal         move_point_while_solving    # go to closest bin
+        jal         move_point_while_solving_generic
+        jal         pickup_all_unprocessed
 
-        sw          $0, PICKUP                  # once reached, pickup whatever is from that bin
-        sw          $0, PICKUP                  # until our inventory is full
-        sw          $0, PICKUP
-        sw          $0, PICKUP
-        jal         update_inventory            # and test updating the inventory
-
-        li          $a0, 15                     # continue testing
+        li          $a0, 15
         li          $a1, 50
-        jal         move_point_while_solving
-
+        jal         move_point_while_solving_generic
         li          $a0, 60
         li          $a1, 80
+        jal         move_point_while_solving_generic
+        jal         drive_to_shared_counter
+        jal         dropoff_all
+
+        li          $a0, 30
+        li          $a1, 70
+        jal         move_point_while_solving_generic
+        jal         rotate_face_outside
+        jal         pickup_all_unprocessed
+        jal         drive_to_shared_counter
+        jal         dropoff_all
+        la          $t1, tile_types
+        lb          $t0, 2($t1)
+        bne         $t0, 7, next_a
+
+
+        li          $a0, 30
+        li          $a1, 70
+        jal         move_point_while_solving_generic
+        jal         rotate_face_outside
+        jal         pickup_all_unprocessed
+        jal         drive_to_shared_counter
+        jal         dropoff_all
+        li          $a0, 30
+        li          $a1, 70
+        jal         move_point_while_solving_generic
+        jal         rotate_face_outside
+        jal         pickup_all_unprocessed
+        jal         drive_to_shared_counter
+        jal         dropoff_all
+
+next_a:
+
+        li          $a0, 30
+        li          $a1, 150
+        jal         move_point_while_solving_generic
+        jal         rotate_face_outside
+        jal         pickup_all_unprocessed
+        jal         drive_to_shared_counter
+        jal         dropoff_all
+
+        li          $a0, 30
+        li          $a1, 150
+        jal         move_point_while_solving_generic
+        jal         rotate_face_outside
+        jal         pickup_all_unprocessed
+        jal         drive_to_shared_counter
+        jal         dropoff_all
+
+        la          $t1, tile_types
+        lb          $t0, 1($t1)
+        bne         $t0, 7, next_b
+
+        li          $a0, 30
+        li          $a1, 150
+        jal         move_point_while_solving_generic
+        jal         rotate_face_outside
+        jal         pickup_all_unprocessed
+        jal         drive_to_shared_counter
+        jal         dropoff_all
+
+        li          $a0, 30
+        li          $a1, 150
+        jal         move_point_while_solving_generic
+        jal         rotate_face_outside
+        jal         pickup_all_unprocessed
+        jal         drive_to_shared_counter
+        jal         dropoff_all
+
+next_b:
+
+        li          $a0, 30
+        li          $a1, 230
+        jal         move_point_while_solving_generic
+        jal         rotate_face_outside
+        jal         pickup_all_unprocessed
+        jal         drive_to_shared_counter
+        jal         dropoff_all
+
+        li          $a0, 30
+        li          $a1, 230
+        jal         move_point_while_solving_generic
+        jal         rotate_face_outside
+        jal         pickup_all_unprocessed
+        jal         drive_to_shared_counter
+        jal         dropoff_all
+
+        la          $t1, tile_types
+        lb          $t0, 0($t1)
+        bne         $t0, 7, process_items_begin
+
+        li          $a0, 30
+        li          $a1, 230
+        jal         move_point_while_solving_generic
+        jal         rotate_face_outside
+        jal         pickup_all_unprocessed
+        jal         drive_to_shared_counter
+        jal         dropoff_all
+
+        li          $a0, 30
+        li          $a1, 230
+        jal         move_point_while_solving_generic
+        jal         rotate_face_outside
+        jal         pickup_all_unprocessed
+        jal         drive_to_shared_counter
+        jal         dropoff_all
+
+process_items_begin:
+        lw,         $t0, TIMER
+        bge         $t0, 8000000, deploy
+
+
+        jal         update_shared_counter
+        la          $s0, decoded_shared_counter
+
+        li          $s2, 0
+
+        # check unwashed unchopped lettuce
+        lw          $s1, 8($s0)
+        lw          $a0, has_sink
+        sne         $t1, $s1, 0
+        add         $s2, $t1, $s2
+        sne         $t2, $a0, 0
+        and         $t1, $t2, $t1
+        bne         $t1, 0, wash_lettuce
+
+        # check unchopped lettuce
+        lw          $s1, 4($s0)
+        lw          $a0, has_chop
+        sne         $t1, $s1, 0
+        add         $s2, $t1, $s2
+        sne         $t2, $a0, 0
+        and         $t1, $t2, $t1
+        bne         $t1, 0, chop_lettuce
+
+        # check uncooked meat
+        lw          $s1, 36($s0)        # $s1 = # of uncooked_meat
+        lw          $a0, has_oven       # $a0 = do we have an oven ? pos int : 0
+        sne         $t1, $s1, 0         # $t1 = # of uncooked_meat is not 0 ? 1 : 0
+        add         $s2, $t1, $s2
+        sne         $t2, $a0, 0
+        and         $t1, $t2, $t1
+        bne         $t1, 0, cook_meat
+
+        # check unwashed tomatoes
+        lw          $s1, 24($s0)
+        lw          $a0, has_sink
+        sne         $t1, $s1, 0
+        add         $s2, $t1, $s2
+        sne         $t2, $a0, 0
+        and         $t1, $t2, $t1
+        bne         $t1, 0, wash_tomatoes
+
+        # check unchopped onion
+        lw          $s1, 16($s0)
+        lw          $a0, has_chop
+        sne         $t1, $s1, 0
+        add         $s2, $t1, $s2
+        sne         $t2, $a0, 0
+        and         $t1, $t2, $t1
+        bne         $t1, 0, chop_onion
+
+        beq         $s2, 0, deploy
+        
+        j           process_items_begin
+
+cook_meat:
+        li          $a1, 0x20000
+        sw          $a1, PICKUP
+        jal         process_single_item
+        jal         drive_to_shared_counter
+        sw          $zero, DROPOFF
+        j           process_items_begin
+
+wash_tomatoes:
+        li          $a1, 0x30000
+        sw          $a1, PICKUP
+        jal         process_single_item
+        jal         drive_to_shared_counter
+        sw          $zero, DROPOFF
+        j           process_items_begin
+
+chop_onion:
+        li          $a1, 0x40000
+        sw          $a1, PICKUP
+        jal         process_single_item
+        jal         drive_to_shared_counter
+        sw          $zero, DROPOFF
+        j           process_items_begin
+
+wash_lettuce:
+        li          $a1, 0x50000
+        sw          $a1, PICKUP
+        jal         process_single_item
+        jal         drive_to_shared_counter
+        sw          $zero, DROPOFF
+        j           process_items_begin
+
+chop_lettuce:
+        li          $a1, 0x50001
+        sw          $a1, PICKUP
+        jal         process_single_item
+        jal         drive_to_shared_counter
+        sw          $zero, DROPOFF
+        j           process_items_begin
+
+deploy:
+        jal         update_orders
+
+process_first_order:
+        lw          $s0, first_order_magnitude     # $s0 = number of components in first order
+        la          $s1, first_order_components
+
+        li          $t0, 4
+        div         $s0, $t0
+        mflo        $s2                             # s2 = quotient
+        mfhi        $s3                             # s3 = remainder
+        sne         $s3, $s3, $zero
+
+        add         $s2, $s2, $s3                   # s2 = number of iterations
+        li          $s4, 0
+process_first_order_for_begin:
+        bge         $s4, $s2, submit_first_order
+
+        li          $s5, 0
+process_first_order_inner_for_begin:
+        bge         $s5, 4, process_first_order_for_inc
+        ble         $s0, $zero, process_first_order_for_inc
+
+        mul         $t2, $s5, 4
+        add         $t2, $t2, $s1
+        mul         $s6, $s4, 16
+        add         $t2, $t2, $s6
+        lw          $t2, 0($t2)
+        sw          $t2, PICKUP
+        sub         $s0, $s0, 1
+
+process_first_order_inner_for_inc:
+        add         $s5, $s5, 1
+        j           process_first_order_inner_for_begin
+
+process_first_order_for_inc:
+        li          $a0, 110
+        li          $a1, 275
+        jal         move_point_while_solving_generic
+        li          $t0, 90
+        sw          $t0, ANGLE
+        li          $t0, 1
+        sw          $t0, ANGLE_CONTROL
+        li          $t0, 0
+        sw          $t0, DROPOFF
+        add         $t0, $t0, 1
+        sw          $t0, DROPOFF
+        add         $t0, $t0, 1
+        sw          $t0, DROPOFF
+        add         $t0, $t0, 1
+        sw          $t0, DROPOFF
+
+        jal         drive_to_shared_counter
+
+        add         $s4, $s4, 1
+        j           process_first_order_for_begin
+
+submit_first_order:
+        li          $a0, 110
+        li          $a1, 275
+        jal         move_point_while_solving_generic
+        li          $t0, 90
+        sw          $t0, ANGLE
+        li          $t0, 1
+        sw          $t0, ANGLE_CONTROL
+        li          $t0, 0
+
+        sw          $zero, SUBMIT_ORDER
+
+process_second_order:
+        jal         drive_to_shared_counter
+        li          $t0, 0
+        sw          $t0, DROPOFF
+        add         $t0, $t0, 1
+        sw          $t0, DROPOFF
+        add         $t0, $t0, 1
+        sw          $t0, DROPOFF
+        add         $t0, $t0, 1
+        sw          $t0, DROPOFF
+
+
+        lw          $s0, second_order_magnitude
+        la          $s1, second_order_components
+
+        li          $t0, 4
+        div         $s0, $t0
+        mflo        $s2                             # s2 = quotient
+        mfhi        $s3                             # s3 = remainder
+        sne         $s3, $s3, $zero
+
+        add         $s2, $s2, $s3                   # s2 = number of iterations
+        li          $s4, 0
+process_second_order_for_begin:
+        bge         $s4, $s2, submit_second_order
+
+        li          $s5, 0
+process_second_order_inner_for_begin:
+        bge         $s5, 4, process_second_order_for_inc
+        ble         $s0, $zero, process_second_order_for_inc
+
+        mul         $t2, $s5, 4
+        add         $t2, $t2, $s1
+        mul         $s6, $s4, 16
+        add         $t2, $t2, $s6
+        lw          $t2, 0($t2)
+        sw          $t2, PICKUP
+        sub         $s0, $s0, 1
+
+process_second_order_inner_for_inc:
+        add         $s5, $s5, 1
+        j           process_second_order_inner_for_begin
+
+process_second_order_for_inc:
+        li          $a0, 90
+        li          $a1, 275
+        jal         move_point_while_solving_generic
+        li          $t0, 90
+        sw          $t0, ANGLE
+        li          $t0, 1
+        sw          $t0, ANGLE_CONTROL
+        li          $t0, 0
+        sw          $t0, DROPOFF
+        add         $t0, $t0, 1
+        sw          $t0, DROPOFF
+        add         $t0, $t0, 1
+        sw          $t0, DROPOFF
+        add         $t0, $t0, 1
+        sw          $t0, DROPOFF
+
+        jal         drive_to_shared_counter
+
+        add         $s4, $s4, 1
+        j           process_second_order_for_begin
+
+submit_second_order:
+        li          $a0, 90
+        li          $a1, 275
+        jal         move_point_while_solving_generic
+        li          $t0, 90
+        sw          $t0, ANGLE
+        li          $t0, 1
+        sw          $t0, ANGLE_CONTROL
+        li          $t0, 0
+
+        sw          $zero, SUBMIT_ORDER
+
+process_third_order:
+        jal         drive_to_shared_counter
+        li          $t0, 0
+        sw          $t0, DROPOFF
+        add         $t0, $t0, 1
+        sw          $t0, DROPOFF
+        add         $t0, $t0, 1
+        sw          $t0, DROPOFF
+        add         $t0, $t0, 1
+        sw          $t0, DROPOFF
+
+
+        lw          $s0, third_order_magnitude
+        la          $s1, third_order_components
+
+        li          $t0, 4
+        div         $s0, $t0
+        mflo        $s2                             # s2 = quotient
+        mfhi        $s3                             # s3 = remainder
+        sne         $s3, $s3, $zero
+
+        add         $s2, $s2, $s3                   # s2 = number of iterations
+        li          $s4, 0
+process_third_order_for_begin:
+        bge         $s4, $s2, submit_third_order
+
+        li          $s5, 0
+process_third_order_inner_for_begin:
+        bge         $s5, 4, process_third_order_for_inc
+        ble         $s0, $zero, process_third_order_for_inc
+
+        mul         $t2, $s5, 4
+        add         $t2, $t2, $s1
+        mul         $s6, $s4, 16
+        add         $t2, $t2, $s6
+        lw          $t2, 0($t2)
+        sw          $t2, PICKUP
+        sub         $s0, $s0, 1
+
+process_third_order_inner_for_inc:
+        add         $s5, $s5, 1
+        j           process_third_order_inner_for_begin
+
+process_third_order_for_inc:
+        li          $a0, 50
+        li          $a1, 275
+        jal         move_point_while_solving_generic
+        li          $t0, 90
+        sw          $t0, ANGLE
+        li          $t0, 1
+        sw          $t0, ANGLE_CONTROL
+        li          $t0, 0
+        sw          $t0, DROPOFF
+        add         $t0, $t0, 1
+        sw          $t0, DROPOFF
+        add         $t0, $t0, 1
+        sw          $t0, DROPOFF
+        add         $t0, $t0, 1
+        sw          $t0, DROPOFF
+
+        jal         drive_to_shared_counter
+
+        add         $s4, $s4, 1
+        j           process_third_order_for_begin
+
+submit_third_order:
+        li          $a0, 50
+        li          $a1, 275
+        jal         move_point_while_solving_generic
+        li          $t0, 90
+        sw          $t0, ANGLE
+        li          $t0, 1
+        sw          $t0, ANGLE_CONTROL
+        li          $t0, 0
+
+        sw          $zero, SUBMIT_ORDER
+
+infinite:
+        j           infinite
+
+# -----------------------------------------------------------------------
+# update_flags - function that updates the utility flags
+# has_oven, has_sink, has_chop
+# $a0 - value of the utility
+# $a1 - index of the utility in tile_types
+# -----------------------------------------------------------------------
+update_flags:
+        beq         $a0, 4, _update_flags_oven
+        beq         $a0, 5, _update_flags_sink
+        beq         $a0, 6, _update_flags_chop
+        j           _update_flags_ret
+_update_flags_oven:
+        la          $t0, has_oven
+        sw          $a1, 0($t0)
+        j           _update_flags_ret
+_update_flags_sink:
+        la          $t0, has_sink
+        sw          $a1, 0($t0)
+        j           _update_flags_ret
+_update_flags_chop:
+        la          $t0, has_chop
+        sw          $a1, 0($t0)
+
+        # fall thru
+
+_update_flags_ret:
+        jr          $ra
+
+# -----------------------------------------------------------------------
+# update_order_mem - function that updates the information about the order
+# in memory
+# $a0 - base address of order struct
+# $a1 - base address to save the number of components
+# $a2 - base address to save the components
+# -----------------------------------------------------------------------
+update_order_mem:
+        li          $v0, 0      # $v0 = 0
+
+        li          $t0, 0      # $t0 = 0 (i)
+        li          $t2, 0      # $t2 = 0 (j)
+_update_order_mem_for_begin:
+        bge         $t0, 12, _update_order_mem_ret
+        mul         $t1, $t0, 4     # $t1 = i*sizeof(int)
+        add         $t3, $t1, $a0   # $t3 = food_groups + i * sizeof(int)
+        lw          $t3, 0($t3)     # $t3 = food_groups[i]
+        add         $v0, $v0, $t3
+
+        beq         $t3, $zero, _update_order_mem_for_inc   # if there are no items (i.e. food_groups[i] == 0), go to next iteration
+
+_update_order_inner_for_begin:          # handle the case where there are multiple of the same element
+        beq         $t3, $zero, _update_order_mem_for_inc
+        mul         $t5, $t2, 4     # $t5 = j*sizeof(int)
+        la          $t4, food_groups_idx_to_id
+        add         $t4, $t4, $t1   # $t4 = food_groups_idx_to_id + i * sizeof(int)
+        lw          $t4, 0($t4)     # $t4 = food_groups_idx_to_id[i]
+        add         $t5, $a2, $t5   # $t5 = base_addr_components + j * sizeof(int)
+
+        sw          $t4, 0($t5)
+        add         $t2, $t2, 1     # j++
+        sub         $t3, $t3, 1     # $t3--
+        j           _update_order_inner_for_begin
+        
+_update_order_mem_for_inc:
+        add         $t0, $t0, 1
+        j           _update_order_mem_for_begin
+
+_update_order_mem_ret:
+        sw          $v0, 0($a1)
+        jr          $ra
+
+# -----------------------------------------------------------------------
+# update_orders - function that updates the orders requested 
+# (the decoded_orders struct in .data)
+# -----------------------------------------------------------------------
+update_orders:
+        sub         $sp, $sp, 12
+        sw          $ra, 0($sp)
+        sw          $s0, 4($sp)
+        sw          $s1, 8($sp)
+
+        la          $s0, encoded_order
+        sw          $s0, GET_TURNIN_ORDER
+        la          $s1, decoded_order
+        
+        add         $a0, $s0, 0
+        add         $a1, $s1, 0
+        jal         decode_request_in_mem
+        add         $a0, $s1, 0
+        la          $a1, first_order_magnitude
+        la          $a2, first_order_components
+        jal         update_order_mem
+    
+        add         $a0, $s0, 8
+        add         $a1, $s1, 48
+        jal         decode_request_in_mem
+        add         $a0, $s1, 48
+        la          $a1, second_order_magnitude
+        la          $a2, second_order_components
+        jal         update_order_mem
+    
+        add         $a0, $s0, 16
+        add         $a1, $s1, 96
+        jal         decode_request_in_mem
+        add         $a0, $s1, 96
+        la          $a1, third_order_magnitude
+        la          $a2, third_order_components
+        jal         update_order_mem
+
+        lw          $ra, 0($sp)
+        lw          $s0, 4($sp)
+        lw          $s1, 8($sp)
+        add         $sp, $sp, 12
+        jr          $ra
+
+# -----------------------------------------------------------------------
+# update_shared_counter - function that updates the contents of the shared counter
+# (the decoded_shared_counter struct in .data)
+# -----------------------------------------------------------------------
+update_shared_counter:
+        sub         $sp, $sp, 4
+        sw          $ra, 0($sp)
+
+        la          $a0, encoded_shared_counter
+        sw          $a0, GET_SHARED
+        la          $a1, decoded_shared_counter
+        jal         decode_request_in_mem
+
+        lw          $ra, 0($sp)
+        add         $sp, $sp, 4
+        jr          $ra
+
+# -----------------------------------------------------------------------
+# process_single_item - function that makes the bot go process a single item
+# $a0 - location (index of tile_types) of the item
+# $a1 - type of item to process
+# -----------------------------------------------------------------------
+process_single_item:
+        sub         $sp, $sp, 8
+        sw          $ra, 0($sp)
+        sw          $s0, 4($sp)
+
+        move        $s0, $a1
+        li          $a1, 62         # height, all utilities are at height 60, so go a bit lower
+
+        bne         $a0, 3, _process_item_idx_4
+        li          $a0, 50
+        j           _process_item_go
+_process_item_idx_4:
+        li          $a0, 110
+
+_process_item_go:
+        jal         move_point_while_solving_generic
+        jal         rotate_face_up
+
+        beq         $s0, 0x20000, _process_item_oven    # uncooked meat
+        beq         $s0, 0x30000, _process_item_sink    # unwashed tomato
+        beq         $s0, 0x40000, _process_item_chop_onion    # unchopped onion
+        beq         $s0, 0x50000, _process_item_sink    # unwashed unchopped lettuce
+        beq         $s0, 0x50001, _process_item_chop_lettuce    # unchopped lettuce
+        j           _process_item_return
+
+_process_item_oven:
+        jal         wait_for_timer_int
+        sw          $zero, DROPOFF
+        li          $a0, 100000
+        jal         set_wait_cycles
+        jal         wait_for_timer_int
+        sw          $0, PICKUP
+        j           _process_item_return
+
+_process_item_sink:
+        jal         wait_for_timer_int
+        sw          $zero, DROPOFF
+        li          $a0, 20000
+        jal         set_wait_cycles
+        jal         wait_for_timer_int
+        sw          $0, PICKUP
+        j           _process_item_return
+
+_process_item_chop_onion:
+        jal         wait_for_timer_int
+        sw          $zero, DROPOFF
+        li          $a0, 20000
+        jal         set_wait_cycles
+        jal         wait_for_timer_int
+        sw          $0, PICKUP
+        j           _process_item_return
+
+_process_item_chop_lettuce:
+        jal         wait_for_timer_int
+        sw          $zero, DROPOFF
+        li          $a0, 40000
+        jal         set_wait_cycles
+        jal         wait_for_timer_int
+        sw          $0, PICKUP
+        # fall thru
+
+_process_item_return:
+        lw          $ra, 0($sp)
+        lw          $s0, 4($sp)
+        add         $sp, $sp, 8
+        jr          $ra
+
+# -----------------------------------------------------------------------
+# can_cook_inventory_items - returns 1 if we can process the inventory items,
+# otherwise returns 0
+# Assumes the inventory contains the exact same elements!! (i.e. only checks
+# the first inventory item to decide on the item type)
+# returns if the bot can process the inventory items in $v0
+# returns the index of tile_types that contains the processing item in $v1
+# -----------------------------------------------------------------------
+can_cook_inventory_items:
+        lw          $t0, inventory      # $t0 = ID of the items in the inventory
+        li          $v0, 0              # default $v0 = 0 (false)
+
+        beq         $t0, 0, _can_cook_return
+        beq         $t0, 0x10000, _can_cook_return
+
+        li          $t1, 0              # $t1 = i
+        la          $t2, tile_types     # $t2 = tile_types (tile_types = char[5])
+_can_cook_search_tiles_for_begin:
+        bge         $t1, 3, _can_cook_return         # we only need to search indices 0-2
+        add         $t3, $t1, $t2       # $t3 = tile_types+i
+        lb          $t3, 0($t3)         # $t3 = *(tile_types+i) = tile_types[i]
+        beq         $t3, 8, _can_cook_handle_meat
+        beq         $t3, 9, _can_cook_handle_lettuce
+        beq         $t3, 12 _can_cook_handle_onion
+        beq         $t3, 10 _can_cook_handle_tomato
+        j           _can_cook_loop_inc
+
+_can_cook_handle_tomato:
+        lb          $t4, 3($t2)
+        li          $t5, 3
+        beq         $t4, 5, _can_cook_handle_tomato_go
+        lb          $t4, 4($t2)
+        li          $t5, 4
+        beq         $t4, 5, _can_cook_handle_tomato_go
+        j _can_cook_loop_inc
+_can_cook_handle_tomato_go:
+        beq         $t0, 0x30000, _can_cook_found       # tomato that is not cooked, return true
+        beq         $t0, 0x30001, _can_cook_return      # tomato that is already cooked, return false
+        j _can_cook_loop_inc
+_can_cook_handle_onion:
+        lb          $t4, 3($t2)
+        li          $t5, 3
+        beq         $t4, 6, _can_cook_handle_onion_go
+        lb          $t4, 4($t2)
+        li          $t5, 4
+        beq         $t4, 6, _can_cook_handle_onion_go
+        j _can_cook_loop_inc
+_can_cook_handle_onion_go:
+        beq         $t0, 0x40000, _can_cook_found
+        beq         $t0, 0x40001, _can_cook_return
+        j _can_cook_loop_inc
+_can_cook_handle_meat:
+        lb          $t4, 3($t2)
+        li          $t5, 3
+        beq         $t4, 4, _can_cook_handle_meat_go
+        lb          $t4, 4($t2)
+        li          $t5, 4
+        beq         $t4, 4, _can_cook_handle_meat_go
+        j _can_cook_loop_inc
+_can_cook_handle_meat_go:
+        beq         $t0, 0x20000, _can_cook_found
+        beq         $t0, 0x20001, _can_cook_return
+        j _can_cook_loop_inc
+_can_cook_handle_lettuce:
+        # TODO: lettuce logic is a bit complicated, since we have to wash and chop it.
+        # if the lettuce is unwashed and unchopped (level 0), return true if there is a sink
+        # if the lettuce is unchopped (level 1), return true if there is a chopping board
+        # else, the lettuce is processed (level 2), return false since we don't need to do any processing
+        #j _can_cook_loop_inc
+_can_cook_handle_lettuce_go:
+        beq         $t0, 0x50000, _can_cook_found
+        beq         $t0, 0x50001, _can_cook_found
+        beq         $t0, 0x50002, _can_cook_return
+
+_can_cook_loop_inc:
+        add         $t1, $t1, 1
+        j _can_cook_search_tiles_for_begin
+
+_can_cook_found:
+        li          $v0, 1              # $v0 = 1 (true)
+        move        $v1, $t5            # $v1 = $t5 (index of processing item)
+        # fall through
+
+_can_cook_return:
+        jr          $ra
+
+# ----------------------------------------------------------------------
+# rotate_face_up - makes the SPIMBot face upwards (towards the utilities)
+# ----------------------------------------------------------------------
+rotate_face_up:
+        li          $t0, 270
+        sw          $t0, ANGLE
+        li          $t1, 1
+        sw          $t1, ANGLE_CONTROL
+        jr          $ra
+
+# ----------------------------------------------------------------------
+# rotate_face_outside - makes the SPIMBot face towards the outside wall
+# If the bot is on the left, turns towards angle 180.
+# If the bot is on the right, turns towards angle 0.
+# ----------------------------------------------------------------------
+rotate_face_outside:
+        lw          $t0, bot_on_left        # load bot_on_left
+        beq         $t0, 0, _rotate_face_outside_right
+        li          $t1, 180
+        sw          $t1, ANGLE
+        j           _rotate_face_outside_go
+
+_rotate_face_outside_right:
+        li          $t1, 0
+        sw          $t1, ANGLE
+
+_rotate_face_outside_go:
+        li          $t1, 1
+        sw          $t1, ANGLE_CONTROL
+        jr          $ra
+
+# -----------------------------------------------------------------------
+# move_point_while_solving_generic - same as move_point_while_solving,
+# but this is now generic.
+# This function only takes in coordinates from the left side, and automatically
+# converts them to the POV of the right side when needed (based on bot_on_left)
+# $a0 - target_x
+# $a1 - target_y
+# -----------------------------------------------------------------------
+move_point_while_solving_generic:
+        sub         $sp, $sp, 4
+        sw          $ra, 0($sp)
+
+        lw          $t0, bot_on_left        # load bot_on_left
+        bne         $t0, 0, _move_point_generic_move
+        li          $t1, 300
+        sub         $a0, $t1, $a0           # bot is on the right side - mirror the x value
+
+_move_point_generic_move:
         jal         move_point_while_solving
 
-        li          $a0, 1000000
-        jal         wait_cycles
+        lw          $ra, 0($sp)
+        add         $sp, $sp, 4
+        jr          $ra
 
-        jal         drive_to_shared_counter_left
+# -----------------------------------------------------------------------
+# pickup_all_unprocessed - pickups 4 (inventory max) unprocessed ingredients
+# -----------------------------------------------------------------------
+pickup_all_unprocessed:
+        sub         $sp, $sp, 4
+        sw          $ra, 0($sp)
 
-left_infinite:
-	j	    left_infinite
+        sw          $0, PICKUP
+        sw          $0, PICKUP
+        sw          $0, PICKUP
+        sw          $0, PICKUP
+        jal         update_inventory
 
-right_main:
-        li          $a0, 10
-        li          $a1, 10
-        jal         set_move_point_target
+        lw          $ra, 0($sp)
+        add         $sp, $sp, 4
+        jr          $ra
 
-right_infinite:
-        j           right_infinite
+# -----------------------------------------------------------------------
+# dropoff_all - drops off all (4) ingredients
+# -----------------------------------------------------------------------
+dropoff_all:
+        sub         $sp, $sp, 4
+        sw          $ra, 0($sp)
 
-nothing:
-        j nothing
+        add         $t0, $zero, $zero
+        sw          $t0, DROPOFF
+        add         $t0, $t0, 1
+        sw          $t0, DROPOFF
+        add         $t0, $t0, 1
+        sw          $t0, DROPOFF
+        add         $t0, $t0, 1
+        sw          $t0, DROPOFF
+        jal         update_inventory
+
+        lw          $ra, 0($sp)
+        add         $sp, $sp, 4
+        jr          $ra
+
+# -----------------------------------------------------------------------
+# set_wait_cycles - sets the timer to wait for a number of cycles.
+# Note: does not actually do the waiting!
+# $a0 - number of cycles to wait
+# -----------------------------------------------------------------------
+set_wait_cycles:
+        lw          $t1, TIMER          # load current cycle
+        add         $t1, $t1, $a0       # and calculate target cycle to stop
+        sw          $t1, TIMER          # set timer interrupt
+        la          $t0, timer_int_active
+        sw          $t1, 0($t0)         # update the timer_int_active flag
+        jr          $ra
 
 # -----------------------------------------------------------------------
 # wait_cycles - waits for a number of cycles
@@ -249,21 +1080,26 @@ wait_cycles:
         jr          $ra
 
 # -----------------------------------------------------------------------
-# drive_to_shared_counter_left - drives the most optimal path to the
-# left side of the shared counter
-# Assumes there is a direct path and that the bot is on the left!
+# drive_to_shared_counter - drives the most optimal path to the
+# corresponding side of the shared counter (depending on bot_on_left)
+# Assumes there is a direct path!
 # This function only returns once the bot reaches the counter.
 # -----------------------------------------------------------------------
-drive_to_shared_counter_left:
+drive_to_shared_counter:
         sub         $sp, $sp, 4
         sw          $ra, 0($sp)
 
-        li          $a0, 130        # x-target (slightly left of left side of counter)
+        lw          $t1, bot_on_left        # load bot_on_left
+        mul         $t1, $t1, 4
+        la          $t2, shared_counter_x
+        add         $t2, $t2, $t1
+        lw          $a0, 0($t2)             # and get shared_counter_x[bot_on_left]
+
         lw          $a1, BOT_Y      # the y-target will be the bot's current y location (shortest distance is direct)
-        bge         $a1, 65, _drive_to_shared_counter_left_drive
+        bge         $a1, 65, _drive_to_shared_counter_drive
         li          $a1, 65         # unless the bot's height is < 65, then load 65 (we want to stay in the center "rectangle", 65 is an approximate cutoff)
 
-_drive_to_shared_counter_left_drive:
+_drive_to_shared_counter_drive:
         jal         move_point_while_solving
 
         lw          $ra, 0($sp)
