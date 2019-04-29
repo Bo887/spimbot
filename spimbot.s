@@ -600,15 +600,16 @@ food_bins_finished:	.word	0	# what index in food_bin_tiles we're currently takin
 placed_on_appliance:	.word	0	# whether the last OPQ_DROPOFF actually placed anything
 used_boost:		.word	0	# whether we used boost on the current OPQ_GOTO_TILE trip
 
-# internal food IDs and tables used by make_sandwiches
+# internal food IDs and tables used by make_sandwiches and usable_supplies
 IID_BREAD		= 0
 IID_CHEESE		= 1
 IID_MEAT		= 2
 IID_TOMATO		= 3
 IID_ONION		= 4
 IID_LETTUCE		= 5
-food_pickup_ids:	.word	0	0x010000 0x020001 0x030001   0x040001 0x050002
-food_req_positions:	.byte	R_BREAD R_CHEESE R_MEAT   R_TOMATOES R_ONIONS R_LETTUCE
+food_pickup_ids:	.word	0	      0x010000        0x020001     0x030001       0x040001      0x050002
+food_req_positions:	.byte	R_BREAD       R_CHEESE        R_MEAT       R_TOMATOES     R_ONIONS      R_LETTUCE
+desired_by_iid:		.byte	DESIRED_BREAD DESIRED_CHEESE  DESIRED_MEAT DESIRED_TOMATO DESIRED_ONION DESIRED_LETTUCE
 
 non_intrpt_str:		.asciiz "Non-interrupt exception\n"
 unhandled_str:		.asciiz "Unhandled interrupt type\n"
@@ -767,7 +768,7 @@ fill_queue:
 	
 	# see if we're nearing the end of the match
 	lw	$t0, TIMER
-	li	$t1, 9000000	# TODO: fine-tune this
+	li	$t1, 9400000	# TODO: fine-tune this
 	blt	$t1, $t0, fq_submission_time
 	
 	# see what's on the shared counter
@@ -1027,6 +1028,14 @@ fq_no_tomatoes:
 	j	fq_process_raw_lettuce
 
 fq_no_sink:
+	# see if we should make an early trip to the turn-in counter
+	move	$a0, $t3
+	jal	usable_supplies
+	beq	$v0, $zero, fq_stall
+	sw	$zero, food_bins_finished
+	j	fq_submission_time
+	
+fq_stall:
 	# wait for partner to put more ingredients on
 	lw	$t0, TIMER
 	add	$t0, $t0, 50000
@@ -1879,4 +1888,38 @@ ri_done:
 	lw	$ra, 0($sp)
 	add	$sp, $sp, 4
 	jr	$ra
+	
+# -----------------------------------------------------------------------
+# usable_supplies determines whether the shared counter has enough stuff 
+#  to make a trip to the turn-in counter worthwhile
+# $a0: base address of decoded shared counter inventory
+# $v0: nonzero if ready to go
+# -----------------------------------------------------------------------
+usable_supplies:
+	li	$v0, 1
+	
+	li	$t0, 5	# ingr = 5 (goes down)
+us_loop_top:
+	bltz	$t0, us_loop_done
+	la	$t1, food_req_positions
+	add	$t1, $t1, $t0	# &food_req_positions[ingr]
+	lbu	$t1, 0($t1)	# food_req_positions[ingr]
+	add	$t1, $a0, $t1	# &inventory[food_req_positions[ingr]]
+	lw	$t1, 0($t1)	# present = inventory[food_req_positions[ingr]]
+	la	$t2, desired_by_iid
+	add	$t2, $t2, $t0	# &desired_by_iid[ingr]
+	lbu	$t2, 0($t2)	# desired = desired_by_iid[ingr]
+	sub	$t1, $t2, $t1	# deficit = desired - present
+	ble	$t1, 4, us_loop_next
+	
+	li	$v0, 0		# return false
+	j	us_loop_done
+	
+us_loop_next:
+	sub	$t0, $t0, 1
+	j	us_loop_top
+	
+us_loop_done:
+	jr	$ra
+	
 	
