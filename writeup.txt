@@ -23,7 +23,8 @@ logic for BOLT is actually in kernel space (.ktext). The only portions in user
 space (.text) are some initialization routines and puzzle solving. BOLT also uses
 a queue containing operations for BOLT to perform. This way, BOLT is always solving 
 puzzles in user mode. When the queue is empty or when an interrupt triggers, 
-BOLT switches to kernel mode to determine the next task and fills up the queue 
-with the according operations. After the queue is filled and interrupts are handled, 
-BOLT switches back to user mode and continues solving puzzles. This essentially allows 
-BOLT to "automatically" switch between solving puzzles and determining the next task.
+BOLT switches to kernel mode to determine the next task (if needed) and fills up 
+the queue with the according operations (if needed). After the queue is filled 
+and interrupts are handled, BOLT switches back to user mode (spending most of its
+time there) and continues solving puzzles. This essentially allows BOLT to 
+"automatically" switch between solving puzzles and determining the next task.
