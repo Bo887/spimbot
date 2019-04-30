@@ -85,11 +85,11 @@ R_BREAD			= 44
 
 # amount of each kind of food to prepare/request
 DESIRED_BREAD		= 28
-DESIRED_CHEESE		= 12
-DESIRED_MEAT		= 28
-DESIRED_ONION		= 20
-DESIRED_TOMATO		= 24
-DESIRED_LETTUCE		= 24
+DESIRED_CHEESE		= 9
+DESIRED_MEAT		= 24
+DESIRED_ONION		= 18
+DESIRED_TOMATO		= 20
+DESIRED_LETTUCE		= 20
 
 puzzle1:		.space 1832     # space allocated for the puzzle
 puzzle2:		.space 1832
@@ -761,10 +761,11 @@ ih_done:
 # -----------------------------------------------------------------------
 
 fill_queue:
-	sub	$sp, $sp, 12
+	sub	$sp, $sp, 16
 	sw	$ra, 0($sp)
 	sw	$s0, 4($sp)	# stores new queue length
 	sw	$s1, 8($sp)	# stores next free queue entry
+	sw	$s2, 12($sp)	# stores &decoded_request
 	
 	# clear the queue
 	sw	$zero, op_queue_pos
@@ -783,7 +784,7 @@ fill_queue:
 	la	$a1, decoded_request
 	jal	decode_request_in_mem
 	la	$t2, useful_locations
-	la	$t3, decoded_request
+	la	$s2, decoded_request
 	
 fq_raw_top:
 	# find the farthest bin that hasn't been adequately used
@@ -801,7 +802,7 @@ fq_raw_top:
 	j	fq_raw_done	# !!! didn't match any
 	
 fq_try_bread:
-	lw	$t1, R_BREAD($t3)
+	lw	$t1, R_BREAD($s2)
 	bge	$t1, DESIRED_BREAD, fq_raw_next
 	li	$t1, 0x0704	# go to bread bin
 	sw	$t1, 0($s1)
@@ -814,7 +815,7 @@ fq_try_bread:
 	j	fq_finish_to_counter
 	
 fq_try_cheese:
-	lw	$t1, R_CHEESE($t3)
+	lw	$t1, R_CHEESE($s2)
 	bge	$t1, DESIRED_CHEESE, fq_raw_next
 	li	$t1, 0x0B04	# go to cheese bin
 	sw	$t1, 0($s1)
@@ -827,8 +828,8 @@ fq_try_cheese:
 	j	fq_finish_to_counter
 
 fq_try_meat:
-	lw	$t0, R_MEAT($t3)
-	lw	$t1, R_UNCOOKED_MEAT($t3)
+	lw	$t0, R_MEAT($s2)
+	lw	$t1, R_UNCOOKED_MEAT($s2)
 	add	$t0, $t0, $t1	# total meat on counter
 	bge	$t0, DESIRED_MEAT, fq_raw_next
 	li	$t0, 0x0804	# go to meat bin
@@ -857,8 +858,8 @@ fq_process_meat:
 	j	fq_finish_to_counter
 	
 fq_try_onion:
-	lw	$t0, R_ONIONS($t3)
-	lw	$t1, R_UNCUT_ONIONS($t3)
+	lw	$t0, R_ONIONS($s2)
+	lw	$t1, R_UNCUT_ONIONS($s2)
 	add	$t0, $t0, $t1	# total onions on counter
 	bge	$t0, DESIRED_ONION, fq_raw_next
 	li	$t0, 0x0C04	# go to onion bin
@@ -887,8 +888,8 @@ fq_process_onion:
 	j	fq_finish_to_counter
 	
 fq_try_tomato:
-	lw	$t0, R_TOMATOES($t3)
-	lw	$t1, R_UNWASHED_TOMATOES($t3)
+	lw	$t0, R_TOMATOES($s2)
+	lw	$t1, R_UNWASHED_TOMATOES($s2)
 	add	$t0, $t0, $t1	# total tomatoes on counter
 	bge	$t0, DESIRED_TOMATO, fq_raw_next
 	li	$t0, 0x0A04	# go to tomato bin
@@ -917,10 +918,10 @@ fq_process_tomato:
 	j	fq_finish_to_counter
 	
 fq_try_lettuce:
-	lw	$t0, R_LETTUCE($t3)
-	lw	$t1, R_UNPROCESSED_LETTUCE($t3)
+	lw	$t0, R_LETTUCE($s2)
+	lw	$t1, R_UNPROCESSED_LETTUCE($s2)
 	add	$t0, $t0, $t1
-	lw	$t1, R_UNCUT_LETTUCE($t3)
+	lw	$t1, R_UNCUT_LETTUCE($s2)
 	add	$t0, $t0, $t1	# total lettuce on counter
 	bge	$t0, DESIRED_LETTUCE, fq_raw_next
 	li	$t0, 0x0904	# go to lettuce bin
@@ -980,7 +981,7 @@ fq_raw_done:
 	# if here, we're definitely at the shared counter - try to process ingredients
 	lbu	$t0, T_OVEN($t2)
 	beq	$t0, $zero, fq_no_oven
-	lw	$t0, R_UNCOOKED_MEAT($t3)
+	lw	$t0, R_UNCOOKED_MEAT($s2)
 	beq	$t0, $zero, fq_no_oven
 	li	$t0, 0x020000	# raw meat
 	sw	$t0, PICKUP
@@ -992,7 +993,7 @@ fq_raw_done:
 fq_no_oven:
 	lbu	$t0, T_CHOPPING_BOARD($t2)
 	beq	$t0, $zero, fq_no_chop
-	lw	$t0, R_UNCUT_ONIONS($t3)
+	lw	$t0, R_UNCUT_ONIONS($s2)
 	beq	$t0, $zero, fq_no_onions
 	li	$t0, 0x040000	# raw onion
 	sw	$t0, PICKUP
@@ -1002,7 +1003,7 @@ fq_no_oven:
 	j	fq_process_onion
 	
 fq_no_onions:
-	lw	$t0, R_UNCUT_LETTUCE($t3)
+	lw	$t0, R_UNCUT_LETTUCE($s2)
 	beq	$t0, $zero, fq_no_chop
 	li	$t0, 0x050001	# washed but unchopped lettuce
 	sw	$t0, PICKUP
@@ -1014,7 +1015,7 @@ fq_no_onions:
 fq_no_chop:
 	lbu	$t0, T_SINK($t2)
 	beq	$t0, $zero, fq_no_sink
-	lw	$t0, R_UNWASHED_TOMATOES($t3)
+	lw	$t0, R_UNWASHED_TOMATOES($s2)
 	beq	$t0, $zero, fq_no_tomatoes
 	li	$t0, 0x030000	# raw tomatoes
 	sw	$t0, PICKUP
@@ -1024,7 +1025,7 @@ fq_no_chop:
 	j	fq_process_tomato
 	
 fq_no_tomatoes:
-	lw	$t0, R_UNPROCESSED_LETTUCE($t3)
+	lw	$t0, R_UNPROCESSED_LETTUCE($s2)
 	beq	$t0, $zero, fq_no_sink
 	li	$t0, 0x050000	# raw lettuce
 	sw	$t0, PICKUP
@@ -1035,7 +1036,7 @@ fq_no_tomatoes:
 
 fq_no_sink:
 	# see if we should make an early trip to the turn-in counter
-	move	$a0, $t3
+	move	$a0, $s2
 	jal	usable_supplies
 	beq	$v0, $zero, fq_low_supplies
 	j	fq_submission_time
@@ -1065,12 +1066,70 @@ fq_not_early_submit:
 fq_stall:
 	# see if we can do emergency magic
 	lw	$t0, TIMER
-	blt	$t0, 4500000, fq_set_timer
-	la	$a0, decoded_request
-	li	$a1, 4
+	blt	$t0, 4500000, fq_consider_exploit
+	move	$a0, $s2	# &decoded_request
+	li	$a1, 4		# target amount
+	li	$a2, 86		# minimum money
 	jal	emergency_magic
 	li	$a1, 8
+	li	$a2, 96		# higher to allow exploits to happen first
 	jal	emergency_magic
+	
+fq_consider_exploit:
+	# see if we should exploit the instant-process bug
+	lw	$t0, GET_MONEY
+	blt	$t0, 90, fq_set_timer	# only takes 40 but want to do emergency magic first if needed
+	li	$a2, OPQ_PROCESS_ASAP
+	
+	lw	$t0, R_UNCOOKED_MEAT($s2)
+	beq	$t0, $zero, fq_zero_raw_meat
+	li	$v0, 0x020000	# raw meat
+	j	fq_go_exploit
+	
+fq_zero_raw_meat:
+	lw	$t0, R_UNCUT_LETTUCE($s2)
+	beq	$t0, $zero, fq_zero_uncut_lettuce
+	li	$v0, 0x050001	# washed but unchopped lettuce
+	li	$a2, 0x010F	# process ASAP to level 2
+	j	fq_go_exploit
+	
+fq_zero_uncut_lettuce:
+	lw	$t0, R_UNPROCESSED_LETTUCE($s2)
+	beq	$t0, $zero, fq_zero_raw_lettuce
+	li	$v0, 0x050000	# raw lettuce
+	j	fq_go_exploit
+	
+fq_zero_raw_lettuce:
+	lw	$t0, R_UNCUT_ONIONS($s2)
+	beq	$t0, $zero, fq_zero_raw_onions
+	li	$v0, 0x040000	# raw onion
+	j	fq_go_exploit
+	
+fq_zero_raw_onions:
+	lw	$t0, R_UNWASHED_TOMATOES($s2)
+	beq	$t0, $zero, fq_set_timer
+	li	$v0, 0x030000	# raw tomatoes
+	# fall through
+	
+fq_go_exploit:
+	sw	$v0, PICKUP
+	sw	$v0, PICKUP
+	sw	$v0, PICKUP
+	sw	$v0, PICKUP
+	la	$t0, food_bin_tiles
+	lbu	$t0, 4($t0)	# tile type of inner appliance
+	sll	$t0, $t0, 8	# parameter to queue item
+	or	$t0, $t0, OPQ_GOTO_TILE
+	sw	$t0, 0($s1)
+	li	$t0, OPQ_FACE_APPLIANCE
+	sw	$t0, 4($s1)
+	add	$a0, $s1, 8
+	sll	$a1, $v0, 8	# parameter to queue item
+	or	$a1, $a1, OPQ_DROPOFF
+	jal	queue_process_four
+	add	$s0, $s0, 14	# added 14 more
+	add	$s1, $s1, 56
+	j	fq_finish_to_counter
 	
 fq_set_timer:
 	# wait for partner to put more ingredients on
@@ -1086,7 +1145,7 @@ fq_submission_time:
 	lw	$t0, TIMER
 	and	$t0, $t0, 0x8000	# effectively random
 	beq	$t0, $zero, fq_go_submit
-	j	fq_stall
+	j	fq_set_timer
 	
 fq_go_submit:
 	# already at the shared counter - go straight down to turn in counter
@@ -1103,7 +1162,8 @@ fq_done:
 	lw	$ra, 0($sp)
 	lw	$s0, 4($sp)
 	lw	$s1, 8($sp)
-	add	$sp, $sp, 12
+	lw	$s2, 12($sp)
+	add	$sp, $sp, 16
 	jr	$ra
 	
 # -----------------------------------------------------------------------
@@ -2028,13 +2088,13 @@ ss_loop_done:
 # -----------------------------------------------------------------------
 # emergency_magic creates ingredients that are severely lacking
 #  and not available on this side
-# assumes there is >80 money
 # $a0: base address of decoded shared counter inventory
 # $a1: target amount of ingredients
+# $a2: amount of money to require
 # -----------------------------------------------------------------------
 emergency_magic:
 	lw	$t0, GET_MONEY
-	blt	$t0, 85, em_done
+	blt	$t0, $a2, em_done
 	li	$t3, 0	# what to get
 	la	$t2, useful_locations
 	
@@ -2044,7 +2104,7 @@ emergency_magic:
 	lw	$t1, R_UNPROCESSED_LETTUCE($a0)
 	add	$t0, $t0, $t1
 	lw	$t1, R_UNCUT_LETTUCE($a0)
-	add	$t0, $t0, $a1
+	add	$t0, $t0, $t1
 	bge	$t0, $a1, em_not_lettuce
 	li	$t3, F_LETTUCE
 	j	em_do_magic
