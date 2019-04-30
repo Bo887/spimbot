@@ -182,7 +182,7 @@ d_solving_puzzle:	.word 0	    # nonzero when working on puzzle2
 
 bot_on_left:		.word 0         # true if the bot is on the left side, false if bot is on the right side
 useful_locations:	.space 13	# locations of each type of interesting tile (zero if absent on this side)
-food_bin_tiles:		.space 4	# tile types of each food bin, from bottom to top (last is trash)
+food_bin_tiles:		.space 5	# tile types of each food bin, from bottom to top (then outer, then inner appliance)
 
 .text
 
@@ -229,6 +229,7 @@ fill_left_tiles:
 	li	$a1, 3
 	jal	examine_location
 	li	$a0, 35
+	li	$a1, 4
 	jal	examine_location
 	j	start_operations
 
@@ -246,6 +247,7 @@ fill_right_tiles:
 	li	$a1, 3
 	jal	examine_location
 	li	$a0, 39
+	li	$a1, 4
 	jal	examine_location
         # fall through
 	
@@ -1061,6 +1063,15 @@ fq_not_early_submit:
 	j	fq_stall
 	
 fq_stall:
+	# see if we can do emergency magic
+	lw	$t0, TIMER
+	blt	$t0, 5000000, fq_set_timer
+	lw	$t0, GET_MONEY
+	blt	$t0, 85, fq_set_timer
+	la	$a0, decoded_request
+	jal	emergency_magic
+	
+fq_set_timer:
 	# wait for partner to put more ingredients on
 	lw	$t0, TIMER
 	add	$t0, $t0, 50000
@@ -2012,3 +2023,79 @@ ss_loop_next:
 	
 ss_loop_done:
 	jr	$ra	
+	
+# -----------------------------------------------------------------------
+# emergency_magic creates ingredients that are severely lacking
+#  and not available on this side
+# assumes there is >80 money
+# $a0: base address of decoded shared counter inventory
+# -----------------------------------------------------------------------
+emergency_magic:
+	li	$t3, 0	# what to get
+	la	$t2, useful_locations
+	
+	lbu	$t0, T_BIN_LETTUCE($t2)
+	bne	$t0, $zero, em_not_lettuce
+	lw	$t0, R_LETTUCE($a0)
+	lw	$t1, R_UNPROCESSED_LETTUCE($a0)
+	add	$t0, $t0, $t1
+	lw	$t1, R_UNCUT_LETTUCE($a0)
+	add	$t0, $t0, $a1
+	bge	$t0, 4, em_not_lettuce
+	li	$t3, F_LETTUCE
+	j	em_do_magic
+	
+em_not_lettuce:
+	lbu	$t0, T_BIN_ONION($t2)
+	bne	$t0, $zero, em_not_onion
+	lw	$t0, R_ONIONS($a0)
+	lw	$t1, R_UNCUT_ONIONS($a0)
+	add	$t0, $t0, $t1
+	bge	$t0, 4, em_not_onion
+	li	$t3, F_ONION
+	j	em_do_magic
+	
+em_not_onion:
+	lbu	$t0, T_BIN_MEAT($t2)
+	bne	$t0, $zero, em_not_meat
+	lw	$t0, R_MEAT($a0)
+	lw	$t1, R_UNCOOKED_MEAT($a0)
+	add	$t0, $t0, $t1
+	bge	$t0, 4, em_not_meat
+	li	$t3, F_MEAT
+	j	em_do_magic
+	
+em_not_meat:
+	lbu	$t0, T_BIN_TOMATO($t2)
+	bne	$t0, $zero, em_done
+	lw	$t0, R_TOMATOES($a0)
+	lw	$t1, R_UNWASHED_TOMATOES($a0)
+	add	$t0, $t0, $t1
+	bge	$t0, 4, em_done
+	li	$t3, F_TOMATO
+	# fall through
+	
+em_do_magic:
+	la	$t0, face_counter_angles
+	lw	$t2, bot_on_left
+	sll	$t2, $t2, 2
+	add	$t0, $t0, $t2	# &face_counter_angles[bot_on_left]
+	lw	$t0, 0($t0)	# face_counter_angles[bot_on_left]
+	sw	$t0, ANGLE
+	li	$t0, 1		# absolute
+	sw	$t0, ANGLE_CONTROL
+	sw	$t3, GET_INGREDIENT_INSTANT
+	sw	$t3, GET_INGREDIENT_INSTANT
+	sw	$t3, GET_INGREDIENT_INSTANT
+	sw	$t3, GET_INGREDIENT_INSTANT
+	sw	$zero, DROPOFF
+	li	$t0, 1
+	sw	$t0, DROPOFF
+	li	$t0, 2
+	sw	$t0, DROPOFF
+	li	$t0, 3
+	sw	$t0, DROPOFF
+	
+em_done:
+	jr	$ra
+	
