@@ -508,7 +508,7 @@ submit_first_order:
         sw          $zero, SUBMIT_ORDER
 
 process_second_order:
-        jal         drive_to_shared_counter
+        jal         drive_to_shared_counter         # make sure we are at shared counter and clear all existing ingredients that we might have
         li          $t0, 0
         sw          $t0, DROPOFF
         add         $t0, $t0, 1
@@ -519,47 +519,47 @@ process_second_order:
         sw          $t0, DROPOFF
 
 
-        lw          $s0, second_order_magnitude
-        la          $s1, second_order_components
+        lw          $s0, second_order_magnitude     # second_order_magnitude = # of elements in second order
+        la          $s1, second_order_components    # second_order_components = list of components in second order
 
         li          $t0, 4
-        div         $s0, $t0
+        div         $s0, $t0                        # ceil(magnitude // 4) = # outer loop iterations
         mflo        $s2                             # s2 = quotient
         mfhi        $s3                             # s3 = remainder
-        sne         $s3, $s3, $zero
+        sne         $s3, $s3, $zero                 # if s3 != 0 (s3 == 1), we need to take an extra trip for the extra ingredient(s) (ceil)
 
         add         $s2, $s2, $s3                   # s2 = number of iterations
         li          $s4, 0
 process_second_order_for_begin:
-        bge         $s4, $s2, submit_second_order
+        bge         $s4, $s2, submit_second_order   # break out of outer loop and go submit the order when we are done with outer loop iterations
 
         li          $s5, 0
-process_second_order_inner_for_begin:
-        bge         $s5, 4, process_second_order_for_inc
-        ble         $s0, $zero, process_second_order_for_inc
+process_second_order_inner_for_begin:               # inner for loop: pickup ingredient (repeat 4 times)
+        bge         $s5, 4, process_second_order_for_inc    # break either when we have picked up 4 ingredients (max)
+        ble         $s0, $zero, process_second_order_for_inc    # or when there are no more ingredients left 
 
-        mul         $t2, $s5, 4
-        add         $t2, $t2, $s1
-        mul         $s6, $s4, 16
-        add         $t2, $t2, $s6
-        lw          $t2, 0($t2)
-        sw          $t2, PICKUP
-        sub         $s0, $s0, 1
+        mul         $t2, $s5, 4                     # $t2 = j * sizeof(int)
+        add         $t2, $t2, $s1                   # $t2 = &second_order_components[j]
+        mul         $s6, $s4, 16                    # $s6 = 4 * i * sizeof(int) (outer loop incrementor)
+        add         $t2, $t2, $s6                   # $t2 = &second_order_components[4*i + j] // account for previous outer iterations
+        lw          $t2, 0($t2)                     # $t2 = second_order_components[4*i + j]
+        sw          $t2, PICKUP                     # pickup element from shared counter
+        sub         $s0, $s0, 1                     # number of elements left --
 
 process_second_order_inner_for_inc:
-        add         $s5, $s5, 1
-        j           process_second_order_inner_for_begin
+        add         $s5, $s5, 1                     # increment inner loop variable
+        j           process_second_order_inner_for_begin    # and loop
 
 process_second_order_for_inc:
         li          $a0, 90
         li          $a1, 275
-        jal         move_point_while_solving_generic
+        jal         move_point_while_solving_generic    # drive to submission tile
         li          $t0, 90
         sw          $t0, ANGLE
         li          $t0, 1
-        sw          $t0, ANGLE_CONTROL
+        sw          $t0, ANGLE_CONTROL                  # and turn
         li          $t0, 0
-        sw          $t0, DROPOFF
+        sw          $t0, DROPOFF                        # and dropoff all
         add         $t0, $t0, 1
         sw          $t0, DROPOFF
         add         $t0, $t0, 1
@@ -567,22 +567,22 @@ process_second_order_for_inc:
         add         $t0, $t0, 1
         sw          $t0, DROPOFF
 
-        jal         drive_to_shared_counter
+        jal         drive_to_shared_counter             # go back to shared counter
 
-        add         $s4, $s4, 1
-        j           process_second_order_for_begin
+        add         $s4, $s4, 1                     # outer loop incrementor (i) ++
+        j           process_second_order_for_begin  # and loop
 
 submit_second_order:
         li          $a0, 90
         li          $a1, 275
-        jal         move_point_while_solving_generic
-        li          $t0, 90
+        jal         move_point_while_solving_generic    # go to submission tile
+        li          $t0, 90                             # and face it
         sw          $t0, ANGLE
         li          $t0, 1
         sw          $t0, ANGLE_CONTROL
         li          $t0, 0
 
-        sw          $zero, SUBMIT_ORDER
+        sw          $zero, SUBMIT_ORDER                 # and submit
 
 process_third_order:
         jal         drive_to_shared_counter
