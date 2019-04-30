@@ -508,7 +508,7 @@ submit_first_order:
         sw          $zero, SUBMIT_ORDER
 
 process_second_order:
-        jal         drive_to_shared_counter
+        jal         drive_to_shared_counter         # make sure we are at shared counter and clear all existing ingredients that we might have
         li          $t0, 0
         sw          $t0, DROPOFF
         add         $t0, $t0, 1
@@ -523,10 +523,10 @@ process_second_order:
         la          $s1, second_order_components    # second_order_components = list of components in second order
 
         li          $t0, 4
-        div         $s0, $t0                        # magnitude // 4 = # outer loop iterations
+        div         $s0, $t0                        # ceil(magnitude // 4) = # outer loop iterations
         mflo        $s2                             # s2 = quotient
         mfhi        $s3                             # s3 = remainder
-        sne         $s3, $s3, $zero                 # if s3 != 0 (s3 == 1), we need to take an extra trip for the extra ingredient(s)
+        sne         $s3, $s3, $zero                 # if s3 != 0 (s3 == 1), we need to take an extra trip for the extra ingredient(s) (ceil)
 
         add         $s2, $s2, $s3                   # s2 = number of iterations
         li          $s4, 0
