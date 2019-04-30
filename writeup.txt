@@ -13,9 +13,10 @@ all the time, gives BOLT a lot of money to work with.
 
 BOLT handles movement in a pretty standard way. BOLT is able to take in a target
 point, and automatically turns and drives to the point (assuming there is nothing
-blocking BOLT). It specifically uses timer interrupts to avoid constant polling.
-Also, when the match starts, BOLT figures out which side it is on, 
-and is is able to generically make movement decisions depending its side.
+blocking BOLT). It specifically calculates the time it needs to drive and sets 
+timer interrupts to avoid constant polling. Also, when the match starts, BOLT 
+figures out which side it is on, and is is able to generically make movement 
+decisions depending its side.
 
 One interesting thing about BOLT is the way the code is structured. Most of the 
 logic for BOLT is actually in kernel space (.ktext). The only portions in user 
