@@ -7,9 +7,9 @@ get an index into the two 64KB lookup tables that were generated with a C#
 program. The "transition" table determines what the new land value at the 
 current position should be; the other determines the mask to binary-OR with
 the vertically adjacent "touching" strips. Neighboring land-containing strips
-are visited in a BFS (using a queue, no recursion). This strategy provides is
-5.5 to 9 times faster than the given solver code and, since it's running nearly
-all the time, gives BOLT a lot of money to work with.
+are visited in a BFS (using a queue, no recursion). This strategy is 5.5 to
+9 times faster than the given solver code and, since it's running nearly all
+the time, gives BOLT a lot of money to work with.
 
 BOLT handles movement in a pretty standard way. BOLT is able to take in a target
 point, and automatically turns and drives to the point (assuming there is nothing
@@ -23,9 +23,17 @@ One interesting thing about BOLT is the way the code is structured. Most of the
 logic for BOLT is actually in kernel space (.ktext). The only portions in user 
 space (.text) are some initialization routines and puzzle solving. BOLT also uses
 a queue containing operations for BOLT to perform. This way, BOLT is always solving 
-puzzles in user mode. When the queue is empty or when an interrupt triggers, 
+puzzles in user mode. When the queue is empty and an interrupt triggers, 
 BOLT switches to kernel mode to determine the next task (if needed) and fills up 
 the queue with the according operations (if needed). After the queue is filled 
 and interrupts are handled, BOLT switches back to user mode (spending most of its
 time there) and continues solving puzzles. This essentially allows BOLT to 
 "automatically" switch between solving puzzles and determining the next task.
+
+QtSpimbot has a bug in ingredient processing: FINISH_APPLIANCE_INSTANT will
+advance the stored item one processing level regardless of whether the appliance
+is appropriate for the food. If BOLT detects that its partner bot is not
+processing ingredients, and if it has enough money, it will use the nearest
+appliance to process any unfinished ingredients. Combined with judicious use of
+GET_INGREDIENT_INSTANT, this allows BOLT to score 300~ points even with an inert
+bot as partner.
