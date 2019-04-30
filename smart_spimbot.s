@@ -591,6 +591,7 @@ counter_prox_xs:	.word	158 139
 boost_end_time:		.word	0	# cycle number at which last boost will end
 food_bins_finished:	.word	0	# what index in food_bin_tiles we're currently taking raw ingredients from
 placed_on_appliance:	.word	0	# whether the last OPQ_DROPOFF actually placed anything
+process_start_time:	.word	0	# cycle in which OPQ_PROCESS or OPQ_PROCESS_ASAP started waiting
 used_boost:		.word	0	# whether we used boost on the current OPQ_GOTO_TILE trip
 started_slow_process:	.word	0	# whether the current OPQ_PROCESS_ASAP had to wait for money
 did_early_trip:		.word	0	# whether an early low-supplies trip to the turn-in counter was made
@@ -1293,13 +1294,27 @@ od_process_asap:
 	lw	$t0, GET_MONEY
 	blt	$t0, 15, od_no
 	lw	$t0, started_slow_process
-	bne	$t0, $zero, od_no
+	bne	$t0, $zero, od_process_asap_wait
 	sw	$zero, FINISH_APPLIANCE_INSTANT
 	# fall through
 	
 od_process_asap_done:
 	sw	$zero, started_slow_process
+	sw	$zero, process_start_time
 	j	od_yes
+	
+od_process_asap_wait:
+	lw 	$t0, process_start_time
+	beq	$t0, $zero, od_process_asap_started
+	lw	$t1, TIMER
+	sub	$t0, $t1, $t0	# current - started
+	bge	$t0, 100000, od_process_asap_done
+	j	od_no
+	
+od_process_asap_started:
+	lw	$t0, TIMER
+	sw	$t0, process_start_time
+	j	od_no
 	
 od_goto_turnin:
 	lw	$t0, BOT_Y
