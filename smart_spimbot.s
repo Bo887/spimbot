@@ -600,6 +600,8 @@ food_bins_finished:	.word	0	# what index in food_bin_tiles we're currently takin
 placed_on_appliance:	.word	0	# whether the last OPQ_DROPOFF actually placed anything
 used_boost:		.word	0	# whether we used boost on the current OPQ_GOTO_TILE trip
 started_slow_process:	.word	0	# whether the current OPQ_PROCESS_ASAP had to wait for money
+did_early_trip:		.word	0	# whether an early low-supplies trip to the turn-in counter was made
+got_late_supplies:	.word	0	# whether the late-game extra supplies run was made
 
 # internal food IDs and tables used by make_sandwiches and usable_supplies
 IID_BREAD		= 0
@@ -1032,9 +1034,30 @@ fq_no_sink:
 	# see if we should make an early trip to the turn-in counter
 	move	$a0, $t3
 	jal	usable_supplies
-	beq	$v0, $zero, fq_stall
-	sw	$zero, food_bins_finished
+	beq	$v0, $zero, fq_low_supplies
 	j	fq_submission_time
+	
+fq_low_supplies:
+	# see if we should make the low-supplies submission trip
+	lw	$t0, TIMER
+	blt	$t0, 5000000, fq_not_early_submit
+	lw	$t0, did_early_trip
+	bne	$t0, $zero, fq_not_early_submit
+	jal	some_supplies	# $a0 unchanged by usable_supplies
+	beq	$v0, $zero, fq_not_early_submit
+	sw	$v0, did_early_trip
+	j	fq_go_submit
+	
+fq_not_early_submit:
+	# see if we should make the late supplies run
+	lw	$t0, TIMER
+	blt	$t0, 6800000, fq_stall
+	lw	$t0, got_late_supplies
+	bne	$t0, $zero, fq_stall
+	li	$t0, 1
+	sw	$t0, got_late_supplies
+	sw	$zero, food_bins_finished
+	j	fq_stall
 	
 fq_stall:
 	# wait for partner to put more ingredients on
@@ -1054,6 +1077,7 @@ fq_submission_time:
 	
 fq_go_submit:
 	# already at the shared counter - go straight down to turn in counter
+	sw	$zero, food_bins_finished
 	li	$t0, OPQ_GOTO_TURNIN
 	sw	$t0, 0($s1)
 	li	$t0, OPQ_SUBMIT
@@ -1913,7 +1937,7 @@ ri_done:
 # -----------------------------------------------------------------------
 # usable_supplies determines whether the shared counter has enough stuff 
 #  to make a trip to the turn-in counter worthwhile
-# $a0: base address of decoded shared counter inventory
+# $a0: base address of decoded shared counter inventory (not modified)
 # $v0: nonzero if ready to go
 # -----------------------------------------------------------------------
 usable_supplies:
@@ -1943,4 +1967,33 @@ us_loop_next:
 us_loop_done:
 	jr	$ra
 	
+# -----------------------------------------------------------------------
+# some_supplies determines whether the shared counter has at least 4
+#  of every item that can't be magicked into existence
+# $a0: base address of decoded shared counter inventory
+# $v0: nonzero if ready to go
+# -----------------------------------------------------------------------
+some_supplies:
+	li	$v0, 1
 	
+	li	$t0, 5	# ingr = 5 (goes down)
+ss_loop_top:
+	bltz	$t0, ss_loop_done
+	beq	$t0, IID_BREAD, ss_loop_next
+	beq	$t0, IID_CHEESE, ss_loop_next
+	la	$t1, food_req_positions
+	add	$t1, $t1, $t0	# &food_req_positions[ingr]
+	lbu	$t1, 0($t1)	# food_req_positions[ingr]
+	add	$t1, $a0, $t1	# &inventory[food_req_positions[ingr]]
+	lw	$t1, 0($t1)	# present = inventory[food_req_positions[ingr]]
+	bge	$t1, 4, ss_loop_next
+	
+	li	$v0, 0		# return false
+	j	ss_loop_done
+	
+ss_loop_next:
+	sub	$t0, $t0, 1
+	j	ss_loop_top
+	
+ss_loop_done:
+	jr	$ra	
