@@ -774,7 +774,7 @@ fill_queue:
 	
 	# see if we're nearing the end of the match
 	lw	$t0, TIMER
-	li	$t1, 9300000
+	li	$t1, 9200000
 	blt	$t1, $t0, fq_submission_time
 	
 	# see what's on the shared counter
@@ -1065,10 +1065,11 @@ fq_not_early_submit:
 fq_stall:
 	# see if we can do emergency magic
 	lw	$t0, TIMER
-	blt	$t0, 5000000, fq_set_timer
-	lw	$t0, GET_MONEY
-	blt	$t0, 85, fq_set_timer
+	blt	$t0, 4500000, fq_set_timer
 	la	$a0, decoded_request
+	li	$a1, 4
+	jal	emergency_magic
+	li	$a1, 8
 	jal	emergency_magic
 	
 fq_set_timer:
@@ -2029,8 +2030,11 @@ ss_loop_done:
 #  and not available on this side
 # assumes there is >80 money
 # $a0: base address of decoded shared counter inventory
+# $a1: target amount of ingredients
 # -----------------------------------------------------------------------
 emergency_magic:
+	lw	$t0, GET_MONEY
+	blt	$t0, 85, em_done
 	li	$t3, 0	# what to get
 	la	$t2, useful_locations
 	
@@ -2041,7 +2045,7 @@ emergency_magic:
 	add	$t0, $t0, $t1
 	lw	$t1, R_UNCUT_LETTUCE($a0)
 	add	$t0, $t0, $a1
-	bge	$t0, 4, em_not_lettuce
+	bge	$t0, $a1, em_not_lettuce
 	li	$t3, F_LETTUCE
 	j	em_do_magic
 	
@@ -2051,7 +2055,7 @@ em_not_lettuce:
 	lw	$t0, R_ONIONS($a0)
 	lw	$t1, R_UNCUT_ONIONS($a0)
 	add	$t0, $t0, $t1
-	bge	$t0, 4, em_not_onion
+	bge	$t0, $a1, em_not_onion
 	li	$t3, F_ONION
 	j	em_do_magic
 	
@@ -2061,7 +2065,7 @@ em_not_onion:
 	lw	$t0, R_MEAT($a0)
 	lw	$t1, R_UNCOOKED_MEAT($a0)
 	add	$t0, $t0, $t1
-	bge	$t0, 4, em_not_meat
+	bge	$t0, $a1, em_not_meat
 	li	$t3, F_MEAT
 	j	em_do_magic
 	
@@ -2071,7 +2075,7 @@ em_not_meat:
 	lw	$t0, R_TOMATOES($a0)
 	lw	$t1, R_UNWASHED_TOMATOES($a0)
 	add	$t0, $t0, $t1
-	bge	$t0, 4, em_done
+	bge	$t0, $a1, em_done
 	li	$t3, F_TOMATO
 	# fall through
 	
