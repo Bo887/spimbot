@@ -10,3 +10,8 @@ the vertically adjacent "touching" strips. Neighboring land-containing strips
 are visited in a BFS (using a queue, no recursion). This strategy provides is
 5.5 to 9 times faster than the given solver code and, since it's running nearly
 all the time, gives BOLT a lot of money to work with.
+
+BOLT handles movement in a pretty standard way. BOLT is able to take in a target
+point, and automatically turns and drives to the point (assuming there is nothing
+blocking BOLT). Also, when the match starts, BOLT figures out which side it is on, 
+and is is able to generically make movement decisions depending its side.
