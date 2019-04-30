@@ -184,13 +184,6 @@ bot_on_left:		.word 0         # true if the bot is on the left side, false if bo
 useful_locations:	.space 13	# locations of each type of interesting tile (zero if absent on this side)
 food_bin_tiles:		.space 4	# tile types of each food bin, from bottom to top (last is trash)
 
-# constants for arctan
-		    .align 4
-PI:                 .float 3.14
-three:              .float 3.0
-five:               .float 5.0
-F180:               .float 180.0
-
 .text
 
 # -----------------------------------------------------------------------
@@ -616,6 +609,13 @@ desired_by_iid:		.byte	DESIRED_BREAD DESIRED_CHEESE  DESIRED_MEAT DESIRED_TOMATO
 
 non_intrpt_str:		.asciiz "Non-interrupt exception\n"
 unhandled_str:		.asciiz "Unhandled interrupt type\n"
+
+# constants for arctan
+		    .align 4
+PI:                 .float 3.14
+three:              .float 3.0
+five:               .float 5.0
+F180:               .float 180.0
 
 .ktext 0x80000180
 interrupt_handler:
