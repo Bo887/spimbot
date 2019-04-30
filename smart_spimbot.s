@@ -769,7 +769,7 @@ fill_queue:
 	
 	# see if we're nearing the end of the match
 	lw	$t0, TIMER
-	li	$t1, 9400000
+	li	$t1, 9300000
 	blt	$t1, $t0, fq_submission_time
 	
 	# see what's on the shared counter
@@ -1044,6 +1044,15 @@ fq_stall:
 	j	fq_done
 	
 fq_submission_time:
+	# are we already at the turn-in counter? if so don't deadlock
+	lw	$t0, BOT_Y
+	blt	$t0, 275, fq_go_submit
+	lw	$t0, TIMER
+	and	$t0, $t0, 0x8000	# effectively random
+	beq	$t0, $zero, fq_go_submit
+	j	fq_stall
+	
+fq_go_submit:
 	# already at the shared counter - go straight down to turn in counter
 	li	$t0, OPQ_GOTO_TURNIN
 	sw	$t0, 0($s1)
