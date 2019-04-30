@@ -1,0 +1,1488 @@
+        1 [0x00400000]	0x8fa40000  lw $4, 0($29)                   ; exceptions.s:183: lw $a0 0($sp)		# argc
+        1 [0x00400004]	0x27a50004  addiu $5, $29, 4                ; exceptions.s:184: addiu $a1 $sp 4		# argv
+        1 [0x00400008]	0x24a60004  addiu $6, $5, 4                 ; exceptions.s:185: addiu $a2 $a1 4		# envp
+        1 [0x0040000c]	0x00041080  sll $2, $4, 2                   ; exceptions.s:186: sll $v0 $a0 2
+        1 [0x00400010]	0x00c23021  addu $6, $6, $2                 ; exceptions.s:187: addu $a2 $a2 $v0
+        1 [0x00400014]	0x0c100009  jal 0x00400024 [main]           ; exceptions.s:188: jal main
+        0 [0x00400018]	0x00000000  nop                             ; exceptions.s:189: nop
+        0 [0x0040001c]	0x3402000a  ori $2, $0, 10                  ; exceptions.s:191: li $v0 10
+        0 [0x00400020]	0x0000000c  syscall                         ; exceptions.s:192: syscall			# syscall 10 (exit)
+        1 [0x00400024]	0x340c0000  ori $12, $0, 0                  ; smart_spimbot.s:194: li          $t4, 0
+        1 [0x00400028]	0x358c1000  ori $12, $12, 4096              ; smart_spimbot.s:195: or          $t4, $t4, BONK_INT_MASK		# request bonk
+        1 [0x0040002c]	0x358c0800  ori $12, $12, 2048              ; smart_spimbot.s:196: or          $t4, $t4, REQUEST_PUZZLE_INT_MASK	# puzzle interrupt bit
+        1 [0x00400030]	0x358c8000  ori $12, $12, -32768            ; smart_spimbot.s:197: or          $t4, $t4, TIMER_INT_MASK		# enable timer interrupts
+        1 [0x00400034]	0x358c0001  ori $12, $12, 1                 ; smart_spimbot.s:198: or          $t4, $t4, 1				# global enable
+        1 [0x00400038]	0x408c6000  mtc0 $12, $12                   ; smart_spimbot.s:199: mtc0        $t4, $12
+        1 [0x0040003c]	0x3c081001  lui $8, 4097 [puzzle1]          ; smart_spimbot.s:202: la	$t0, puzzle1
+        1 [0x00400040]	0x3c01ffff  lui $1, -1                      ; smart_spimbot.s:203: sw	$t0, REQUEST_PUZZLE
+        1 [0x00400044]	0xac2800d0  sw $8, 208($1)
+        1 [0x00400048]	0x3c01ffff  lui $1, -1                      ; smart_spimbot.s:206: lw          $t0, BOT_X
+        1 [0x0040004c]	0x8c280020  lw $8, 32($1)
+        1 [0x00400050]	0x29090096  slti $9, $8, 150                ; smart_spimbot.s:207: slt         $t1, $t0, 150       # $t1 = BOT_X < 150 ? 1 : 0
+        1 [0x00400054]	0x3c011003  lui $1, 4099 [bot_on_left]      ; smart_spimbot.s:208: la          $t0, bot_on_left
+        1 [0x00400058]	0x34281300  ori $8, $1, 4864 [bot_on_left]
+        1 [0x0040005c]	0xad090000  sw $9, 0($8)                    ; smart_spimbot.s:209: sw          $t1, 0($t0)    # save to global variable
+        1 [0x00400060]	0x3c011001  lui $1, 4097 [map]              ; smart_spimbot.s:212: la          $s0, map
+        1 [0x00400064]	0x34300e50  ori $16, $1, 3664 [map]
+        1 [0x00400068]	0x3c01ffff  lui $1, -1                      ; smart_spimbot.s:213: sw          $s0, GET_LAYOUT     # $s0 = struct layout {char map[15][15];};
+        1 [0x0040006c]	0xac3000ec  sw $16, 236($1)
+        1 [0x00400070]	0x3c011003  lui $1, 4099 [useful_locations] ; smart_spimbot.s:214: la	$s1, useful_locations
+        1 [0x00400074]	0x34311304  ori $17, $1, 4868 [useful_locations]
+        1 [0x00400078]	0x3c011003  lui $1, 4099 [food_bin_tiles]   ; smart_spimbot.s:215: la	$s2, food_bin_tiles
+        1 [0x0040007c]	0x34321311  ori $18, $1, 4881 [food_bin_tiles]
+        1 [0x00400080]	0x11200010  beq $9, $0, 64 [fill_right_tiles-0x00400080]; smart_spimbot.s:216: beq     $t1, $zero, fill_right_tiles    # when bot_on_left is false, branch to fill_right_tiles
+        1 [0x00400084]	0x340400a5  ori $4, $0, 165                 ; smart_spimbot.s:219: li	$a0, 165
+        1 [0x00400088]	0x34050000  ori $5, $0, 0                   ; smart_spimbot.s:220: li	$a1, 0
+        1 [0x0040008c]	0x0c10005a  jal 0x00400168 [examine_location]; smart_spimbot.s:221: jal	examine_location
+        1 [0x00400090]	0x34040069  ori $4, $0, 105                 ; smart_spimbot.s:222: li	$a0, 105
+        1 [0x00400094]	0x34050001  ori $5, $0, 1                   ; smart_spimbot.s:223: li	$a1, 1
+        1 [0x00400098]	0x0c10005a  jal 0x00400168 [examine_location]; smart_spimbot.s:224: jal	examine_location
+        1 [0x0040009c]	0x3404002d  ori $4, $0, 45                  ; smart_spimbot.s:225: li	$a0, 45
+        1 [0x004000a0]	0x34050002  ori $5, $0, 2                   ; smart_spimbot.s:226: li	$a1, 2
+        1 [0x004000a4]	0x0c10005a  jal 0x00400168 [examine_location]; smart_spimbot.s:227: jal	examine_location
+        1 [0x004000a8]	0x34040020  ori $4, $0, 32                  ; smart_spimbot.s:228: li	$a0, 32
+        1 [0x004000ac]	0x34050003  ori $5, $0, 3                   ; smart_spimbot.s:229: li	$a1, 3
+        1 [0x004000b0]	0x0c10005a  jal 0x00400168 [examine_location]; smart_spimbot.s:230: jal	examine_location
+        1 [0x004000b4]	0x34040023  ori $4, $0, 35                  ; smart_spimbot.s:231: li	$a0, 35
+        1 [0x004000b8]	0x0c10005a  jal 0x00400168 [examine_location]; smart_spimbot.s:232: jal	examine_location
+        1 [0x004000bc]	0x0810003e  j 0x004000f8 [start_operations] ; smart_spimbot.s:233: j	start_operations
+        0 [0x004000c0]	0x340400b3  ori $4, $0, 179                 ; smart_spimbot.s:236: li	$a0, 179
+        0 [0x004000c4]	0x34050000  ori $5, $0, 0                   ; smart_spimbot.s:237: li	$a1, 0
+        0 [0x004000c8]	0x0c10005a  jal 0x00400168 [examine_location]; smart_spimbot.s:238: jal	examine_location
+        0 [0x004000cc]	0x34040077  ori $4, $0, 119                 ; smart_spimbot.s:239: li	$a0, 119
+        0 [0x004000d0]	0x34050001  ori $5, $0, 1                   ; smart_spimbot.s:240: li	$a1, 1
+        0 [0x004000d4]	0x0c10005a  jal 0x00400168 [examine_location]; smart_spimbot.s:241: jal	examine_location
+        0 [0x004000d8]	0x3404003b  ori $4, $0, 59                  ; smart_spimbot.s:242: li	$a0, 59
+        0 [0x004000dc]	0x34050002  ori $5, $0, 2                   ; smart_spimbot.s:243: li	$a1, 2
+        0 [0x004000e0]	0x0c10005a  jal 0x00400168 [examine_location]; smart_spimbot.s:244: jal	examine_location
+        0 [0x004000e4]	0x3404002a  ori $4, $0, 42                  ; smart_spimbot.s:245: li	$a0, 42
+        0 [0x004000e8]	0x34050003  ori $5, $0, 3                   ; smart_spimbot.s:246: li	$a1, 3
+        0 [0x004000ec]	0x0c10005a  jal 0x00400168 [examine_location]; smart_spimbot.s:247: jal	examine_location
+        0 [0x004000f0]	0x34040027  ori $4, $0, 39                  ; smart_spimbot.s:248: li	$a0, 39
+        0 [0x004000f4]	0x0c10005a  jal 0x00400168 [examine_location]; smart_spimbot.s:249: jal	examine_location
+        1 [0x004000f8]	0x3c01ffff  lui $1, -1                      ; smart_spimbot.s:253: lw	$t0, TIMER
+        1 [0x004000fc]	0x8c28001c  lw $8, 28($1)
+        1 [0x00400100]	0x3c01ffff  lui $1, -1                      ; smart_spimbot.s:254: sw	$t0, TIMER	# immediately causes a timer interrupt, transfers control to kernel mode
+        1 [0x00400104]	0xac28001c  sw $8, 28($1)
+     1995 [0x00400108]	0x3c011003  lui $1, 4099                    ; smart_spimbot.s:257: lw	$t0, d_puzzle_pending		# will be set in kernel mode when puzzle is generated (not written yet)
+     1993 [0x0040010c]	0x8c2812f8  lw $8, 4856($1)
+     1993 [0x00400110]	0x1100fffe  beq $8, $0, -8 [infinite-0x00400110]; smart_spimbot.s:258: beq	$t0, $zero, infinite
+      493 [0x00400114]	0x3c011003  lui $1, 4099                    ; smart_spimbot.s:261: sw	$zero, d_puzzle_pending
+      493 [0x00400118]	0xac2012f8  sw $0, 4856($1)
+      493 [0x0040011c]	0x3c041001  lui $4, 4097 [puzzle1]          ; smart_spimbot.s:262: la	$a0, puzzle1			# puzzle to work on
+      493 [0x00400120]	0x3c011001  lui $1, 4097 [puzzle2]          ; smart_spimbot.s:263: la	$s2, puzzle2			# puzzle to generate
+      493 [0x00400124]	0x34320728  ori $18, $1, 1832 [puzzle2]
+      493 [0x00400128]	0x3c011003  lui $1, 4099                    ; smart_spimbot.s:264: lw	$t3, d_solving_puzzle
+      493 [0x0040012c]	0x8c2b12fc  lw $11, 4860($1)
+      493 [0x00400130]	0x34080001  ori $8, $0, 1                   ; smart_spimbot.s:265: li	$t0, 1
+      493 [0x00400134]	0x3c011003  lui $1, 4099                    ; smart_spimbot.s:266: sw	$t0, d_solving_puzzle
+      493 [0x00400138]	0xac2812fc  sw $8, 4860($1)
+      493 [0x0040013c]	0x11600005  beq $11, $0, 20 [use_puzzle1-0x0040013c]; smart_spimbot.s:267: beq	$t3, $zero, use_puzzle1
+      246 [0x00400140]	0x00122021  addu $4, $0, $18                ; smart_spimbot.s:270: move	$a0, $s2			# switch current and next
+      246 [0x00400144]	0x3c121001  lui $18, 4097 [puzzle1]         ; smart_spimbot.s:271: la	$s2, puzzle1
+      246 [0x00400148]	0x3c011003  lui $1, 4099                    ; smart_spimbot.s:272: sw	$zero, d_solving_puzzle
+      246 [0x0040014c]	0xac2012fc  sw $0, 4860($1)
+      493 [0x00400150]	0x3c01ffff  lui $1, -1                      ; smart_spimbot.s:276: sw	$s2, REQUEST_PUZZLE		# request the next puzzle (generated while solving this one)
+      493 [0x00400154]	0xac3200d0  sw $18, 208($1)
+      493 [0x00400158]	0x0c100061  jal 0x00400184 [puzzle_bolt]    ; smart_spimbot.s:277: jal	puzzle_bolt			# solve the current puzzle
+      492 [0x0040015c]	0x3c01ffff  lui $1, -1                      ; smart_spimbot.s:278: sw	$a0, SUBMIT_SOLUTION		# submit the current solution - puzzle_bolt doesn't change $a0
+      492 [0x00400160]	0xac2400d4  sw $4, 212($1)
+      492 [0x00400164]	0x08100042  j 0x00400108 [infinite]         ; smart_spimbot.s:280: j	infinite
+        5 [0x00400168]	0x02044020  add $8, $16, $4                 ; smart_spimbot.s:292: add	$t0, $s0, $a0	# &map[tile]
+        5 [0x0040016c]	0x91080000  lbu $8, 0($8)                   ; smart_spimbot.s:293: lbu	$t0, 0($t0)	# type = map[tile]
+        5 [0x00400170]	0x02284820  add $9, $17, $8                 ; smart_spimbot.s:294: add	$t1, $s1, $t0	# &useful_locations[type]
+        5 [0x00400174]	0xa1240000  sb $4, 0($9)                    ; smart_spimbot.s:295: sb	$a0, 0($t1)	# useful_locations[type] = tile
+        5 [0x00400178]	0x02454820  add $9, $18, $5                 ; smart_spimbot.s:296: add	$t1, $s2, $a1	# &food_bin_tiles[foodpos]
+        5 [0x0040017c]	0xa1280000  sb $8, 0($9)                    ; smart_spimbot.s:297: sb	$t0, 0($t1)	# food_bin_tiles[foodpos] = type
+        5 [0x00400180]	0x03e00008  jr $31                          ; smart_spimbot.s:298: jr	$ra
+      493 [0x00400184]	0x23bdffd4  addi $29, $29, -44              ; smart_spimbot.s:306: sub         $sp, $sp, 44	# free up registers to store:
+      493 [0x00400188]	0xafbf0000  sw $31, 0($29)                  ; smart_spimbot.s:307: sw          $ra, 0($sp)	# &touchVert
+      493 [0x0040018c]	0xafb00004  sw $16, 4($29)                  ; smart_spimbot.s:308: sw          $s0, 4($sp)	# scanStart
+      493 [0x00400190]	0xafb10008  sw $17, 8($29)                  ; smart_spimbot.s:309: sw          $s1, 8($sp)	# marker
+      493 [0x00400194]	0xafb2000c  sw $18, 12($29)                 ; smart_spimbot.s:310: sw          $s2, 12($sp)	# Puzzle.Bitmap.Length
+      493 [0x00400198]	0xafb30010  sw $19, 16($29)                 ; smart_spimbot.s:311: sw          $s3, 16($sp)	# base address of the bitmap
+      493 [0x0040019c]	0xafb40014  sw $20, 20($29)                 ; smart_spimbot.s:312: sw          $s4, 20($sp)	# qStart
+      493 [0x004001a0]	0xafb50018  sw $21, 24($29)                 ; smart_spimbot.s:313: sw          $s5, 24($sp)	# qEnd
+      493 [0x004001a4]	0xafb6001c  sw $22, 28($29)                 ; smart_spimbot.s:314: sw          $s6, 28($sp)	# Puzzle.BytesWidth
+      493 [0x004001a8]	0xafb70020  sw $23, 32($29)                 ; smart_spimbot.s:315: sw          $s7, 32($sp)	# how many bitmap bytes per row are valid
+      493 [0x004001ac]	0xafbc0024  sw $28, 36($29)                 ; smart_spimbot.s:316: sw          $gp, 36($sp)	# &transitions
+      493 [0x004001b0]	0xafbe0028  sw $30, 40($29)                 ; smart_spimbot.s:317: sw          $fp, 40($sp)	# &contact
+      493 [0x004001b4]	0x34100000  ori $16, $0, 0                  ; smart_spimbot.s:319: li	    $s0, 0		# scanStart = 0
+      493 [0x004001b8]	0x34110041  ori $17, $0, 65                 ; smart_spimbot.s:320: li	    $s1, 'A'	# marker
+      493 [0x004001bc]	0x34160005  ori $22, $0, 5                  ; smart_spimbot.s:321: li	    $s6, 5		# always 5 bytes - documentation is a lie
+      493 [0x004001c0]	0x3c011002  lui $1, 4098 [puzzle_touch_vert]; smart_spimbot.s:322: la	    $ra, puzzle_touch_vert
+      493 [0x004001c4]	0x343f10a0  ori $31, $1, 4256 [puzzle_touch_vert]
+      493 [0x004001c8]	0x3c011001  lui $1, 4097 [puzzle_transition]; smart_spimbot.s:323: la	    $gp, puzzle_transition
+      493 [0x004001cc]	0x343c10a0  ori $28, $1, 4256 [puzzle_transition]
+      493 [0x004001d0]	0x3c011003  lui $1, 4099 [puzzle_contact]   ; smart_spimbot.s:324: la	    $fp, puzzle_contact
+      493 [0x004001d4]	0x343e1230  ori $30, $1, 4656 [puzzle_contact]
+      493 [0x004001d8]	0x8c880004  lw $8, 4($4)                    ; smart_spimbot.s:326: lw	    $t0, 4($a0)	# width
+      493 [0x004001dc]	0x31090007  andi $9, $8, 7                  ; smart_spimbot.s:327: and	    $t1, $t0, 7	# width & 0x7
+      493 [0x004001e0]	0x0008b8c2  srl $23, $8, 3                  ; smart_spimbot.s:328: srl	    $s7, $t0, 3	# floor(width / 8)
+      493 [0x004001e4]	0x11200002  beq $9, $0, 8 [pb_no_ceil_needed-0x004001e4]; smart_spimbot.s:329: beq	    $t1, $zero, pb_no_ceil_needed
+      399 [0x004001e8]	0x22f70001  addi $23, $23, 1                ; smart_spimbot.s:330: add	    $s7, $s7, 1	# ceil(width / 8)
+      493 [0x004001ec]	0x8c890000  lw $9, 0($4)                    ; smart_spimbot.s:332: lw	    $t1, 0($a0)	# height
+      493 [0x004001f0]	0x72c99002  mul $18, $22, $9                ; smart_spimbot.s:333: mul	    $s2, $s6, $t1	# Puzzle.Bitmap.Length
+      493 [0x004001f4]	0x71099802  mul $19, $8, $9                 ; smart_spimbot.s:334: mul	    $s3, $t0, $t1	# width * height
+      493 [0x004001f8]	0x00939820  add $19, $4, $19                ; smart_spimbot.s:335: add	    $s3, $a0, $s3	# &puzzle->bitmap - 8
+      493 [0x004001fc]	0x22730008  addi $19, $19, 8                ; smart_spimbot.s:336: add	    $s3, $s3, 8	# &puzzle->bitmap
+    97987 [0x00400200]	0x12120090  beq $16, $18, 576 [pb_outer_loop_done-0x00400200]; smart_spimbot.s:339: beq	    $s0, $s2, pb_outer_loop_done
+    97493 [0x00400204]	0x02704020  add $8, $19, $16                ; smart_spimbot.s:341: add	    $t0, $s3, $s0	# &puzzle->bitmap[scanStart]
+    97494 [0x00400208]	0x91080000  lbu $8, 0($8)                   ; smart_spimbot.s:342: lbu	    $t0, 0($t0)	# chunk = puzzle->bitmap[scanStart]
+    97495 [0x0040020c]	0x15000003  bne $8, $0, 12 [pb_start_fill-0x0040020c]; smart_spimbot.s:343: bne	    $t0, $zero, pb_start_fill
+    88926 [0x00400210]	0x22100001  addi $16, $16, 1                ; smart_spimbot.s:344: add	    $s0, $s0, 1	# scanStart++
+    88927 [0x00400214]	0x08100080  j 0x00400200 [pb_outer_loop_top]; smart_spimbot.s:345: j	    pb_outer_loop_top
+     8563 [0x00400218]	0x3c011003  lui $1, 4099 [puzzle_contact]   ; smart_spimbot.s:348: la	    $t0, puzzle_contact	# zero out the contact array
+     8565 [0x0040021c]	0x34281230  ori $8, $1, 4656 [puzzle_contact]
+     8564 [0x00400220]	0x210900c8  addi $9, $8, 200                ; smart_spimbot.s:349: add	    $t1, $t0, 200
+    94200 [0x00400224]	0x11090008  beq $8, $9, 32 [pb_clear_contact_done-0x00400224]; smart_spimbot.s:351: beq	    $t0, $t1, pb_clear_contact_done
+    85635 [0x00400228]	0xad000000  sw $0, 0($8)                    ; smart_spimbot.s:352: sw	    $zero, 0($t0)
+    85634 [0x0040022c]	0xad000004  sw $0, 4($8)                    ; smart_spimbot.s:353: sw	    $zero, 4($t0)
+    85636 [0x00400230]	0xad000008  sw $0, 8($8)                    ; smart_spimbot.s:354: sw	    $zero, 8($t0)
+    85643 [0x00400234]	0xad00000c  sw $0, 12($8)                   ; smart_spimbot.s:355: sw	    $zero, 12($t0)
+    85638 [0x00400238]	0xad000010  sw $0, 16($8)                   ; smart_spimbot.s:356: sw	    $zero, 16($t0)
+    85633 [0x0040023c]	0x21080014  addi $8, $8, 20                 ; smart_spimbot.s:357: add	    $t0, $t0, 20		# zero 5 words (20 bytes) per iteration
+    85636 [0x00400240]	0x08100089  j 0x00400224 [pb_clear_contact_top]; smart_spimbot.s:358: j	    pb_clear_contact_top
+     8564 [0x00400244]	0x3c011003  lui $1, 4099 [puzzle_queue]     ; smart_spimbot.s:361: la	    $s4, puzzle_queue	# qStart = 0
+     8563 [0x00400248]	0x343410a0  ori $20, $1, 4256 [puzzle_queue]
+     8563 [0x0040024c]	0x22950001  addi $21, $20, 1                ; smart_spimbot.s:362: add	    $s5, $s4, 1		# qEnd = 1
+     8563 [0x00400250]	0xa2900000  sb $16, 0($20)                  ; smart_spimbot.s:363: sb	    $s0, 0($s4)		# queue[0] = scanStart
+   164957 [0x00400254]	0x12950079  beq $20, $21, 484 [pb_fill_loop_done-0x00400254]; smart_spimbot.s:366: beq	$s4, $s5, pb_fill_loop_done
+   156387 [0x00400258]	0x928d0000  lbu $13, 0($20)                 ; smart_spimbot.s:367: lbu	$t5, 0($s4)	# position = queue[qStart]
+   156394 [0x0040025c]	0x026d6020  add $12, $19, $13               ; smart_spimbot.s:368: add	$t4, $s3, $t5	# &puzzle->bitmap[position]
+   156392 [0x00400260]	0x918e0000  lbu $14, 0($12)                 ; smart_spimbot.s:369: lbu	$t6, 0($t4)	# chunk = puzzle->bitmap[position]
+   156387 [0x00400264]	0x11c00073  beq $14, $0, 460 [pb_fill_loop_next-0x00400264]; smart_spimbot.s:370: beq	$t6, $zero, pb_fill_loop_next
+   132478 [0x00400268]	0x03cd1020  add $2, $30, $13                ; smart_spimbot.s:372: add	$v0, $fp, $t5	# &contact[position]
+   132473 [0x0040026c]	0x90480000  lbu $8, 0($2)                   ; smart_spimbot.s:373: lbu	$t0, 0($v0)	# touching = contact[position]
+   132475 [0x00400270]	0x000e4a00  sll $9, $14, 8                  ; smart_spimbot.s:374: sll	$t1, $t6, 8	# chunk << 8
+   132476 [0x00400274]	0x01284825  or $9, $9, $8                   ; smart_spimbot.s:375: or	$t1, $t1, $t0	# lookupId = chunk << 8 | touching
+   132476 [0x00400278]	0x03894020  add $8, $28, $9                 ; smart_spimbot.s:376: add	$t0, $gp, $t1	# &transitions[lookupId]
+   132473 [0x0040027c]	0x91190000  lbu $25, 0($8)                  ; smart_spimbot.s:377: lbu	$t9, 0($t0)	# transitions[lookupId]
+   132464 [0x00400280]	0x132e006c  beq $25, $14, 432 [pb_fill_loop_next-0x00400280]; smart_spimbot.s:378: beq	$t9, $t6, pb_fill_loop_next
+    82170 [0x00400284]	0xa1990000  sb $25, 0($12)                  ; smart_spimbot.s:379: sb	$t9, 0($t4)	# puzzle->bitmap[position] = transitions[lookupId]
+    82170 [0x00400288]	0x01b6001a  div $13, $22                    ; smart_spimbot.s:381: div	$t5, $s6	# need both quotient and remainder
+    82173 [0x0040028c]	0x00007810  mfhi $15                        ; smart_spimbot.s:382: mfhi	$t7		# position % Puzzle.BytesWidth
+    82167 [0x00400290]	0x11f70068  beq $15, $23, 416 [pb_fill_loop_next-0x00400290]; smart_spimbot.s:383: beq	$t7, $s7, pb_fill_loop_next
+    80907 [0x00400294]	0x0000c012  mflo $24                        ; smart_spimbot.s:384: mflo	$t8		# position / Puzzle.BytesWidth
+    80904 [0x00400298]	0x000f78c0  sll $15, $15, 3                 ; smart_spimbot.s:385: sll	$t7, $t7, 3	# (position % Puzzle.BytesWidth) * 8
+    80906 [0x0040029c]	0x8c880004  lw $8, 4($4)                    ; smart_spimbot.s:386: lw	$t0, 4($a0)	# width
+    80905 [0x004002a0]	0x7308c002  mul $24, $24, $8                ; smart_spimbot.s:387: mul	$t8, $t8, $t0	# (position / Puzzle.BytesWidth) * Puzzle.Width
+    80907 [0x004002a4]	0x01f87820  add $15, $15, $24               ; smart_spimbot.s:388: add	$t7, $t7, $t8	# mapPos
+    80905 [0x004002a8]	0x0339c827  nor $25, $25, $25               ; smart_spimbot.s:390: nor	$t9, $t9, $t9	# ~transitions[lookupId]
+    80903 [0x004002ac]	0x032e5824  and $11, $25, $14               ; smart_spimbot.s:391: and	$t3, $t9, $t6	# changed = chunk & ~transitions[lookupId]
+    80908 [0x004002b0]	0x31660080  andi $6, $11, 128               ; smart_spimbot.s:392: and	$a2, $t3, 0x80	# nonzero if need to use touchLeft
+    80909 [0x004002b4]	0x31670001  andi $7, $11, 1                 ; smart_spimbot.s:393: and	$a3, $t3, 0x01	# likewise for touchRight
+    80905 [0x004002b8]	0x03e92820  add $5, $31, $9                 ; smart_spimbot.s:395: add	$a1, $ra, $t1	# &touchVert[lookupId]
+    80907 [0x004002bc]	0x90a50000  lbu $5, 0($5)                   ; smart_spimbot.s:396: lbu	$a1, 0($a1)	# touchVert[lookupId]
+    80902 [0x004002c0]	0x008f4820  add $9, $4, $15                 ; smart_spimbot.s:398: add	$t1, $a0, $t7	# &puzzle->map[mapPos] - 8
+   491004 [0x004002c4]	0x11600007  beq $11, $0, 28 [pb_write_map_done-0x004002c4]; smart_spimbot.s:400: beq	    $t3, $zero, pb_write_map_done
+   410103 [0x004002c8]	0x3168007f  andi $8, $11, 127               ; smart_spimbot.s:401: and	    $t0, $t3, 0x7f	# see if cutting off the top bit changes the value
+   410105 [0x004002cc]	0x11680002  beq $11, $8, 8 [pb_write_map_next-0x004002cc]; smart_spimbot.s:402: beq	    $t3, $t0, pb_write_map_next
+   180817 [0x004002d0]	0xa1310008  sb $17, 8($9)                   ; smart_spimbot.s:403: sb	    $s1, 8($t1)	# puzzle->map[mapPos] = marker
+   410115 [0x004002d4]	0x00085840  sll $11, $8, 1                  ; smart_spimbot.s:405: sll	    $t3, $t0, 1	# changed <<= 1
+   410099 [0x004002d8]	0x21290001  addi $9, $9, 1                  ; smart_spimbot.s:406: add	    $t1, $t1, 1
+   410107 [0x004002dc]	0x081000b1  j 0x004002c4 [pb_write_map_top] ; smart_spimbot.s:407: j	    pb_write_map_top
+    80905 [0x004002e0]	0x01b64822  sub $9, $13, $22                ; smart_spimbot.s:411: sub	    $t1, $t5, $s6	# upPos = position - puzzle.BytesWidth
+    80903 [0x004002e4]	0x0120082a  slt $1, $9, $0                  ; smart_spimbot.s:412: blt	    $t1, $zero, pb_no_up
+    80903 [0x004002e8]	0x14200008  bne $1, $0, 32 [pb_no_up-0x004002e8]
+    79228 [0x004002ec]	0x9188fffb  lbu $8, -5($12)                 ; smart_spimbot.s:413: lbu	    $t0, -5($t4)	# puzzle->bitmap[upPos]
+    79225 [0x004002f0]	0x11000006  beq $8, $0, 24 [pb_no_up-0x004002f0]; smart_spimbot.s:414: beq	    $t0, $zero, pb_no_up
+    20815 [0x004002f4]	0x904bfffb  lbu $11, -5($2)                 ; smart_spimbot.s:415: lbu	    $t3, -5($v0)	# contact[upPos]
+    20813 [0x004002f8]	0x01655825  or $11, $11, $5                 ; smart_spimbot.s:416: or	    $t3, $t3, $a1	# contact[upPos] | touchVert[lookupId]
+    20813 [0x004002fc]	0xa04bfffb  sb $11, -5($2)                  ; smart_spimbot.s:417: sb	    $t3, -5($v0)
+    20813 [0x00400300]	0xa2a90000  sb $9, 0($21)                   ; smart_spimbot.s:418: sb	    $t1, 0($s5)	# queue[qEnd] = upPos
+    20812 [0x00400304]	0x22b50001  addi $21, $21, 1                ; smart_spimbot.s:419: add	    $s5, $s5, 1	# qEnd++
+    80906 [0x00400308]	0x01b6c020  add $24, $13, $22               ; smart_spimbot.s:423: add	    $t8, $t5, $s6	# downPos = position + puzzle.BytesWidth
+    80909 [0x0040030c]	0x0312082a  slt $1, $24, $18                ; smart_spimbot.s:424: bge	    $t8, $s2, pb_no_down
+    80907 [0x00400310]	0x10200008  beq $1, $0, 32 [pb_no_down-0x00400310]
+    79278 [0x00400314]	0x91880005  lbu $8, 5($12)                  ; smart_spimbot.s:425: lbu	    $t0, 5($t4)	# puzzle->bitmap[downPos]
+    79276 [0x00400318]	0x11000006  beq $8, $0, 24 [pb_no_down-0x00400318]; smart_spimbot.s:426: beq	    $t0, $zero, pb_no_down
+    66924 [0x0040031c]	0x904b0005  lbu $11, 5($2)                  ; smart_spimbot.s:427: lbu	    $t3, 5($v0)	# contact[downPos]
+    66920 [0x00400320]	0x01655825  or $11, $11, $5                 ; smart_spimbot.s:428: or	    $t3, $t3, $a1	# contact[downPos] | touchVert[lookupId]
+    66919 [0x00400324]	0xa04b0005  sb $11, 5($2)                   ; smart_spimbot.s:429: sb	    $t3, 5($v0)
+    66922 [0x00400328]	0xa2b80000  sb $24, 0($21)                  ; smart_spimbot.s:430: sb	    $t8, 0($s5)	# queue[qEnd] = downPos
+    66922 [0x0040032c]	0x22b50001  addi $21, $21, 1                ; smart_spimbot.s:431: add	    $s5, $s5, 1	# qEnd++
+    80901 [0x00400330]	0x10c00020  beq $6, $0, 128 [pb_no_left-0x00400330]; smart_spimbot.s:435: beq	    $a2, $zero, pb_no_left
+    24126 [0x00400334]	0x01b6001a  div $13, $22                    ; smart_spimbot.s:436: div	    $t5, $s6
+    24131 [0x00400338]	0x00004010  mfhi $8                         ; smart_spimbot.s:437: mfhi	    $t0		# position % Puzzle.BytesWidth
+    24129 [0x0040033c]	0x1100001d  beq $8, $0, 116 [pb_no_left-0x0040033c]; smart_spimbot.s:438: beq	    $t0, $zero, pb_no_left
+    20000 [0x00400340]	0x918affff  lbu $10, -1($12)                ; smart_spimbot.s:439: lbu	    $t2, -1($t4)	# puzzle->bitmap[position - 1]
+    20000 [0x00400344]	0x11400007  beq $10, $0, 28 [pb_no_direct_left-0x00400344]; smart_spimbot.s:440: beq	    $t2, $zero, pb_no_direct_left
+     8257 [0x00400348]	0x904bffff  lbu $11, -1($2)                 ; smart_spimbot.s:441: lbu	    $t3, -1($v0)	# contact[position - 1]
+     8259 [0x0040034c]	0x356b0001  ori $11, $11, 1                 ; smart_spimbot.s:442: or	    $t3, $t3, 1	# contact[position - 1] | touchLeft[lookupId]
+     8256 [0x00400350]	0xa04bffff  sb $11, -1($2)                  ; smart_spimbot.s:443: sb	    $t3, -1($v0)
+     8256 [0x00400354]	0x21a8ffff  addi $8, $13, -1                ; smart_spimbot.s:444: sub	    $t0, $t5, 1	# position - 1
+     8258 [0x00400358]	0xa2a80000  sb $8, 0($21)                   ; smart_spimbot.s:445: sb	    $t0, 0($s5)	# queue[qEnd] = position - 1
+     8256 [0x0040035c]	0x22b50001  addi $21, $21, 1                ; smart_spimbot.s:446: add	    $s5, $s5, 1	# qEnd++
+    20002 [0x00400360]	0x0312082a  slt $1, $24, $18                ; smart_spimbot.s:450: bge	    $t8, $s2, pb_no_down_left
+    19999 [0x00400364]	0x10200009  beq $1, $0, 36 [pb_no_down_left-0x00400364]
+    19516 [0x00400368]	0x91880004  lbu $8, 4($12)                  ; smart_spimbot.s:451: lbu	    $t0, 4($t4)	# puzzle->bitmap[downPos - 1]
+    19517 [0x0040036c]	0x11000007  beq $8, $0, 28 [pb_no_down_left-0x0040036c]; smart_spimbot.s:452: beq	    $t0, $zero, pb_no_down_left
+    13105 [0x00400370]	0x904b0004  lbu $11, 4($2)                  ; smart_spimbot.s:453: lbu	    $t3, 4($v0)	# contact[downPos - 1]
+    13105 [0x00400374]	0x356b0001  ori $11, $11, 1                 ; smart_spimbot.s:454: or	    $t3, $t3, 1	# contact[downPos - 1] | touchLeft[lookupId]
+    13106 [0x00400378]	0xa04b0004  sb $11, 4($2)                   ; smart_spimbot.s:455: sb	    $t3, 4($v0)
+    13107 [0x0040037c]	0x21a80004  addi $8, $13, 4                 ; smart_spimbot.s:456: add	    $t0, $t5, 4	# downPos - 1
+    13106 [0x00400380]	0xa2a80000  sb $8, 0($21)                   ; smart_spimbot.s:457: sb	    $t0, 0($s5)	# queue[qEnd] = downPos - 1
+    13104 [0x00400384]	0x22b50001  addi $21, $21, 1                ; smart_spimbot.s:458: add	    $s5, $s5, 1	# qEnd++
+    20002 [0x00400388]	0x0120082a  slt $1, $9, $0                  ; smart_spimbot.s:462: blt	    $t1, $zero, pb_no_left
+    20002 [0x0040038c]	0x14200009  bne $1, $0, 36 [pb_no_left-0x0040038c]
+    19558 [0x00400390]	0x9188fffa  lbu $8, -6($12)                 ; smart_spimbot.s:463: lbu	    $t0, -6($t4)	# puzzle->bitmap[upPos - 1]
+    19560 [0x00400394]	0x11000007  beq $8, $0, 28 [pb_no_left-0x00400394]; smart_spimbot.s:464: beq	    $t0, $zero, pb_no_left
+     4756 [0x00400398]	0x904bfffa  lbu $11, -6($2)                 ; smart_spimbot.s:465: lbu	    $t3, -6($v0)	# contact[upPos - 1]
+     4758 [0x0040039c]	0x356b0001  ori $11, $11, 1                 ; smart_spimbot.s:466: or	    $t3, $t3, 1	# contact[upPos - 1] | touchLeft[lookupId]
+     4756 [0x004003a0]	0xa04bfffa  sb $11, -6($2)                  ; smart_spimbot.s:467: sb	    $t3, -6($v0)
+     4755 [0x004003a4]	0x21a8fffa  addi $8, $13, -6                ; smart_spimbot.s:468: add	    $t0, $t5, -6	# upPos - 1
+     4756 [0x004003a8]	0xa2a80000  sb $8, 0($21)                   ; smart_spimbot.s:469: sb	    $t0, 0($s5)	# queue[qEnd] = upPos - 1
+     4755 [0x004003ac]	0x22b50001  addi $21, $21, 1                ; smart_spimbot.s:470: add	    $s5, $s5, 1	# qEnd++
+    80906 [0x004003b0]	0x10e00020  beq $7, $0, 128 [pb_no_right-0x004003b0]; smart_spimbot.s:474: beq	    $a3, $zero, pb_no_right
+    20874 [0x004003b4]	0x21ae0001  addi $14, $13, 1                ; smart_spimbot.s:475: add	    $t6, $t5, 1	# position + 1
+    20873 [0x004003b8]	0x01d6001a  div $14, $22                    ; smart_spimbot.s:476: div	    $t6, $s6
+    20872 [0x004003bc]	0x00004010  mfhi $8                         ; smart_spimbot.s:477: mfhi	    $t0		# (position + 1) % Puzzle.BytesWidth
+    20876 [0x004003c0]	0x1100001c  beq $8, $0, 112 [pb_no_right-0x004003c0]; smart_spimbot.s:478: beq	    $t0, $zero, pb_no_right
+    20484 [0x004003c4]	0x918a0001  lbu $10, 1($12)                 ; smart_spimbot.s:479: lbu	    $t2, 1($t4)	# puzzle->bitmap[position + 1]
+    20486 [0x004003c8]	0x11400006  beq $10, $0, 24 [pb_no_direct_right-0x004003c8]; smart_spimbot.s:480: beq	    $t2, $zero, pb_no_direct_right
+    12102 [0x004003cc]	0x904b0001  lbu $11, 1($2)                  ; smart_spimbot.s:481: lbu	    $t3, 1($v0)	# contact[position + 1]
+    12102 [0x004003d0]	0x356b0080  ori $11, $11, 128               ; smart_spimbot.s:482: or	    $t3, $t3, 0x80	# contact[position + 1] | touchRight[lookupId]
+    12105 [0x004003d4]	0xa04b0001  sb $11, 1($2)                   ; smart_spimbot.s:483: sb	    $t3, 1($v0)
+    12102 [0x004003d8]	0xa2ae0000  sb $14, 0($21)                  ; smart_spimbot.s:484: sb	    $t6, 0($s5)	# queue[qEnd] = position + 1
+    12103 [0x004003dc]	0x22b50001  addi $21, $21, 1                ; smart_spimbot.s:485: add	    $s5, $s5, 1	# qEnd++
+    20488 [0x004003e0]	0x0312082a  slt $1, $24, $18                ; smart_spimbot.s:489: bge	    $t8, $s2, pb_no_down_right
+    20488 [0x004003e4]	0x10200009  beq $1, $0, 36 [pb_no_down_right-0x004003e4]
+    20008 [0x004003e8]	0x91880006  lbu $8, 6($12)                  ; smart_spimbot.s:490: lbu	    $t0, 6($t4)	# puzzle->bitmap[downPos + 1]
+    20009 [0x004003ec]	0x11000007  beq $8, $0, 28 [pb_no_down_right-0x004003ec]; smart_spimbot.s:491: beq	    $t0, $zero, pb_no_down_right
+    14845 [0x004003f0]	0x904b0006  lbu $11, 6($2)                  ; smart_spimbot.s:492: lbu	    $t3, 6($v0)	# contact[downPos + 1]
+    14845 [0x004003f4]	0x356b0080  ori $11, $11, 128               ; smart_spimbot.s:493: or	    $t3, $t3, 0x80	# contact[downPos + 1] | touchRight[lookupId]
+    14844 [0x004003f8]	0xa04b0006  sb $11, 6($2)                   ; smart_spimbot.s:494: sb	    $t3, 6($v0)
+    14845 [0x004003fc]	0x21a80006  addi $8, $13, 6                 ; smart_spimbot.s:495: add	    $t0, $t5, 6	# downPos + 1
+    14844 [0x00400400]	0xa2a80000  sb $8, 0($21)                   ; smart_spimbot.s:496: sb	    $t0, 0($s5)	# queue[qEnd] = downPos + 1
+    14846 [0x00400404]	0x22b50001  addi $21, $21, 1                ; smart_spimbot.s:497: add	    $s5, $s5, 1	# qEnd++
+    20486 [0x00400408]	0x0120082a  slt $1, $9, $0                  ; smart_spimbot.s:501: blt	    $t1, $zero, pb_no_right
+    20485 [0x0040040c]	0x14200009  bne $1, $0, 36 [pb_no_right-0x0040040c]
+    20040 [0x00400410]	0x9188fffc  lbu $8, -4($12)                 ; smart_spimbot.s:502: lbu	    $t0, -4($t4)	# puzzle->bitmap[upPos + 1]
+    20040 [0x00400414]	0x11000007  beq $8, $0, 28 [pb_no_right-0x00400414]; smart_spimbot.s:503: beq	    $t0, $zero, pb_no_right
+     7032 [0x00400418]	0x904bfffc  lbu $11, -4($2)                 ; smart_spimbot.s:504: lbu	    $t3, -4($v0)	# contact[upPos + 1]
+     7034 [0x0040041c]	0x356b0080  ori $11, $11, 128               ; smart_spimbot.s:505: or	    $t3, $t3, 0x80	# contact[upPos + 1] | touchRight[lookupId]
+     7032 [0x00400420]	0xa04bfffc  sb $11, -4($2)                  ; smart_spimbot.s:506: sb	    $t3, -4($v0)
+     7031 [0x00400424]	0x21a8fffc  addi $8, $13, -4                ; smart_spimbot.s:507: add	    $t0, $t5, -4	# upPos + 1
+     7031 [0x00400428]	0xa2a80000  sb $8, 0($21)                   ; smart_spimbot.s:508: sb	    $t0, 0($s5)	# queue[qEnd] = upPos + 1
+     7032 [0x0040042c]	0x22b50001  addi $21, $21, 1                ; smart_spimbot.s:509: add	    $s5, $s5, 1	# qEnd++
+   156385 [0x00400430]	0x22940001  addi $20, $20, 1                ; smart_spimbot.s:513: add	    $s4, $s4, 1	# qStart++
+   156389 [0x00400434]	0x08100095  j 0x00400254 [pb_fill_loop_top] ; smart_spimbot.s:514: j	    pb_fill_loop_top
+     8562 [0x00400438]	0x22310001  addi $17, $17, 1                ; smart_spimbot.s:517: add	    $s1, $s1, 1	# marker++
+     8562 [0x0040043c]	0x08100080  j 0x00400200 [pb_outer_loop_top]; smart_spimbot.s:518: j	    pb_outer_loop_top
+      492 [0x00400440]	0x8fbf0000  lw $31, 0($29)                  ; smart_spimbot.s:521: lw          $ra, 0($sp)
+      492 [0x00400444]	0x8fb00004  lw $16, 4($29)                  ; smart_spimbot.s:522: lw          $s0, 4($sp)
+      492 [0x00400448]	0x8fb10008  lw $17, 8($29)                  ; smart_spimbot.s:523: lw          $s1, 8($sp)
+      492 [0x0040044c]	0x8fb2000c  lw $18, 12($29)                 ; smart_spimbot.s:524: lw          $s2, 12($sp)
+      492 [0x00400450]	0x8fb30010  lw $19, 16($29)                 ; smart_spimbot.s:525: lw          $s3, 16($sp)
+      492 [0x00400454]	0x8fb40014  lw $20, 20($29)                 ; smart_spimbot.s:526: lw          $s4, 20($sp)
+      492 [0x00400458]	0x8fb50018  lw $21, 24($29)                 ; smart_spimbot.s:527: lw          $s5, 24($sp)
+      492 [0x0040045c]	0x8fb6001c  lw $22, 28($29)                 ; smart_spimbot.s:528: lw          $s6, 28($sp)
+      492 [0x00400460]	0x8fb70020  lw $23, 32($29)                 ; smart_spimbot.s:529: lw          $s7, 32($sp)
+      492 [0x00400464]	0x8fbc0024  lw $28, 36($29)                 ; smart_spimbot.s:530: lw          $gp, 36($sp)
+      492 [0x00400468]	0x8fbe0028  lw $30, 40($29)                 ; smart_spimbot.s:531: lw          $fp, 40($sp)
+      492 [0x0040046c]	0x23bd002c  addi $29, $29, 44               ; smart_spimbot.s:532: add         $sp, $sp, 44
+      492 [0x00400470]	0x03e00008  jr $31                          ; smart_spimbot.s:533: jr	    $ra
+
+
+kernel text segment
+
+      784 [0x80000180]	0x0001d821  addu $27, $0, $1                ; smart_spimbot.s:623: move	$k1, $at	# Save $at
+      784 [0x80000184]	0x3c019000  lui $1, -28672 [chunkIH]        ; smart_spimbot.s:625: la	$k0, chunkIH
+      784 [0x80000188]	0x343a0208  ori $26, $1, 520 [chunkIH]
+      784 [0x8000018c]	0xaf440000  sw $4, 0($26)                   ; smart_spimbot.s:626: sw	$a0, 0($k0)	# Get some free registers
+      784 [0x80000190]	0xaf420004  sw $2, 4($26)                   ; smart_spimbot.s:627: sw	$v0, 4($k0)	# by storing them to a global variable
+      784 [0x80000194]	0xaf480008  sw $8, 8($26)                   ; smart_spimbot.s:628: sw	$t0, 8($k0)
+      784 [0x80000198]	0xaf49000c  sw $9, 12($26)                  ; smart_spimbot.s:629: sw	$t1, 12($k0)
+      784 [0x8000019c]	0xaf4a0010  sw $10, 16($26)                 ; smart_spimbot.s:630: sw	$t2, 16($k0)
+      784 [0x800001a0]	0xaf4b0014  sw $11, 20($26)                 ; smart_spimbot.s:631: sw	$t3, 20($k0)
+      784 [0x800001a4]	0xaf4c0018  sw $12, 24($26)                 ; smart_spimbot.s:632: sw	$t4, 24($k0)
+      784 [0x800001a8]	0xaf4d001c  sw $13, 28($26)                 ; smart_spimbot.s:633: sw	$t5, 28($k0)
+      784 [0x800001ac]	0xaf450020  sw $5, 32($26)                  ; smart_spimbot.s:634: sw	$a1, 32($k0)
+      784 [0x800001b0]	0xaf460024  sw $6, 36($26)                  ; smart_spimbot.s:635: sw	$a2, 36($k0)
+      784 [0x800001b4]	0xaf470028  sw $7, 40($26)                  ; smart_spimbot.s:636: sw	$a3, 40($k0)
+      784 [0x800001b8]	0xaf43002c  sw $3, 44($26)                  ; smart_spimbot.s:637: sw	$v1, 44($k0)
+      784 [0x800001bc]	0xaf5f0030  sw $31, 48($26)                 ; smart_spimbot.s:638: sw	$ra, 48($k0)
+      784 [0x800001c0]	0xaf5d0034  sw $29, 52($26)                 ; smart_spimbot.s:639: sw	$sp, 52($k0)
+      784 [0x800001c4]	0xaf500038  sw $16, 56($26)                 ; smart_spimbot.s:640: sw	$s0, 56($k0)
+      784 [0x800001c8]	0xaf51003c  sw $17, 60($26)                 ; smart_spimbot.s:641: sw	$s1, 60($k0)
+      784 [0x800001cc]	0xaf520040  sw $18, 64($26)                 ; smart_spimbot.s:642: sw	$s2, 64($k0)
+      784 [0x800001d0]	0x00004012  mflo $8                         ; smart_spimbot.s:645: mflo	$t0
+      784 [0x800001d4]	0xaf480044  sw $8, 68($26)                  ; smart_spimbot.s:646: sw	$t0, 68($k0)
+      784 [0x800001d8]	0x00004010  mfhi $8                         ; smart_spimbot.s:647: mfhi	$t0
+      784 [0x800001dc]	0xaf480048  sw $8, 72($26)                  ; smart_spimbot.s:648: sw	$t0, 72($k0)
+      784 [0x800001e0]	0x401a6800  mfc0 $26, $13                   ; smart_spimbot.s:650: mfc0	$k0, $13	# Get Cause register
+      784 [0x800001e4]	0x001a2082  srl $4, $26, 2                  ; smart_spimbot.s:651: srl	$a0, $k0, 2
+      784 [0x800001e8]	0x3084000f  andi $4, $4, 15                 ; smart_spimbot.s:652: and	$a0, $a0, 0xf	# ExcCode field
+      784 [0x800001ec]	0x14040038  bne $0, $4, 224 [ih_non_intrpt-0x800001ec]; smart_spimbot.s:653: bne	$a0, 0, ih_non_intrpt
+     1568 [0x800001f0]	0x401a6800  mfc0 $26, $13                   ; smart_spimbot.s:656: mfc0	$k0, $13		# Get Cause register, again
+     1568 [0x800001f4]	0x101a003a  beq $0, $26, 232 [ih_done-0x800001f4]; smart_spimbot.s:657: beq	$k0, 0, ih_done		# handled all outstanding interrupts
+      784 [0x800001f8]	0x33441000  andi $4, $26, 4096              ; smart_spimbot.s:659: and	$a0, $k0, BONK_INT_MASK		# is there a bonk interrupt?
+      784 [0x800001fc]	0x1404000a  bne $0, $4, 40 [ih_bonk_interrupt-0x800001fc]; smart_spimbot.s:660: bne	$a0, 0, ih_bonk_interrupt
+      736 [0x80000200]	0x33448000  andi $4, $26, -32768            ; smart_spimbot.s:662: and	$a0, $k0, TIMER_INT_MASK	# is there a timer interrupt?
+      736 [0x80000204]	0x14040011  bne $0, $4, 68 [ih_timer_interrupt-0x80000204]; smart_spimbot.s:663: bne	$a0, 0, ih_timer_interrupt
+      494 [0x80000208]	0x33440800  andi $4, $26, 2048              ; smart_spimbot.s:665: and	$a0, $k0, REQUEST_PUZZLE_INT_MASK
+      494 [0x8000020c]	0x14040009  bne $0, $4, 36 [ih_request_puzzle_interrupt-0x8000020c]; smart_spimbot.s:666: bne	$a0, 0, ih_request_puzzle_interrupt
+        0 [0x80000210]	0x34020004  ori $2, $0, 4                   ; smart_spimbot.s:668: li	$v0, PRINT_STRING	# Unhandled interrupt types
+        0 [0x80000214]	0x3c019000  lui $1, -28672 [unhandled_str]  ; smart_spimbot.s:669: la	$a0, unhandled_str
+        0 [0x80000218]	0x342409a1  ori $4, $1, 2465 [unhandled_str]
+        0 [0x8000021c]	0x0000000c  syscall                         ; smart_spimbot.s:670: syscall
+        0 [0x80000220]	0x080000b7  j 0x000002dc [ih_done]          ; smart_spimbot.s:671: j	ih_done
+       48 [0x80000224]	0x3c01ffff  lui $1, -1                      ; smart_spimbot.s:674: sw	$0, BONK_ACK
+       48 [0x80000228]	0xac200060  sw $0, 96($1)
+       48 [0x8000022c]	0x08000094  j 0x00000250 [ih_perform_operation]; smart_spimbot.s:675: j	ih_perform_operation
+      494 [0x80000230]	0x3c01ffff  lui $1, -1                      ; smart_spimbot.s:678: sw	$zero, REQUEST_PUZZLE_ACK
+      494 [0x80000234]	0xac2000d8  sw $0, 216($1)
+      494 [0x80000238]	0x34080001  ori $8, $0, 1                   ; smart_spimbot.s:679: li	$t0, 1
+      494 [0x8000023c]	0x3c011003  lui $1, 4099                    ; smart_spimbot.s:680: sw	$t0, d_puzzle_pending
+      494 [0x80000240]	0xac2812f8  sw $8, 4856($1)
+      494 [0x80000244]	0x0800007c  j 0x000001f0 [ih_interrupt_dispatch]; smart_spimbot.s:681: j	ih_interrupt_dispatch
+      242 [0x80000248]	0x3c01ffff  lui $1, -1                      ; smart_spimbot.s:684: sw	$0, TIMER_ACK
+      242 [0x8000024c]	0xac20006c  sw $0, 108($1)
+     1010 [0x80000250]	0x3c019000  lui $1, -28672 [kstack_bottom]  ; smart_spimbot.s:688: la	$sp, kstack_bottom
+     1010 [0x80000254]	0x343d0654  ori $29, $1, 1620 [kstack_bottom]
+     1010 [0x80000258]	0x3c019000  lui $1, -28672                  ; smart_spimbot.s:689: lw	$t0, op_queue_pos
+     1010 [0x8000025c]	0x8c280870  lw $8, 2160($1)
+     1010 [0x80000260]	0x3c019000  lui $1, -28672                  ; smart_spimbot.s:690: lw	$t1, op_queue_length
+     1010 [0x80000264]	0x8c290874  lw $9, 2164($1)
+     1010 [0x80000268]	0x15090006  bne $8, $9, 24 [ih_queue_ready-0x80000268]; smart_spimbot.s:691: bne	$t0, $t1, ih_queue_ready
+      132 [0x8000026c]	0x0c0000d0  jal 0x00000340 [fill_queue]     ; smart_spimbot.s:693: jal	fill_queue	# find some work to do
+      132 [0x80000270]	0x3c019000  lui $1, -28672                  ; smart_spimbot.s:694: lw	$t0, op_queue_length
+      132 [0x80000274]	0x8c280874  lw $8, 2164($1)
+      132 [0x80000278]	0x1100ffde  beq $8, $0, -136 [ih_interrupt_dispatch-0x80000278]; smart_spimbot.s:695: beq	$t0, $zero, ih_interrupt_dispatch
+      123 [0x8000027c]	0x34080000  ori $8, $0, 0                   ; smart_spimbot.s:696: li	$t0, 0		# start from the top of the queue
+     1001 [0x80000280]	0x00084080  sll $8, $8, 2                   ; smart_spimbot.s:699: sll	$t0, $t0, 2	# [opQueuePos]
+     1001 [0x80000284]	0x3c019000  lui $1, -28672 [operations_queue]; smart_spimbot.s:700: la	$t1, operations_queue
+     1001 [0x80000288]	0x3429065c  ori $9, $1, 1628 [operations_queue]
+     1001 [0x8000028c]	0x01284820  add $9, $9, $8                  ; smart_spimbot.s:701: add	$t1, $t1, $t0	# &opQueue[opQueuePos]
+     1001 [0x80000290]	0x8d300000  lw $16, 0($9)                   ; smart_spimbot.s:702: lw	$s0, 0($t1)	# current operation
+     1001 [0x80000294]	0x00102a02  srl $5, $16, 8                  ; smart_spimbot.s:703: srl	$a1, $s0, 8	# high bits (extra data)
+     1001 [0x80000298]	0x320400ff  andi $4, $16, 255               ; smart_spimbot.s:704: and	$a0, $s0, 0xFF
+     1001 [0x8000029c]	0x0c000239  jal 0x000008e4 [operation_done] ; smart_spimbot.s:705: jal	operation_done	# check whether a task was just completed
+     1001 [0x800002a0]	0x10400007  beq $2, $0, 28 [ih_operation_incomplete-0x800002a0]; smart_spimbot.s:706: beq	$v0, $zero, ih_operation_incomplete
+      720 [0x800002a4]	0x3c019000  lui $1, -28672                  ; smart_spimbot.s:708: lw	$t0, op_queue_pos
+      720 [0x800002a8]	0x8c280870  lw $8, 2160($1)
+      720 [0x800002ac]	0x21080001  addi $8, $8, 1                  ; smart_spimbot.s:709: add	$t0, $t0, 1	# opQueuePos++
+      720 [0x800002b0]	0x3c019000  lui $1, -28672                  ; smart_spimbot.s:710: sw	$t0, op_queue_pos
+      720 [0x800002b4]	0xac280870  sw $8, 2160($1)
+      720 [0x800002b8]	0x08000094  j 0x00000250 [ih_perform_operation]; smart_spimbot.s:711: j	ih_perform_operation
+      281 [0x800002bc]	0x00102a02  srl $5, $16, 8                  ; smart_spimbot.s:714: srl	$a1, $s0, 8	# prepare arguments again
+      281 [0x800002c0]	0x320400ff  andi $4, $16, 255               ; smart_spimbot.s:715: and	$a0, $s0, 0xFF
+      281 [0x800002c4]	0x0c00030e  jal 0x00000c38 [perform_operation]; smart_spimbot.s:716: jal	perform_operation
+      281 [0x800002c8]	0x0800007c  j 0x000001f0 [ih_interrupt_dispatch]; smart_spimbot.s:717: j	ih_interrupt_dispatch
+        0 [0x800002cc]	0x34020004  ori $2, $0, 4                   ; smart_spimbot.s:720: li	$v0, PRINT_STRING
+        0 [0x800002d0]	0x3c019000  lui $1, -28672 [non_intrpt_str] ; smart_spimbot.s:721: la	$a0, non_intrpt_str
+        0 [0x800002d4]	0x34240988  ori $4, $1, 2440 [non_intrpt_str]
+        0 [0x800002d8]	0x0000000c  syscall                         ; smart_spimbot.s:722: syscall			# print out an error message
+      784 [0x800002dc]	0x3c019000  lui $1, -28672 [chunkIH]        ; smart_spimbot.s:726: la	$k0, chunkIH
+      784 [0x800002e0]	0x343a0208  ori $26, $1, 520 [chunkIH]
+      784 [0x800002e4]	0x8f480044  lw $8, 68($26)                  ; smart_spimbot.s:729: lw	$t0, 68($k0)
+      784 [0x800002e8]	0x01000013  mtlo $8                         ; smart_spimbot.s:730: mtlo	$t0
+      784 [0x800002ec]	0x8f480048  lw $8, 72($26)                  ; smart_spimbot.s:731: lw	$t0, 72($k0)
+      784 [0x800002f0]	0x01000011  mthi $8                         ; smart_spimbot.s:732: mthi	$t0
+      784 [0x800002f4]	0x8f440000  lw $4, 0($26)                   ; smart_spimbot.s:734: lw	$a0, 0($k0)	# Restore saved registers
+      784 [0x800002f8]	0x8f420004  lw $2, 4($26)                   ; smart_spimbot.s:735: lw	$v0, 4($k0)
+      784 [0x800002fc]	0x8f480008  lw $8, 8($26)                   ; smart_spimbot.s:736: lw	$t0, 8($k0)
+      784 [0x80000300]	0x8f49000c  lw $9, 12($26)                  ; smart_spimbot.s:737: lw	$t1, 12($k0)
+      784 [0x80000304]	0x8f4a0010  lw $10, 16($26)                 ; smart_spimbot.s:738: lw	$t2, 16($k0)
+      784 [0x80000308]	0x8f4b0014  lw $11, 20($26)                 ; smart_spimbot.s:739: lw	$t3, 20($k0)
+      784 [0x8000030c]	0x8f4c0018  lw $12, 24($26)                 ; smart_spimbot.s:740: lw	$t4, 24($k0)
+      784 [0x80000310]	0x8f4d001c  lw $13, 28($26)                 ; smart_spimbot.s:741: lw	$t5, 28($k0)
+      784 [0x80000314]	0x8f450020  lw $5, 32($26)                  ; smart_spimbot.s:742: lw	$a1, 32($k0)
+      784 [0x80000318]	0x8f460024  lw $6, 36($26)                  ; smart_spimbot.s:743: lw	$a2, 36($k0)
+      784 [0x8000031c]	0x8f470028  lw $7, 40($26)                  ; smart_spimbot.s:744: lw	$a3, 40($k0)
+      784 [0x80000320]	0x8f43002c  lw $3, 44($26)                  ; smart_spimbot.s:745: lw	$v1, 44($k0)
+      784 [0x80000324]	0x8f5f0030  lw $31, 48($26)                 ; smart_spimbot.s:746: lw	$ra, 48($k0)
+      784 [0x80000328]	0x8f5d0034  lw $29, 52($26)                 ; smart_spimbot.s:747: lw	$sp, 52($k0)
+      784 [0x8000032c]	0x8f500038  lw $16, 56($26)                 ; smart_spimbot.s:748: lw	$s0, 56($k0)
+      784 [0x80000330]	0x8f51003c  lw $17, 60($26)                 ; smart_spimbot.s:749: lw	$s1, 60($k0)
+      784 [0x80000334]	0x8f520040  lw $18, 64($26)                 ; smart_spimbot.s:750: lw	$s2, 64($k0)
+      784 [0x80000338]	0x001b0821  addu $1, $0, $27                ; smart_spimbot.s:752: move	$at, $k1	# Restore $at
+      784 [0x8000033c]	0x42000018  eret                            ; smart_spimbot.s:754: eret
+      132 [0x80000340]	0x23bdfff4  addi $29, $29, -12              ; smart_spimbot.s:761: sub	$sp, $sp, 12
+      132 [0x80000344]	0xafbf0000  sw $31, 0($29)                  ; smart_spimbot.s:762: sw	$ra, 0($sp)
+      132 [0x80000348]	0xafb00004  sw $16, 4($29)                  ; smart_spimbot.s:763: sw	$s0, 4($sp)	# stores new queue length
+      132 [0x8000034c]	0xafb10008  sw $17, 8($29)                  ; smart_spimbot.s:764: sw	$s1, 8($sp)	# stores next free queue entry
+      132 [0x80000350]	0x3c019000  lui $1, -28672                  ; smart_spimbot.s:767: sw	$zero, op_queue_pos
+      132 [0x80000354]	0xac200870  sw $0, 2160($1)
+      132 [0x80000358]	0x3c019000  lui $1, -28672                  ; smart_spimbot.s:768: sw	$zero, op_queue_length
+      132 [0x8000035c]	0xac200874  sw $0, 2164($1)
+      132 [0x80000360]	0x34100000  ori $16, $0, 0                  ; smart_spimbot.s:769: li	$s0, 0
+      132 [0x80000364]	0x3c019000  lui $1, -28672 [operations_queue]; smart_spimbot.s:770: la	$s1, operations_queue
+      132 [0x80000368]	0x3431065c  ori $17, $1, 1628 [operations_queue]
+      132 [0x8000036c]	0x3c01ffff  lui $1, -1                      ; smart_spimbot.s:773: lw	$t0, TIMER
+      132 [0x80000370]	0x8c28001c  lw $8, 28($1)
+      132 [0x80000374]	0x3c01008d  lui $1, 141                     ; smart_spimbot.s:774: li	$t1, 9300000
+      132 [0x80000378]	0x3429e820  ori $9, $1, -6112
+      132 [0x8000037c]	0x0128082a  slt $1, $9, $8                  ; smart_spimbot.s:775: ------------------------------
+      132 [0x80000380]	0x14200133  bne $1, $0, 1228 [fq_submission_time-0x80000380]
+       38 [0x80000384]	0x3c011001  lui $1, 4097 [encoded_request]  ; smart_spimbot.s:778: la	$a0, encoded_request
+       38 [0x80000388]	0x34240f40  ori $4, $1, 3904 [encoded_request]
+       38 [0x8000038c]	0x3c01ffff  lui $1, -1                      ; smart_spimbot.s:779: sw	$a0, GET_SHARED
+       38 [0x80000390]	0xac24004c  sw $4, 76($1)
+       38 [0x80000394]	0x3c011001  lui $1, 4097 [decoded_request]  ; smart_spimbot.s:780: la	$a1, decoded_request
+       38 [0x80000398]	0x34250f58  ori $5, $1, 3928 [decoded_request]
+       38 [0x8000039c]	0x0c000413  jal 0x0000104c [decode_request_in_mem]; smart_spimbot.s:781: jal	decode_request_in_mem
+       38 [0x800003a0]	0x3c011003  lui $1, 4099 [useful_locations] ; smart_spimbot.s:782: la	$t2, useful_locations
+       38 [0x800003a4]	0x342a1304  ori $10, $1, 4868 [useful_locations]
+       38 [0x800003a8]	0x3c011001  lui $1, 4097 [decoded_request]  ; smart_spimbot.s:783: la	$t3, decoded_request
+       38 [0x800003ac]	0x342b0f58  ori $11, $1, 3928 [decoded_request]
+       50 [0x800003b0]	0x3c019000  lui $1, -28672                  ; smart_spimbot.s:787: lw	$t4, food_bins_finished
+       50 [0x800003b4]	0x8c2c094c  lw $12, 2380($1)
+       50 [0x800003b8]	0x34010003  ori $1, $0, 3                   ; smart_spimbot.s:788: beq	$t4, 3, fq_raw_done
+       50 [0x800003bc]	0x102c00b9  beq $1, $12, 740 [fq_raw_done-0x800003bc]
+       38 [0x800003c0]	0x3c011003  lui $1, 4099 [food_bin_tiles]   ; smart_spimbot.s:789: la	$t1, food_bin_tiles
+       38 [0x800003c4]	0x34291311  ori $9, $1, 4881 [food_bin_tiles]
+       38 [0x800003c8]	0x012c4820  add $9, $9, $12                 ; smart_spimbot.s:790: add	$t1, $t1, $t4	# &food_bin_tiles[food_bins_finished]
+       38 [0x800003cc]	0x91290000  lbu $9, 0($9)                   ; smart_spimbot.s:791: lbu	$t1, 0($t1)	# bin tile to consider
+       38 [0x800003d0]	0x34010007  ori $1, $0, 7                   ; smart_spimbot.s:792: beq	$t1, T_BIN_BREAD, fq_try_bread
+       38 [0x800003d4]	0x1029000c  beq $1, $9, 48 [fq_try_bread-0x800003d4]
+       38 [0x800003d8]	0x34010009  ori $1, $0, 9                   ; smart_spimbot.s:793: beq	$t1, T_BIN_LETTUCE, fq_try_lettuce
+       38 [0x800003dc]	0x10290079  beq $1, $9, 484 [fq_try_lettuce-0x800003dc]
+       24 [0x800003e0]	0x3401000b  ori $1, $0, 11                  ; smart_spimbot.s:794: beq	$t1, T_BIN_CHEESE, fq_try_cheese
+       24 [0x800003e4]	0x10290014  beq $1, $9, 80 [fq_try_cheese-0x800003e4]
+       17 [0x800003e8]	0x3401000a  ori $1, $0, 10                  ; smart_spimbot.s:795: beq	$t1, T_BIN_TOMATO, fq_try_tomato
+       17 [0x800003ec]	0x10290058  beq $1, $9, 352 [fq_try_tomato-0x800003ec]
+       17 [0x800003f0]	0x3401000c  ori $1, $0, 12                  ; smart_spimbot.s:796: beq	$t1, T_BIN_ONION, fq_try_onion
+       17 [0x800003f4]	0x10290039  beq $1, $9, 228 [fq_try_onion-0x800003f4]
+       17 [0x800003f8]	0x34010008  ori $1, $0, 8                   ; smart_spimbot.s:797: beq	$t1, T_BIN_MEAT, fq_try_meat
+       17 [0x800003fc]	0x1029001a  beq $1, $9, 104 [fq_try_meat-0x800003fc]
+        0 [0x80000400]	0x080001a8  j 0x000006a0 [fq_raw_done]      ; smart_spimbot.s:798: j	fq_raw_done	# !!! didn't match any
+        0 [0x80000404]	0x8d69002c  lw $9, 44($11)                  ; smart_spimbot.s:801: lw	$t1, R_BREAD($t3)
+        0 [0x80000408]	0x2921001c  slti $1, $9, 28                 ; smart_spimbot.s:802: bge	$t1, DESIRED_BREAD, fq_raw_next
+        0 [0x8000040c]	0x1020009f  beq $1, $0, 636 [fq_raw_next-0x8000040c]
+        0 [0x80000410]	0x34090704  ori $9, $0, 1796                ; smart_spimbot.s:803: li	$t1, 0x0704	# go to bread bin
+        0 [0x80000414]	0xae290000  sw $9, 0($17)                   ; smart_spimbot.s:804: sw	$t1, 0($s1)
+        0 [0x80000418]	0x34090008  ori $9, $0, 8                   ; smart_spimbot.s:805: li	$t1, OPQ_FACE_BIN
+        0 [0x8000041c]	0xae290004  sw $9, 4($17)                   ; smart_spimbot.s:806: sw	$t1, 4($s1)
+        0 [0x80000420]	0x3409000e  ori $9, $0, 14                  ; smart_spimbot.s:807: li	$t1, OPQ_LOAD_UP
+        0 [0x80000424]	0xae290008  sw $9, 8($17)                   ; smart_spimbot.s:808: sw	$t1, 8($s1)
+        0 [0x80000428]	0x34100003  ori $16, $0, 3                  ; smart_spimbot.s:809: li	$s0, 3		# three entries in queue
+        0 [0x8000042c]	0x2231000c  addi $17, $17, 12               ; smart_spimbot.s:810: add	$s1, $s1, 12
+        0 [0x80000430]	0x0800019c  j 0x00000670 [fq_finish_to_counter]; smart_spimbot.s:811: j	fq_finish_to_counter
+        7 [0x80000434]	0x8d690028  lw $9, 40($11)                  ; smart_spimbot.s:814: lw	$t1, R_CHEESE($t3)
+        7 [0x80000438]	0x2921000c  slti $1, $9, 12                 ; smart_spimbot.s:815: bge	$t1, DESIRED_CHEESE, fq_raw_next
+        7 [0x8000043c]	0x10200093  beq $1, $0, 588 [fq_raw_next-0x8000043c]
+        3 [0x80000440]	0x34090b04  ori $9, $0, 2820                ; smart_spimbot.s:816: li	$t1, 0x0B04	# go to cheese bin
+        3 [0x80000444]	0xae290000  sw $9, 0($17)                   ; smart_spimbot.s:817: sw	$t1, 0($s1)
+        3 [0x80000448]	0x34090008  ori $9, $0, 8                   ; smart_spimbot.s:818: li	$t1, OPQ_FACE_BIN
+        3 [0x8000044c]	0xae290004  sw $9, 4($17)                   ; smart_spimbot.s:819: sw	$t1, 4($s1)
+        3 [0x80000450]	0x3409000e  ori $9, $0, 14                  ; smart_spimbot.s:820: li	$t1, OPQ_LOAD_UP
+        3 [0x80000454]	0xae290008  sw $9, 8($17)                   ; smart_spimbot.s:821: sw	$t1, 8($s1)
+        3 [0x80000458]	0x34100003  ori $16, $0, 3                  ; smart_spimbot.s:822: li	$s0, 3		# three entries in queue
+        3 [0x8000045c]	0x2231000c  addi $17, $17, 12               ; smart_spimbot.s:823: add	$s1, $s1, 12
+        3 [0x80000460]	0x0800019c  j 0x00000670 [fq_finish_to_counter]; smart_spimbot.s:824: j	fq_finish_to_counter
+       17 [0x80000464]	0x8d680020  lw $8, 32($11)                  ; smart_spimbot.s:827: lw	$t0, R_MEAT($t3)
+       17 [0x80000468]	0x8d690024  lw $9, 36($11)                  ; smart_spimbot.s:828: lw	$t1, R_UNCOOKED_MEAT($t3)
+       17 [0x8000046c]	0x01094020  add $8, $8, $9                  ; smart_spimbot.s:829: add	$t0, $t0, $t1	# total meat on counter
+       17 [0x80000470]	0x2901001c  slti $1, $8, 28                 ; smart_spimbot.s:830: bge	$t0, DESIRED_MEAT, fq_raw_next
+       17 [0x80000474]	0x10200085  beq $1, $0, 532 [fq_raw_next-0x80000474]
+       13 [0x80000478]	0x34080804  ori $8, $0, 2052                ; smart_spimbot.s:831: li	$t0, 0x0804	# go to meat bin
+       13 [0x8000047c]	0xae280000  sw $8, 0($17)                   ; smart_spimbot.s:832: sw	$t0, 0($s1)
+       13 [0x80000480]	0x34080008  ori $8, $0, 8                   ; smart_spimbot.s:833: li	$t0, OPQ_FACE_BIN
+       13 [0x80000484]	0xae280004  sw $8, 4($17)                   ; smart_spimbot.s:834: sw	$t0, 4($s1)
+       13 [0x80000488]	0x3408000e  ori $8, $0, 14                  ; smart_spimbot.s:835: li	$t0, OPQ_LOAD_UP
+       13 [0x8000048c]	0xae280008  sw $8, 8($17)                   ; smart_spimbot.s:836: sw	$t0, 8($s1)
+       13 [0x80000490]	0x34100003  ori $16, $0, 3                  ; smart_spimbot.s:837: li	$s0, 3		# three entries in queue
+       13 [0x80000494]	0x2231000c  addi $17, $17, 12               ; smart_spimbot.s:838: add	$s1, $s1, 12
+       13 [0x80000498]	0x34010002  ori $1, $0, 2                   ; smart_spimbot.s:839: bne	$t4, 2, fq_finish_to_counter
+       13 [0x8000049c]	0x142c0075  bne $1, $12, 468 [fq_finish_to_counter-0x8000049c]
+        0 [0x800004a0]	0x91490004  lbu $9, 4($10)                  ; smart_spimbot.s:840: lbu	$t1, T_OVEN($t2)
+        0 [0x800004a4]	0x11200073  beq $9, $0, 460 [fq_finish_to_counter-0x800004a4]; smart_spimbot.s:841: beq	$t1, $zero, fq_finish_to_counter
+        0 [0x800004a8]	0x34080404  ori $8, $0, 1028                ; smart_spimbot.s:844: li	$t0, 0x0404	# go to oven
+        0 [0x800004ac]	0xae280000  sw $8, 0($17)                   ; smart_spimbot.s:845: sw	$t0, 0($s1)
+        0 [0x800004b0]	0x34080007  ori $8, $0, 7                   ; smart_spimbot.s:846: li	$t0, OPQ_FACE_APPLIANCE
+        0 [0x800004b4]	0xae280004  sw $8, 4($17)                   ; smart_spimbot.s:847: sw	$t0, 4($s1)
+        0 [0x800004b8]	0x22240008  addi $4, $17, 8                 ; smart_spimbot.s:848: add	$a0, $s1, 8
+        0 [0x800004bc]	0x3c010200  lui $1, 512                     ; smart_spimbot.s:849: li	$a1, 0x0200000C	# drop uncooked meat
+        0 [0x800004c0]	0x3425000c  ori $5, $1, 12
+        0 [0x800004c4]	0x3406000f  ori $6, $0, 15                  ; smart_spimbot.s:850: li	$a2, OPQ_PROCESS_ASAP
+        0 [0x800004c8]	0x0c00022b  jal 0x000008ac [queue_process_four]; smart_spimbot.s:851: jal	queue_process_four
+        0 [0x800004cc]	0x2210000e  addi $16, $16, 14               ; smart_spimbot.s:852: add	$s0, $s0, 14	# added 14 more
+        0 [0x800004d0]	0x22310038  addi $17, $17, 56               ; smart_spimbot.s:853: add	$s1, $s1, 56
+        0 [0x800004d4]	0x0800019c  j 0x00000670 [fq_finish_to_counter]; smart_spimbot.s:854: j	fq_finish_to_counter
+        0 [0x800004d8]	0x8d68000c  lw $8, 12($11)                  ; smart_spimbot.s:857: lw	$t0, R_ONIONS($t3)
+        0 [0x800004dc]	0x8d690010  lw $9, 16($11)                  ; smart_spimbot.s:858: lw	$t1, R_UNCUT_ONIONS($t3)
+        0 [0x800004e0]	0x01094020  add $8, $8, $9                  ; smart_spimbot.s:859: add	$t0, $t0, $t1	# total onions on counter
+        0 [0x800004e4]	0x29010014  slti $1, $8, 20                 ; smart_spimbot.s:860: bge	$t0, DESIRED_ONION, fq_raw_next
+        0 [0x800004e8]	0x10200068  beq $1, $0, 416 [fq_raw_next-0x800004e8]
+        0 [0x800004ec]	0x34080c04  ori $8, $0, 3076                ; smart_spimbot.s:861: li	$t0, 0x0C04	# go to onion bin
+        0 [0x800004f0]	0xae280000  sw $8, 0($17)                   ; smart_spimbot.s:862: sw	$t0, 0($s1)
+        0 [0x800004f4]	0x34080008  ori $8, $0, 8                   ; smart_spimbot.s:863: li	$t0, OPQ_FACE_BIN
+        0 [0x800004f8]	0xae280004  sw $8, 4($17)                   ; smart_spimbot.s:864: sw	$t0, 4($s1)
+        0 [0x800004fc]	0x3408000e  ori $8, $0, 14                  ; smart_spimbot.s:865: li	$t0, OPQ_LOAD_UP
+        0 [0x80000500]	0xae280008  sw $8, 8($17)                   ; smart_spimbot.s:866: sw	$t0, 8($s1)
+        0 [0x80000504]	0x34100003  ori $16, $0, 3                  ; smart_spimbot.s:867: li	$s0, 3		# enqueued three items
+        0 [0x80000508]	0x2231000c  addi $17, $17, 12               ; smart_spimbot.s:868: add	$s1, $s1, 12
+        0 [0x8000050c]	0x34010002  ori $1, $0, 2                   ; smart_spimbot.s:869: bne	$t4, 2, fq_finish_to_counter
+        0 [0x80000510]	0x142c0058  bne $1, $12, 352 [fq_finish_to_counter-0x80000510]
+        0 [0x80000514]	0x91490006  lbu $9, 6($10)                  ; smart_spimbot.s:870: lbu	$t1, T_CHOPPING_BOARD($t2)
+        0 [0x80000518]	0x11200056  beq $9, $0, 344 [fq_finish_to_counter-0x80000518]; smart_spimbot.s:871: beq	$t1, $zero, fq_finish_to_counter
+        0 [0x8000051c]	0x34080604  ori $8, $0, 1540                ; smart_spimbot.s:874: li	$t0, 0x0604	# go to chopping board
+        0 [0x80000520]	0xae280000  sw $8, 0($17)                   ; smart_spimbot.s:875: sw	$t0, 0($s1)
+        0 [0x80000524]	0x34080007  ori $8, $0, 7                   ; smart_spimbot.s:876: li	$t0, OPQ_FACE_APPLIANCE
+        0 [0x80000528]	0xae280004  sw $8, 4($17)                   ; smart_spimbot.s:877: sw	$t0, 4($s1)
+        0 [0x8000052c]	0x22240008  addi $4, $17, 8                 ; smart_spimbot.s:878: add	$a0, $s1, 8
+        0 [0x80000530]	0x3c010400  lui $1, 1024                    ; smart_spimbot.s:879: li	$a1, 0x0400000C	# drop unchopped onion
+        0 [0x80000534]	0x3425000c  ori $5, $1, 12
+        0 [0x80000538]	0x3406000f  ori $6, $0, 15                  ; smart_spimbot.s:880: li	$a2, OPQ_PROCESS_ASAP
+        0 [0x8000053c]	0x0c00022b  jal 0x000008ac [queue_process_four]; smart_spimbot.s:881: jal	queue_process_four
+        0 [0x80000540]	0x2210000e  addi $16, $16, 14               ; smart_spimbot.s:882: add	$s0, $s0, 14	# added 14 more
+        0 [0x80000544]	0x22310038  addi $17, $17, 56               ; smart_spimbot.s:883: add	$s1, $s1, 56
+        0 [0x80000548]	0x0800019c  j 0x00000670 [fq_finish_to_counter]; smart_spimbot.s:884: j	fq_finish_to_counter
+        0 [0x8000054c]	0x8d680014  lw $8, 20($11)                  ; smart_spimbot.s:887: lw	$t0, R_TOMATOES($t3)
+        0 [0x80000550]	0x8d690018  lw $9, 24($11)                  ; smart_spimbot.s:888: lw	$t1, R_UNWASHED_TOMATOES($t3)
+        0 [0x80000554]	0x01094020  add $8, $8, $9                  ; smart_spimbot.s:889: add	$t0, $t0, $t1	# total tomatoes on counter
+        0 [0x80000558]	0x29010018  slti $1, $8, 24                 ; smart_spimbot.s:890: bge	$t0, DESIRED_TOMATO, fq_raw_next
+        0 [0x8000055c]	0x1020004b  beq $1, $0, 300 [fq_raw_next-0x8000055c]
+        0 [0x80000560]	0x34080a04  ori $8, $0, 2564                ; smart_spimbot.s:891: li	$t0, 0x0A04	# go to tomato bin
+        0 [0x80000564]	0xae280000  sw $8, 0($17)                   ; smart_spimbot.s:892: sw	$t0, 0($s1)
+        0 [0x80000568]	0x34080008  ori $8, $0, 8                   ; smart_spimbot.s:893: li	$t0, OPQ_FACE_BIN
+        0 [0x8000056c]	0xae280004  sw $8, 4($17)                   ; smart_spimbot.s:894: sw	$t0, 4($s1)
+        0 [0x80000570]	0x3408000e  ori $8, $0, 14                  ; smart_spimbot.s:895: li	$t0, OPQ_LOAD_UP
+        0 [0x80000574]	0xae280008  sw $8, 8($17)                   ; smart_spimbot.s:896: sw	$t0, 8($s1)
+        0 [0x80000578]	0x34100003  ori $16, $0, 3                  ; smart_spimbot.s:897: li	$s0, 3		# enqueued 3
+        0 [0x8000057c]	0x2231000c  addi $17, $17, 12               ; smart_spimbot.s:898: add	$s1, $s1, 12
+        0 [0x80000580]	0x34010002  ori $1, $0, 2                   ; smart_spimbot.s:899: bne	$t4, 2, fq_finish_to_counter
+        0 [0x80000584]	0x142c003b  bne $1, $12, 236 [fq_finish_to_counter-0x80000584]
+        0 [0x80000588]	0x91490005  lbu $9, 5($10)                  ; smart_spimbot.s:900: lbu	$t1, T_SINK($t2)
+        0 [0x8000058c]	0x11200039  beq $9, $0, 228 [fq_finish_to_counter-0x8000058c]; smart_spimbot.s:901: beq	$t1, $zero, fq_finish_to_counter
+        8 [0x80000590]	0x34080504  ori $8, $0, 1284                ; smart_spimbot.s:904: li	$t0, 0x0504	# go to sink
+        8 [0x80000594]	0xae280000  sw $8, 0($17)                   ; smart_spimbot.s:905: sw	$t0, 0($s1)
+        8 [0x80000598]	0x34080007  ori $8, $0, 7                   ; smart_spimbot.s:906: li	$t0, OPQ_FACE_APPLIANCE
+        8 [0x8000059c]	0xae280004  sw $8, 4($17)                   ; smart_spimbot.s:907: sw	$t0, 4($s1)
+        8 [0x800005a0]	0x22240008  addi $4, $17, 8                 ; smart_spimbot.s:908: add	$a0, $s1, 8
+        8 [0x800005a4]	0x3c010300  lui $1, 768                     ; smart_spimbot.s:909: li	$a1, 0x0300000C	# drop unwashed tomato
+        8 [0x800005a8]	0x3425000c  ori $5, $1, 12
+        8 [0x800005ac]	0x3406000f  ori $6, $0, 15                  ; smart_spimbot.s:910: li	$a2, OPQ_PROCESS_ASAP
+        8 [0x800005b0]	0x0c00022b  jal 0x000008ac [queue_process_four]; smart_spimbot.s:911: jal	queue_process_four
+        8 [0x800005b4]	0x2210000e  addi $16, $16, 14               ; smart_spimbot.s:912: add	$s0, $s0, 14
+        8 [0x800005b8]	0x22310038  addi $17, $17, 56               ; smart_spimbot.s:913: add	$s1, $s1, 56
+        8 [0x800005bc]	0x0800019c  j 0x00000670 [fq_finish_to_counter]; smart_spimbot.s:914: j	fq_finish_to_counter
+       14 [0x800005c0]	0x8d680000  lw $8, 0($11)                   ; smart_spimbot.s:917: lw	$t0, R_LETTUCE($t3)
+       14 [0x800005c4]	0x8d690008  lw $9, 8($11)                   ; smart_spimbot.s:918: lw	$t1, R_UNPROCESSED_LETTUCE($t3)
+       14 [0x800005c8]	0x01094020  add $8, $8, $9                  ; smart_spimbot.s:919: add	$t0, $t0, $t1
+       14 [0x800005cc]	0x8d690004  lw $9, 4($11)                   ; smart_spimbot.s:920: lw	$t1, R_UNCUT_LETTUCE($t3)
+       14 [0x800005d0]	0x01094020  add $8, $8, $9                  ; smart_spimbot.s:921: add	$t0, $t0, $t1	# total lettuce on counter
+       14 [0x800005d4]	0x29010018  slti $1, $8, 24                 ; smart_spimbot.s:922: bge	$t0, DESIRED_LETTUCE, fq_raw_next
+       14 [0x800005d8]	0x1020002c  beq $1, $0, 176 [fq_raw_next-0x800005d8]
+       10 [0x800005dc]	0x34080904  ori $8, $0, 2308                ; smart_spimbot.s:923: li	$t0, 0x0904	# go to lettuce bin
+       10 [0x800005e0]	0xae280000  sw $8, 0($17)                   ; smart_spimbot.s:924: sw	$t0, 0($s1)
+       10 [0x800005e4]	0x34080008  ori $8, $0, 8                   ; smart_spimbot.s:925: li	$t0, OPQ_FACE_BIN
+       10 [0x800005e8]	0xae280004  sw $8, 4($17)                   ; smart_spimbot.s:926: sw	$t0, 4($s1)
+       10 [0x800005ec]	0x3408000e  ori $8, $0, 14                  ; smart_spimbot.s:927: li	$t0, OPQ_LOAD_UP
+       10 [0x800005f0]	0xae280008  sw $8, 8($17)                   ; smart_spimbot.s:928: sw	$t0, 8($s1)
+       10 [0x800005f4]	0x34100003  ori $16, $0, 3                  ; smart_spimbot.s:929: li	$s0, 3		# enqueued 3
+       10 [0x800005f8]	0x2231000c  addi $17, $17, 12               ; smart_spimbot.s:930: add	$s1, $s1, 12
+       10 [0x800005fc]	0x34010002  ori $1, $0, 2                   ; smart_spimbot.s:931: bne	$t4, 2, fq_finish_to_counter
+       10 [0x80000600]	0x142c001c  bne $1, $12, 112 [fq_finish_to_counter-0x80000600]
+       10 [0x80000604]	0x91490005  lbu $9, 5($10)                  ; smart_spimbot.s:932: lbu	$t1, T_SINK($t2)
+       10 [0x80000608]	0x1120001a  beq $9, $0, 104 [fq_finish_to_counter-0x80000608]; smart_spimbot.s:933: beq	$t1, $zero, fq_finish_to_counter
+       10 [0x8000060c]	0x34080504  ori $8, $0, 1284                ; smart_spimbot.s:936: li	$t0, 0x0504	# go to sink
+       10 [0x80000610]	0xae280000  sw $8, 0($17)                   ; smart_spimbot.s:937: sw	$t0, 0($s1)
+       10 [0x80000614]	0x34080007  ori $8, $0, 7                   ; smart_spimbot.s:938: li	$t0, OPQ_FACE_APPLIANCE
+       10 [0x80000618]	0xae280004  sw $8, 4($17)                   ; smart_spimbot.s:939: sw	$t0, 4($s1)
+       10 [0x8000061c]	0x22240008  addi $4, $17, 8                 ; smart_spimbot.s:940: add	$a0, $s1, 8
+       10 [0x80000620]	0x3c010500  lui $1, 1280                    ; smart_spimbot.s:941: li	$a1, 0x0500000C	# drop unwashed lettuce
+       10 [0x80000624]	0x3425000c  ori $5, $1, 12
+       10 [0x80000628]	0x3406000f  ori $6, $0, 15                  ; smart_spimbot.s:942: li	$a2, OPQ_PROCESS_ASAP
+       10 [0x8000062c]	0x0c00022b  jal 0x000008ac [queue_process_four]; smart_spimbot.s:943: jal	queue_process_four
+       10 [0x80000630]	0x2210000e  addi $16, $16, 14               ; smart_spimbot.s:944: add	$s0, $s0, 14	# added 14 more
+       10 [0x80000634]	0x22310038  addi $17, $17, 56               ; smart_spimbot.s:945: add	$s1, $s1, 56
+       10 [0x80000638]	0x91490006  lbu $9, 6($10)                  ; smart_spimbot.s:946: lbu	$t1, T_CHOPPING_BOARD($t2)
+       10 [0x8000063c]	0x1120000d  beq $9, $0, 52 [fq_finish_to_counter-0x8000063c]; smart_spimbot.s:947: beq	$t1, $zero, fq_finish_to_counter
+       10 [0x80000640]	0x34080604  ori $8, $0, 1540                ; smart_spimbot.s:950: li	$t0, 0x0604	# go to chopping board
+       10 [0x80000644]	0xae280000  sw $8, 0($17)                   ; smart_spimbot.s:951: sw	$t0, 0($s1)
+       10 [0x80000648]	0x34080007  ori $8, $0, 7                   ; smart_spimbot.s:952: li	$t0, OPQ_FACE_APPLIANCE
+       10 [0x8000064c]	0xae280004  sw $8, 4($17)                   ; smart_spimbot.s:953: sw	$t0, 4($s1)
+       10 [0x80000650]	0x22240008  addi $4, $17, 8                 ; smart_spimbot.s:954: add	$a0, $s1, 8
+       10 [0x80000654]	0x3c010500  lui $1, 1280                    ; smart_spimbot.s:955: li	$a1, 0x0500010C	# drop washed lettuce
+       10 [0x80000658]	0x3425010c  ori $5, $1, 268
+       10 [0x8000065c]	0x3406010f  ori $6, $0, 271                 ; smart_spimbot.s:956: li	$a2, 0x010F	# process ASAP to level 2
+       10 [0x80000660]	0x0c00022b  jal 0x000008ac [queue_process_four]; smart_spimbot.s:957: jal	queue_process_four
+       10 [0x80000664]	0x2210000e  addi $16, $16, 14               ; smart_spimbot.s:958: add	$s0, $s0, 14	# added 14 more
+       10 [0x80000668]	0x22310038  addi $17, $17, 56               ; smart_spimbot.s:959: add	$s1, $s1, 56
+       10 [0x8000066c]	0x0800019c  j 0x00000670 [fq_finish_to_counter]; smart_spimbot.s:960: j	fq_finish_to_counter
+       34 [0x80000670]	0x3408000b  ori $8, $0, 11                  ; smart_spimbot.s:963: li	$t0, OPQ_GOTO_COUNTER
+       34 [0x80000674]	0xae280000  sw $8, 0($17)                   ; smart_spimbot.s:964: sw	$t0, 0($s1)
+       34 [0x80000678]	0x34080009  ori $8, $0, 9                   ; smart_spimbot.s:965: li	$t0, OPQ_DUMP
+       34 [0x8000067c]	0xae280004  sw $8, 4($17)                   ; smart_spimbot.s:966: sw	$t0, 4($s1)
+       34 [0x80000680]	0x22100002  addi $16, $16, 2                ; smart_spimbot.s:967: add	$s0, $s0, 2
+       34 [0x80000684]	0x08000224  j 0x00000890 [fq_done]          ; smart_spimbot.s:968: j	fq_done
+       12 [0x80000688]	0x3c019000  lui $1, -28672                  ; smart_spimbot.s:971: lw	$t0, food_bins_finished
+       12 [0x8000068c]	0x8c28094c  lw $8, 2380($1)
+       12 [0x80000690]	0x21080001  addi $8, $8, 1                  ; smart_spimbot.s:972: add	$t0, $t0, 1
+       12 [0x80000694]	0x3c019000  lui $1, -28672                  ; smart_spimbot.s:973: sw	$t0, food_bins_finished
+       12 [0x80000698]	0xac28094c  sw $8, 2380($1)
+       12 [0x8000069c]	0x080000ec  j 0x000003b0 [fq_raw_top]       ; smart_spimbot.s:974: j	fq_raw_top
+       12 [0x800006a0]	0x91480004  lbu $8, 4($10)                  ; smart_spimbot.s:978: lbu	$t0, T_OVEN($t2)
+       12 [0x800006a4]	0x1100000d  beq $8, $0, 52 [fq_no_oven-0x800006a4]; smart_spimbot.s:979: beq	$t0, $zero, fq_no_oven
+        0 [0x800006a8]	0x8d680024  lw $8, 36($11)                  ; smart_spimbot.s:980: lw	$t0, R_UNCOOKED_MEAT($t3)
+        0 [0x800006ac]	0x1100000b  beq $8, $0, 44 [fq_no_oven-0x800006ac]; smart_spimbot.s:981: beq	$t0, $zero, fq_no_oven
+        0 [0x800006b0]	0x3c080002  lui $8, 2                       ; smart_spimbot.s:982: li	$t0, 0x020000	# raw meat
+        0 [0x800006b4]	0x3c01ffff  lui $1, -1                      ; smart_spimbot.s:983: sw	$t0, PICKUP
+        0 [0x800006b8]	0xac2800e0  sw $8, 224($1)
+        0 [0x800006bc]	0x3c01ffff  lui $1, -1                      ; smart_spimbot.s:984: sw	$t0, PICKUP
+        0 [0x800006c0]	0xac2800e0  sw $8, 224($1)
+        0 [0x800006c4]	0x3c01ffff  lui $1, -1                      ; smart_spimbot.s:985: sw	$t0, PICKUP
+        0 [0x800006c8]	0xac2800e0  sw $8, 224($1)
+        0 [0x800006cc]	0x3c01ffff  lui $1, -1                      ; smart_spimbot.s:986: sw	$t0, PICKUP
+        0 [0x800006d0]	0xac2800e0  sw $8, 224($1)
+        0 [0x800006d4]	0x0800012a  j 0x000004a8 [fq_process_meat]  ; smart_spimbot.s:987: j	fq_process_meat
+       12 [0x800006d8]	0x91480006  lbu $8, 6($10)                  ; smart_spimbot.s:990: lbu	$t0, T_CHOPPING_BOARD($t2)
+       12 [0x800006dc]	0x1100001a  beq $8, $0, 104 [fq_no_chop-0x800006dc]; smart_spimbot.s:991: beq	$t0, $zero, fq_no_chop
+       12 [0x800006e0]	0x8d680010  lw $8, 16($11)                  ; smart_spimbot.s:992: lw	$t0, R_UNCUT_ONIONS($t3)
+       12 [0x800006e4]	0x1100000b  beq $8, $0, 44 [fq_no_onions-0x800006e4]; smart_spimbot.s:993: beq	$t0, $zero, fq_no_onions
+        0 [0x800006e8]	0x3c080004  lui $8, 4                       ; smart_spimbot.s:994: li	$t0, 0x040000	# raw onion
+        0 [0x800006ec]	0x3c01ffff  lui $1, -1                      ; smart_spimbot.s:995: sw	$t0, PICKUP
+        0 [0x800006f0]	0xac2800e0  sw $8, 224($1)
+        0 [0x800006f4]	0x3c01ffff  lui $1, -1                      ; smart_spimbot.s:996: sw	$t0, PICKUP
+        0 [0x800006f8]	0xac2800e0  sw $8, 224($1)
+        0 [0x800006fc]	0x3c01ffff  lui $1, -1                      ; smart_spimbot.s:997: sw	$t0, PICKUP
+        0 [0x80000700]	0xac2800e0  sw $8, 224($1)
+        0 [0x80000704]	0x3c01ffff  lui $1, -1                      ; smart_spimbot.s:998: sw	$t0, PICKUP
+        0 [0x80000708]	0xac2800e0  sw $8, 224($1)
+        0 [0x8000070c]	0x08000147  j 0x0000051c [fq_process_onion] ; smart_spimbot.s:999: j	fq_process_onion
+       12 [0x80000710]	0x8d680004  lw $8, 4($11)                   ; smart_spimbot.s:1002: lw	$t0, R_UNCUT_LETTUCE($t3)
+       12 [0x80000714]	0x1100000c  beq $8, $0, 48 [fq_no_chop-0x80000714]; smart_spimbot.s:1003: beq	$t0, $zero, fq_no_chop
+        0 [0x80000718]	0x3c010005  lui $1, 5                       ; smart_spimbot.s:1004: li	$t0, 0x050001	# washed but unchopped lettuce
+        0 [0x8000071c]	0x34280001  ori $8, $1, 1
+        0 [0x80000720]	0x3c01ffff  lui $1, -1                      ; smart_spimbot.s:1005: sw	$t0, PICKUP
+        0 [0x80000724]	0xac2800e0  sw $8, 224($1)
+        0 [0x80000728]	0x3c01ffff  lui $1, -1                      ; smart_spimbot.s:1006: sw	$t0, PICKUP
+        0 [0x8000072c]	0xac2800e0  sw $8, 224($1)
+        0 [0x80000730]	0x3c01ffff  lui $1, -1                      ; smart_spimbot.s:1007: sw	$t0, PICKUP
+        0 [0x80000734]	0xac2800e0  sw $8, 224($1)
+        0 [0x80000738]	0x3c01ffff  lui $1, -1                      ; smart_spimbot.s:1008: sw	$t0, PICKUP
+        0 [0x8000073c]	0xac2800e0  sw $8, 224($1)
+        0 [0x80000740]	0x08000190  j 0x00000640 [fq_process_washed_lettuce]; smart_spimbot.s:1009: j	fq_process_washed_lettuce
+       12 [0x80000744]	0x91480005  lbu $8, 5($10)                  ; smart_spimbot.s:1012: lbu	$t0, T_SINK($t2)
+       12 [0x80000748]	0x11000019  beq $8, $0, 100 [fq_no_sink-0x80000748]; smart_spimbot.s:1013: beq	$t0, $zero, fq_no_sink
+       12 [0x8000074c]	0x8d680018  lw $8, 24($11)                  ; smart_spimbot.s:1014: lw	$t0, R_UNWASHED_TOMATOES($t3)
+       12 [0x80000750]	0x1100000b  beq $8, $0, 44 [fq_no_tomatoes-0x80000750]; smart_spimbot.s:1015: beq	$t0, $zero, fq_no_tomatoes
+        8 [0x80000754]	0x3c080003  lui $8, 3                       ; smart_spimbot.s:1016: li	$t0, 0x030000	# raw tomatoes
+        8 [0x80000758]	0x3c01ffff  lui $1, -1                      ; smart_spimbot.s:1017: sw	$t0, PICKUP
+        8 [0x8000075c]	0xac2800e0  sw $8, 224($1)
+        8 [0x80000760]	0x3c01ffff  lui $1, -1                      ; smart_spimbot.s:1018: sw	$t0, PICKUP
+        8 [0x80000764]	0xac2800e0  sw $8, 224($1)
+        8 [0x80000768]	0x3c01ffff  lui $1, -1                      ; smart_spimbot.s:1019: sw	$t0, PICKUP
+        8 [0x8000076c]	0xac2800e0  sw $8, 224($1)
+        8 [0x80000770]	0x3c01ffff  lui $1, -1                      ; smart_spimbot.s:1020: sw	$t0, PICKUP
+        8 [0x80000774]	0xac2800e0  sw $8, 224($1)
+        8 [0x80000778]	0x08000164  j 0x00000590 [fq_process_tomato]; smart_spimbot.s:1021: j	fq_process_tomato
+        4 [0x8000077c]	0x8d680008  lw $8, 8($11)                   ; smart_spimbot.s:1024: lw	$t0, R_UNPROCESSED_LETTUCE($t3)
+        4 [0x80000780]	0x1100000b  beq $8, $0, 44 [fq_no_sink-0x80000780]; smart_spimbot.s:1025: beq	$t0, $zero, fq_no_sink
+        0 [0x80000784]	0x3c080005  lui $8, 5                       ; smart_spimbot.s:1026: li	$t0, 0x050000	# raw lettuce
+        0 [0x80000788]	0x3c01ffff  lui $1, -1                      ; smart_spimbot.s:1027: sw	$t0, PICKUP
+        0 [0x8000078c]	0xac2800e0  sw $8, 224($1)
+        0 [0x80000790]	0x3c01ffff  lui $1, -1                      ; smart_spimbot.s:1028: sw	$t0, PICKUP
+        0 [0x80000794]	0xac2800e0  sw $8, 224($1)
+        0 [0x80000798]	0x3c01ffff  lui $1, -1                      ; smart_spimbot.s:1029: sw	$t0, PICKUP
+        0 [0x8000079c]	0xac2800e0  sw $8, 224($1)
+        0 [0x800007a0]	0x3c01ffff  lui $1, -1                      ; smart_spimbot.s:1030: sw	$t0, PICKUP
+        0 [0x800007a4]	0xac2800e0  sw $8, 224($1)
+        0 [0x800007a8]	0x08000183  j 0x0000060c [fq_process_raw_lettuce]; smart_spimbot.s:1031: j	fq_process_raw_lettuce
+        4 [0x800007ac]	0x000b2021  addu $4, $0, $11                ; smart_spimbot.s:1035: move	$a0, $t3
+        4 [0x800007b0]	0x0c0004e7  jal 0x0000139c [usable_supplies]; smart_spimbot.s:1036: jal	usable_supplies
+        4 [0x800007b4]	0x10400002  beq $2, $0, 8 [fq_low_supplies-0x800007b4]; smart_spimbot.s:1037: beq	$v0, $zero, fq_low_supplies
+        3 [0x800007b8]	0x08000213  j 0x0000084c [fq_submission_time]; smart_spimbot.s:1038: j	fq_submission_time
+        1 [0x800007bc]	0x3c01ffff  lui $1, -1                      ; smart_spimbot.s:1042: lw	$t0, TIMER
+        1 [0x800007c0]	0x8c28001c  lw $8, 28($1)
+        1 [0x800007c4]	0x3c01004c  lui $1, 76                      ; smart_spimbot.s:1043: blt	$t0, 5000000, fq_not_early_submit
+        1 [0x800007c8]	0x34214b40  ori $1, $1, 19264
+        1 [0x800007cc]	0x0101082a  slt $1, $8, $1
+        1 [0x800007d0]	0x14200009  bne $1, $0, 36 [fq_not_early_submit-0x800007d0]
+        1 [0x800007d4]	0x3c019000  lui $1, -28672                  ; smart_spimbot.s:1044: lw	$t0, did_early_trip
+        1 [0x800007d8]	0x8c28095c  lw $8, 2396($1)
+        1 [0x800007dc]	0x15000006  bne $8, $0, 24 [fq_not_early_submit-0x800007dc]; smart_spimbot.s:1045: bne	$t0, $zero, fq_not_early_submit
+        1 [0x800007e0]	0x0c0004fc  jal 0x000013f0 [some_supplies]  ; smart_spimbot.s:1046: jal	some_supplies	# $a0 unchanged by usable_supplies
+        1 [0x800007e4]	0x10400004  beq $2, $0, 16 [fq_not_early_submit-0x800007e4]; smart_spimbot.s:1047: beq	$v0, $zero, fq_not_early_submit
+        1 [0x800007e8]	0x3c019000  lui $1, -28672                  ; smart_spimbot.s:1048: sw	$v0, did_early_trip
+        1 [0x800007ec]	0xac22095c  sw $2, 2396($1)
+        1 [0x800007f0]	0x0800021c  j 0x00000870 [fq_go_submit]     ; smart_spimbot.s:1049: j	fq_go_submit
+        0 [0x800007f4]	0x3c01ffff  lui $1, -1                      ; smart_spimbot.s:1053: lw	$t0, TIMER
+        0 [0x800007f8]	0x8c28001c  lw $8, 28($1)
+        0 [0x800007fc]	0x3c010067  lui $1, 103                     ; smart_spimbot.s:1054: blt	$t0, 6800000, fq_stall
+        0 [0x80000800]	0x3421c280  ori $1, $1, -15744
+        0 [0x80000804]	0x0101082a  slt $1, $8, $1
+        0 [0x80000808]	0x1420000a  bne $1, $0, 40 [fq_stall-0x80000808]
+        0 [0x8000080c]	0x3c019000  lui $1, -28672                  ; smart_spimbot.s:1055: lw	$t0, got_late_supplies
+        0 [0x80000810]	0x8c280960  lw $8, 2400($1)
+        0 [0x80000814]	0x15000007  bne $8, $0, 28 [fq_stall-0x80000814]; smart_spimbot.s:1056: bne	$t0, $zero, fq_stall
+        0 [0x80000818]	0x34080001  ori $8, $0, 1                   ; smart_spimbot.s:1057: li	$t0, 1
+        0 [0x8000081c]	0x3c019000  lui $1, -28672                  ; smart_spimbot.s:1058: sw	$t0, got_late_supplies
+        0 [0x80000820]	0xac280960  sw $8, 2400($1)
+        0 [0x80000824]	0x3c019000  lui $1, -28672                  ; smart_spimbot.s:1059: sw	$zero, food_bins_finished
+        0 [0x80000828]	0xac20094c  sw $0, 2380($1)
+        0 [0x8000082c]	0x0800020c  j 0x00000830 [fq_stall]         ; smart_spimbot.s:1060: j	fq_stall
+        9 [0x80000830]	0x3c01ffff  lui $1, -1                      ; smart_spimbot.s:1064: lw	$t0, TIMER
+        9 [0x80000834]	0x8c28001c  lw $8, 28($1)
+        9 [0x80000838]	0x3401c350  ori $1, $0, -15536              ; smart_spimbot.s:1065: add	$t0, $t0, 50000
+        9 [0x8000083c]	0x01014020  add $8, $8, $1
+        9 [0x80000840]	0x3c01ffff  lui $1, -1                      ; smart_spimbot.s:1066: sw	$t0, TIMER
+        9 [0x80000844]	0xac28001c  sw $8, 28($1)
+        9 [0x80000848]	0x08000224  j 0x00000890 [fq_done]          ; smart_spimbot.s:1067: j	fq_done
+       97 [0x8000084c]	0x3c01ffff  lui $1, -1                      ; smart_spimbot.s:1071: lw	$t0, BOT_Y
+       97 [0x80000850]	0x8c280024  lw $8, 36($1)
+       97 [0x80000854]	0x29010113  slti $1, $8, 275                ; smart_spimbot.s:1072: blt	$t0, 275, fq_go_submit
+       97 [0x80000858]	0x14200006  bne $1, $0, 24 [fq_go_submit-0x80000858]
+       94 [0x8000085c]	0x3c01ffff  lui $1, -1                      ; smart_spimbot.s:1073: lw	$t0, TIMER
+       94 [0x80000860]	0x8c28001c  lw $8, 28($1)
+       94 [0x80000864]	0x31088000  andi $8, $8, -32768             ; smart_spimbot.s:1074: and	$t0, $t0, 0x8000	# effectively random
+       94 [0x80000868]	0x11000002  beq $8, $0, 8 [fq_go_submit-0x80000868]; smart_spimbot.s:1075: beq	$t0, $zero, fq_go_submit
+        9 [0x8000086c]	0x0800020c  j 0x00000830 [fq_stall]         ; smart_spimbot.s:1076: j	fq_stall
+       89 [0x80000870]	0x3c019000  lui $1, -28672                  ; smart_spimbot.s:1080: sw	$zero, food_bins_finished
+       89 [0x80000874]	0xac20094c  sw $0, 2380($1)
+       89 [0x80000878]	0x34080011  ori $8, $0, 17                  ; smart_spimbot.s:1081: li	$t0, OPQ_GOTO_TURNIN
+       89 [0x8000087c]	0xae280000  sw $8, 0($17)                   ; smart_spimbot.s:1082: sw	$t0, 0($s1)
+       89 [0x80000880]	0x34080012  ori $8, $0, 18                  ; smart_spimbot.s:1083: li	$t0, OPQ_SUBMIT
+       89 [0x80000884]	0xae280004  sw $8, 4($17)                   ; smart_spimbot.s:1084: sw	$t0, 4($s1)
+       89 [0x80000888]	0x22100002  addi $16, $16, 2                ; smart_spimbot.s:1085: add	$s0, $s0, 2
+       89 [0x8000088c]	0x08000224  j 0x00000890 [fq_done]          ; smart_spimbot.s:1086: j	fq_done
+      132 [0x80000890]	0x3c019000  lui $1, -28672                  ; smart_spimbot.s:1089: sw	$s0, op_queue_length
+      132 [0x80000894]	0xac300874  sw $16, 2164($1)
+      132 [0x80000898]	0x8fbf0000  lw $31, 0($29)                  ; smart_spimbot.s:1090: lw	$ra, 0($sp)
+      132 [0x8000089c]	0x8fb00004  lw $16, 4($29)                  ; smart_spimbot.s:1091: lw	$s0, 4($sp)
+      132 [0x800008a0]	0x8fb10008  lw $17, 8($29)                  ; smart_spimbot.s:1092: lw	$s1, 8($sp)
+      132 [0x800008a4]	0x23bd000c  addi $29, $29, 12               ; smart_spimbot.s:1093: add	$sp, $sp, 12
+      132 [0x800008a8]	0x03e00008  jr $31                          ; smart_spimbot.s:1094: jr	$ra
+       28 [0x800008ac]	0x3408000e  ori $8, $0, 14                  ; smart_spimbot.s:1106: li	$t0, OPQ_LOAD_UP
+       28 [0x800008b0]	0xac850000  sw $5, 0($4)                    ; smart_spimbot.s:1107: sw	$a1, 0($a0)
+       28 [0x800008b4]	0xac860004  sw $6, 4($4)                    ; smart_spimbot.s:1108: sw	$a2, 4($a0)
+       28 [0x800008b8]	0xac880008  sw $8, 8($4)                    ; smart_spimbot.s:1109: sw	$t0, 8($a0)
+       28 [0x800008bc]	0xac85000c  sw $5, 12($4)                   ; smart_spimbot.s:1110: sw	$a1, 12($a0)
+       28 [0x800008c0]	0xac860010  sw $6, 16($4)                   ; smart_spimbot.s:1111: sw	$a2, 16($a0)
+       28 [0x800008c4]	0xac880014  sw $8, 20($4)                   ; smart_spimbot.s:1112: sw	$t0, 20($a0)
+       28 [0x800008c8]	0xac850018  sw $5, 24($4)                   ; smart_spimbot.s:1113: sw	$a1, 24($a0)
+       28 [0x800008cc]	0xac86001c  sw $6, 28($4)                   ; smart_spimbot.s:1114: sw	$a2, 28($a0)
+       28 [0x800008d0]	0xac880020  sw $8, 32($4)                   ; smart_spimbot.s:1115: sw	$t0, 32($a0)
+       28 [0x800008d4]	0xac850024  sw $5, 36($4)                   ; smart_spimbot.s:1116: sw	$a1, 36($a0)
+       28 [0x800008d8]	0xac860028  sw $6, 40($4)                   ; smart_spimbot.s:1117: sw	$a2, 40($a0)
+       28 [0x800008dc]	0xac88002c  sw $8, 44($4)                   ; smart_spimbot.s:1118: sw	$t0, 44($a0)
+       28 [0x800008e0]	0x03e00008  jr $31                          ; smart_spimbot.s:1119: jr	$ra
+     1001 [0x800008e4]	0x23bdfffc  addi $29, $29, -4               ; smart_spimbot.s:1129: sub	$sp, $sp, 4
+     1001 [0x800008e8]	0xafbf0000  sw $31, 0($29)                  ; smart_spimbot.s:1130: sw	$ra, 0($sp)
+     1001 [0x800008ec]	0x3c019000  lui $1, -28672 [od_jump_table]  ; smart_spimbot.s:1132: la	$t0, od_jump_table
+     1001 [0x800008f0]	0x34280880  ori $8, $1, 2176 [od_jump_table]
+     1001 [0x800008f4]	0x00044880  sll $9, $4, 2                   ; smart_spimbot.s:1133: sll	$t1, $a0, 2	# [i]
+     1001 [0x800008f8]	0x01094020  add $8, $8, $9                  ; smart_spimbot.s:1134: add	$t0, $t0, $t1	# address in jump table to load
+     1001 [0x800008fc]	0x8d080000  lw $8, 0($8)                    ; smart_spimbot.s:1135: lw	$t0, 0($t0)	# subfunction address
+     1001 [0x80000900]	0x01000008  jr $8                           ; smart_spimbot.s:1136: jr	$t0
+        2 [0x80000904]	0x3c01ffff  lui $1, -1                      ; smart_spimbot.s:1139: lw	$t0, BOT_Y
+        2 [0x80000908]	0x8c280024  lw $8, 36($1)
+        2 [0x8000090c]	0x34010014  ori $1, $0, 20                  ; smart_spimbot.s:1140: sge	$v0, $t0, 20	# return (y >= 20)
+        2 [0x80000910]	0x14280003  bne $1, $8, 12
+        0 [0x80000914]	0x34020001  ori $2, $0, 1
+        0 [0x80000918]	0x10000002  beq $0, $0, 8
+        2 [0x8000091c]	0x0028102a  slt $2, $1, $8
+        2 [0x80000920]	0x0800030b  j 0x00000c2c [od_done]          ; smart_spimbot.s:1141: j	od_done
+        2 [0x80000924]	0x3c01ffff  lui $1, -1                      ; smart_spimbot.s:1144: lw	$t0, BOT_Y
+        2 [0x80000928]	0x8c280024  lw $8, 36($1)
+        2 [0x8000092c]	0x3401003c  ori $1, $0, 60                  ; smart_spimbot.s:1145: sge	$v0, $t0, 60	# return (y >= 60)
+        2 [0x80000930]	0x14280003  bne $1, $8, 12
+        0 [0x80000934]	0x34020001  ori $2, $0, 1
+        0 [0x80000938]	0x10000002  beq $0, $0, 8
+        2 [0x8000093c]	0x0028102a  slt $2, $1, $8
+        2 [0x80000940]	0x0800030b  j 0x00000c2c [od_done]          ; smart_spimbot.s:1146: j	od_done
+        1 [0x80000944]	0x3c01ffff  lui $1, -1                      ; smart_spimbot.s:1149: sw	$zero, VELOCITY
+        1 [0x80000948]	0xac200010  sw $0, 16($1)
+        1 [0x8000094c]	0x08000308  j 0x00000c20 [od_yes]           ; smart_spimbot.s:1150: j	od_yes
+      258 [0x80000950]	0x3c011003  lui $1, 4099 [useful_locations] ; smart_spimbot.s:1153: la	$t0, useful_locations
+      258 [0x80000954]	0x34281304  ori $8, $1, 4868 [useful_locations]
+      258 [0x80000958]	0x01054020  add $8, $8, $5                  ; smart_spimbot.s:1154: add	$t0, $t0, $a1	# &useful_locations[type]
+      258 [0x8000095c]	0x91080000  lbu $8, 0($8)                   ; smart_spimbot.s:1155: lbu	$t0, 0($t0)	# tileID = useful_locations[type]
+      258 [0x80000960]	0x3409000f  ori $9, $0, 15                  ; smart_spimbot.s:1156: li	$t1, 15		# width = 15
+      258 [0x80000964]	0x0109001a  div $8, $9                      ; smart_spimbot.s:1157: div	$t0, $t1
+      258 [0x80000968]	0x00004012  mflo $8                         ; smart_spimbot.s:1158: mflo	$t0		# y = tileID / 15
+      258 [0x8000096c]	0x00004810  mfhi $9                         ; smart_spimbot.s:1159: mfhi	$t1		# x = tileId % 15
+      258 [0x80000970]	0x00085400  sll $10, $8, 16                 ; smart_spimbot.s:1160: sll	$t2, $t0, 16	# y << 16
+      258 [0x80000974]	0x01495025  or $10, $10, $9                 ; smart_spimbot.s:1161: or	$t2, $t2, $t1	# (y << 16) | x
+      258 [0x80000978]	0x3c01ffff  lui $1, -1                      ; smart_spimbot.s:1162: sw	$t2, SET_TILE
+      258 [0x8000097c]	0xac2a0058  sw $10, 88($1)
+      258 [0x80000980]	0x29010003  slti $1, $8, 3                  ; smart_spimbot.s:1163: bgt	$t0, 2, od_goto_tile_food
+      258 [0x80000984]	0x10200011  beq $1, $0, 68 [od_goto_tile_food-0x80000984]
+      112 [0x80000988]	0x3c01ffff  lui $1, -1                      ; smart_spimbot.s:1165: lw	$t0, BOT_Y	# make sure we're vertically at the appliance
+      112 [0x8000098c]	0x8c280024  lw $8, 36($1)
+      112 [0x80000990]	0x29010040  slti $1, $8, 64                 ; smart_spimbot.s:1166: bge	$t0, 64, od_no
+      112 [0x80000994]	0x102000a5  beq $1, $0, 660 [od_no-0x80000994]
+       83 [0x80000998]	0x34080014  ori $8, $0, 20                  ; smart_spimbot.s:1167: li	$t0, 20		# 20 px per tile
+       83 [0x8000099c]	0x71284802  mul $9, $9, $8                  ; smart_spimbot.s:1168: mul	$t1, $t1, $t0
+       83 [0x800009a0]	0x3c01ffff  lui $1, -1                      ; smart_spimbot.s:1169: lw	$t0, BOT_X
+       83 [0x800009a4]	0x8c280020  lw $8, 32($1)
+       83 [0x800009a8]	0x0109082a  slt $1, $8, $9                  ; smart_spimbot.s:1170: blt	$t0, $t1, od_no
+       83 [0x800009ac]	0x1420009f  bne $1, $0, 636 [od_no-0x800009ac]
+       73 [0x800009b0]	0x21290014  addi $9, $9, 20                 ; smart_spimbot.s:1171: add	$t1, $t1, 20	# make sure we're not more than 20 px to right of tile
+       73 [0x800009b4]	0x0128082a  slt $1, $9, $8                  ; smart_spimbot.s:1172: bgt	$t0, $t1, od_no
+       73 [0x800009b8]	0x1420009c  bne $1, $0, 624 [od_no-0x800009b8]
+       28 [0x800009bc]	0x3c019000  lui $1, -28672                  ; smart_spimbot.s:1173: sw	$zero, used_boost
+       28 [0x800009c0]	0xac200954  sw $0, 2388($1)
+       28 [0x800009c4]	0x08000308  j 0x00000c20 [od_yes]           ; smart_spimbot.s:1174: j	od_yes
+      146 [0x800009c8]	0x34090014  ori $9, $0, 20                  ; smart_spimbot.s:1177: li	$t1, 20		# 20 px per tile
+      146 [0x800009cc]	0x71094802  mul $9, $8, $9                  ; smart_spimbot.s:1178: mul	$t1, $t0, $t1	# y * px
+      146 [0x800009d0]	0x3c01ffff  lui $1, -1                      ; smart_spimbot.s:1179: lw	$t0, BOT_Y
+      146 [0x800009d4]	0x8c280024  lw $8, 36($1)
+      146 [0x800009d8]	0x0109082a  slt $1, $8, $9                  ; smart_spimbot.s:1180: blt	$t0, $t1, od_no
+      146 [0x800009dc]	0x14200093  bne $1, $0, 588 [od_no-0x800009dc]
+      142 [0x800009e0]	0x21290014  addi $9, $9, 20                 ; smart_spimbot.s:1181: add	$t1, $t1, 20	# make sure we're not more than 20 px below top of tile
+      142 [0x800009e4]	0x0128082a  slt $1, $9, $8                  ; smart_spimbot.s:1182: bgt	$t0, $t1, od_no
+      142 [0x800009e8]	0x14200090  bne $1, $0, 576 [od_no-0x800009e8]
+      115 [0x800009ec]	0x3c019000  lui $1, -28672 [bin_prox_xs]    ; smart_spimbot.s:1183: la	$t0, bin_prox_xs
+      115 [0x800009f0]	0x34280928  ori $8, $1, 2344 [bin_prox_xs]
+      115 [0x800009f4]	0x3c011003  lui $1, 4099                    ; smart_spimbot.s:1184: lw	$t1, bot_on_left
+      115 [0x800009f8]	0x8c291300  lw $9, 4864($1)
+      115 [0x800009fc]	0x00094880  sll $9, $9, 2                   ; smart_spimbot.s:1185: sll	$t1, $t1, 2
+      115 [0x80000a00]	0x01094020  add $8, $8, $9                  ; smart_spimbot.s:1186: add	$t0, $t0, $t1	# &bin_prox_xs[bot_on_left]
+      115 [0x80000a04]	0x8d080000  lw $8, 0($8)                    ; smart_spimbot.s:1187: lw	$t0, 0($t0)	# target = bin_prox_xs[bot_on_left]
+      115 [0x80000a08]	0x3c01ffff  lui $1, -1                      ; smart_spimbot.s:1188: lw	$t1, BOT_X
+      115 [0x80000a0c]	0x8c290020  lw $9, 32($1)
+      115 [0x80000a10]	0x01094022  sub $8, $8, $9                  ; smart_spimbot.s:1189: sub	$t0, $t0, $t1	# margin = target - botX
+      115 [0x80000a14]	0x29010004  slti $1, $8, 4                  ; smart_spimbot.s:1190: bgt	$t0, 3, od_no
+      115 [0x80000a18]	0x10200084  beq $1, $0, 528 [od_no-0x80000a18]
+      115 [0x80000a1c]	0x2901fffd  slti $1, $8, -3                 ; smart_spimbot.s:1191: blt	$t0, -3, od_no
+      115 [0x80000a20]	0x14200082  bne $1, $0, 520 [od_no-0x80000a20]
+       26 [0x80000a24]	0x3c019000  lui $1, -28672                  ; smart_spimbot.s:1192: sw	$zero, used_boost
+       26 [0x80000a28]	0xac200954  sw $0, 2388($1)
+       26 [0x80000a2c]	0x08000308  j 0x00000c20 [od_yes]           ; smart_spimbot.s:1193: j	od_yes
+        0 [0x80000a30]	0x0800030b  j 0x00000c2c [od_done]          ; smart_spimbot.s:1197: j	od_done
+        0 [0x80000a34]	0x3c01ffff  lui $1, -1                      ; smart_spimbot.s:1200: lw	$t0, TIMER
+        0 [0x80000a38]	0x8c28001c  lw $8, 28($1)
+        0 [0x80000a3c]	0x01054020  add $8, $8, $5                  ; smart_spimbot.s:1201: add	$t0, $t0, $a1	# when we want it to end
+        0 [0x80000a40]	0x3c019000  lui $1, -28672                  ; smart_spimbot.s:1202: lw	$t1, boost_end_time
+        0 [0x80000a44]	0x8c290948  lw $9, 2376($1)
+        0 [0x80000a48]	0x0109102a  slt $2, $8, $9                  ; smart_spimbot.s:1203: slt	$v0, $t0, $t1	# true if desired < boost_end_time
+        0 [0x80000a4c]	0x0800030b  j 0x00000c2c [od_done]          ; smart_spimbot.s:1204: j	od_done
+       28 [0x80000a50]	0x3408010e  ori $8, $0, 270                 ; smart_spimbot.s:1207: li	$t0, 270
+       28 [0x80000a54]	0x3c01ffff  lui $1, -1                      ; smart_spimbot.s:1208: sw	$t0, ANGLE
+       28 [0x80000a58]	0xac280014  sw $8, 20($1)
+       28 [0x80000a5c]	0x34080001  ori $8, $0, 1                   ; smart_spimbot.s:1209: li	$t0, 1
+       28 [0x80000a60]	0x3c01ffff  lui $1, -1                      ; smart_spimbot.s:1210: sw	$t0, ANGLE_CONTROL
+       28 [0x80000a64]	0xac280018  sw $8, 24($1)
+       28 [0x80000a68]	0x08000308  j 0x00000c20 [od_yes]           ; smart_spimbot.s:1211: j	od_yes
+       26 [0x80000a6c]	0x3c01ffff  lui $1, -1                      ; smart_spimbot.s:1214: sw	$zero, VELOCITY
+       26 [0x80000a70]	0xac200010  sw $0, 16($1)
+       26 [0x80000a74]	0x3c019000  lui $1, -28672 [face_bin_angles]; smart_spimbot.s:1215: la	$t0, face_bin_angles
+       26 [0x80000a78]	0x34280938  ori $8, $1, 2360 [face_bin_angles]
+       26 [0x80000a7c]	0x3c011003  lui $1, 4099                    ; smart_spimbot.s:1216: lw	$t1, bot_on_left
+       26 [0x80000a80]	0x8c291300  lw $9, 4864($1)
+       26 [0x80000a84]	0x00094880  sll $9, $9, 2                   ; smart_spimbot.s:1217: sll	$t1, $t1, 2
+       26 [0x80000a88]	0x01094020  add $8, $8, $9                  ; smart_spimbot.s:1218: add	$t0, $t0, $t1	# &face_bin_angles[bot_on_left]
+       26 [0x80000a8c]	0x8d080000  lw $8, 0($8)                    ; smart_spimbot.s:1219: lw	$t0, 0($t0)	# face_bin_angles[bot_on_left]
+       26 [0x80000a90]	0x3c01ffff  lui $1, -1                      ; smart_spimbot.s:1220: sw	$t0, ANGLE
+       26 [0x80000a94]	0xac280014  sw $8, 20($1)
+       26 [0x80000a98]	0x34080001  ori $8, $0, 1                   ; smart_spimbot.s:1221: li	$t0, 1		# absolute
+       26 [0x80000a9c]	0x3c01ffff  lui $1, -1                      ; smart_spimbot.s:1222: sw	$t0, ANGLE_CONTROL
+       26 [0x80000aa0]	0xac280018  sw $8, 24($1)
+       26 [0x80000aa4]	0x08000308  j 0x00000c20 [od_yes]           ; smart_spimbot.s:1223: j	od_yes
+       34 [0x80000aa8]	0x3c01ffff  lui $1, -1                      ; smart_spimbot.s:1226: sw	$zero, DROPOFF
+       34 [0x80000aac]	0xac2000c0  sw $0, 192($1)
+       34 [0x80000ab0]	0x34080001  ori $8, $0, 1                   ; smart_spimbot.s:1227: li	$t0, 1
+       34 [0x80000ab4]	0x3c01ffff  lui $1, -1                      ; smart_spimbot.s:1228: sw	$t0, DROPOFF
+       34 [0x80000ab8]	0xac2800c0  sw $8, 192($1)
+       34 [0x80000abc]	0x34080002  ori $8, $0, 2                   ; smart_spimbot.s:1229: li	$t0, 2
+       34 [0x80000ac0]	0x3c01ffff  lui $1, -1                      ; smart_spimbot.s:1230: sw	$t0, DROPOFF
+       34 [0x80000ac4]	0xac2800c0  sw $8, 192($1)
+       34 [0x80000ac8]	0x34080003  ori $8, $0, 3                   ; smart_spimbot.s:1231: li	$t0, 3
+       34 [0x80000acc]	0x3c01ffff  lui $1, -1                      ; smart_spimbot.s:1232: sw	$t0, DROPOFF
+       34 [0x80000ad0]	0xac2800c0  sw $8, 192($1)
+       34 [0x80000ad4]	0x08000308  j 0x00000c20 [od_yes]           ; smart_spimbot.s:1233: j	od_yes
+        0 [0x80000ad8]	0x3c01ffff  lui $1, -1                      ; smart_spimbot.s:1236: sw	$zero, PICKUP
+        0 [0x80000adc]	0xac2000e0  sw $0, 224($1)
+        0 [0x80000ae0]	0x08000308  j 0x00000c20 [od_yes]           ; smart_spimbot.s:1237: j	od_yes
+       68 [0x80000ae4]	0x3c019000  lui $1, -28672 [face_counter_angles]; smart_spimbot.s:1240: la	$t0, face_counter_angles
+       68 [0x80000ae8]	0x34280930  ori $8, $1, 2352 [face_counter_angles]
+       68 [0x80000aec]	0x3c011003  lui $1, 4099                    ; smart_spimbot.s:1241: lw	$t2, bot_on_left
+       68 [0x80000af0]	0x8c2a1300  lw $10, 4864($1)
+       68 [0x80000af4]	0x000a5080  sll $10, $10, 2                 ; smart_spimbot.s:1242: sll	$t2, $t2, 2
+       68 [0x80000af8]	0x010a4020  add $8, $8, $10                 ; smart_spimbot.s:1243: add	$t0, $t0, $t2	# &face_counter_angles[bot_on_left]
+       68 [0x80000afc]	0x8d080000  lw $8, 0($8)                    ; smart_spimbot.s:1244: lw	$t0, 0($t0)	# face_counter_angles[bot_on_left]
+       68 [0x80000b00]	0x3c01ffff  lui $1, -1                      ; smart_spimbot.s:1245: sw	$t0, ANGLE
+       68 [0x80000b04]	0xac280014  sw $8, 20($1)
+       68 [0x80000b08]	0x34080001  ori $8, $0, 1                   ; smart_spimbot.s:1246: li	$t0, 1		# absolute
+       68 [0x80000b0c]	0x3c01ffff  lui $1, -1                      ; smart_spimbot.s:1247: sw	$t0, ANGLE_CONTROL
+       68 [0x80000b10]	0xac280018  sw $8, 24($1)
+       68 [0x80000b14]	0x3c019000  lui $1, -28672 [counter_prox_xs]; smart_spimbot.s:1248: la	$t0, counter_prox_xs
+       68 [0x80000b18]	0x34280940  ori $8, $1, 2368 [counter_prox_xs]
+       68 [0x80000b1c]	0x010a4020  add $8, $8, $10                 ; smart_spimbot.s:1249: add	$t0, $t0, $t2	# &counter_prox_xs[bot_on_left]
+       68 [0x80000b20]	0x8d080000  lw $8, 0($8)                    ; smart_spimbot.s:1250: lw	$t0, 0($t0)	# counter_prox_xs[bot_on_left]
+       68 [0x80000b24]	0x3c01ffff  lui $1, -1                      ; smart_spimbot.s:1251: lw	$t1, BOT_X	# x
+       68 [0x80000b28]	0x8c290020  lw $9, 32($1)
+       68 [0x80000b2c]	0x01284822  sub $9, $9, $8                  ; smart_spimbot.s:1252: sub	$t1, $t1, $t0	# difference between x positions
+       68 [0x80000b30]	0x05210002  bgez $9 8 [od_goto_counter_positive-0x80000b30]; smart_spimbot.s:1253: bgez	$t1, od_goto_counter_positive
+       34 [0x80000b34]	0x00094822  sub $9, $0, $9                  ; smart_spimbot.s:1254: sub	$t1, $zero, $t1	# negate to get absolute value
+       68 [0x80000b38]	0x29220003  slti $2, $9, 3                  ; smart_spimbot.s:1256: slt	$v0, $t1, 3
+       68 [0x80000b3c]	0x0800030b  j 0x00000c2c [od_done]          ; smart_spimbot.s:1257: j	od_done
+      112 [0x80000b40]	0x3c019000  lui $1, -28672                  ; smart_spimbot.s:1260: sw	$zero, placed_on_appliance
+      112 [0x80000b44]	0xac200950  sw $0, 2384($1)
+      112 [0x80000b48]	0x0c0003f2  jal 0x00000fc8 [update_inventory]; smart_spimbot.s:1261: jal	update_inventory
+      112 [0x80000b4c]	0x3c011001  lui $1, 4097 [inventory]        ; smart_spimbot.s:1262: la	$t1, inventory
+      112 [0x80000b50]	0x34291090  ori $9, $1, 4240 [inventory]
+      112 [0x80000b54]	0x34080003  ori $8, $0, 3                   ; smart_spimbot.s:1263: li	$t0, 3		# i = 3
+      280 [0x80000b58]	0x8d2a000c  lw $10, 12($9)                  ; smart_spimbot.s:1265: lw	$t2, 12($t1)	# inventory[i]
+      280 [0x80000b5c]	0x15450006  bne $10, $5, 24 [od_dropoff_loop_next-0x80000b5c]; smart_spimbot.s:1266: bne	$t2, $a1, od_dropoff_loop_next
+      112 [0x80000b60]	0x3c01ffff  lui $1, -1                      ; smart_spimbot.s:1267: sw	$t0, DROPOFF	# drop from index i
+      112 [0x80000b64]	0xac2800c0  sw $8, 192($1)
+      112 [0x80000b68]	0x3c019000  lui $1, -28672                  ; smart_spimbot.s:1268: sw	$t2, placed_on_appliance
+      112 [0x80000b6c]	0xac2a0950  sw $10, 2384($1)
+      112 [0x80000b70]	0x08000308  j 0x00000c20 [od_yes]           ; smart_spimbot.s:1269: j	od_yes
+      168 [0x80000b74]	0x1100002b  beq $8, $0, 172 [od_yes-0x80000b74]; smart_spimbot.s:1271: beq	$t0, $zero, od_yes
+      168 [0x80000b78]	0x2108ffff  addi $8, $8, -1                 ; smart_spimbot.s:1272: sub	$t0, $t0, 1	# i--
+      168 [0x80000b7c]	0x2129fffc  addi $9, $9, -4                 ; smart_spimbot.s:1273: sub	$t1, $t1, 4	# update address
+      168 [0x80000b80]	0x080002d6  j 0x00000b58 [od_dropoff_loop_top]; smart_spimbot.s:1274: j	od_dropoff_loop_top
+        0 [0x80000b84]	0x3c019000  lui $1, -28672                  ; smart_spimbot.s:1277: lw	$t0, placed_on_appliance
+        0 [0x80000b88]	0x8c280950  lw $8, 2384($1)
+        0 [0x80000b8c]	0x11000025  beq $8, $0, 148 [od_yes-0x80000b8c]; smart_spimbot.s:1278: beq	$t0, $zero, od_yes
+        0 [0x80000b90]	0x3c01ffff  lui $1, -1                      ; smart_spimbot.s:1279: lw	$t0, GET_TILE_INFO
+        0 [0x80000b94]	0x8c280050  lw $8, 80($1)
+        0 [0x80000b98]	0x00a8102a  slt $2, $5, $8                  ; smart_spimbot.s:1280: slt	$v0, $a1, $t0
+        0 [0x80000b9c]	0x0800030b  j 0x00000c2c [od_done]          ; smart_spimbot.s:1281: j	od_done
+      138 [0x80000ba0]	0x3c01ffff  lui $1, -1                      ; smart_spimbot.s:1284: sw	$zero, PICKUP
+      138 [0x80000ba4]	0xac2000e0  sw $0, 224($1)
+      138 [0x80000ba8]	0x3c01ffff  lui $1, -1                      ; smart_spimbot.s:1285: sw	$zero, PICKUP
+      138 [0x80000bac]	0xac2000e0  sw $0, 224($1)
+      138 [0x80000bb0]	0x3c01ffff  lui $1, -1                      ; smart_spimbot.s:1286: sw	$zero, PICKUP
+      138 [0x80000bb4]	0xac2000e0  sw $0, 224($1)
+      138 [0x80000bb8]	0x3c01ffff  lui $1, -1                      ; smart_spimbot.s:1287: sw	$zero, PICKUP	# assumes we have enough money
+      138 [0x80000bbc]	0xac2000e0  sw $0, 224($1)
+      138 [0x80000bc0]	0x08000308  j 0x00000c20 [od_yes]           ; smart_spimbot.s:1288: j	od_yes
+      149 [0x80000bc4]	0x3c01ffff  lui $1, -1                      ; smart_spimbot.s:1291: lw	$t0, GET_TILE_INFO
+      149 [0x80000bc8]	0x8c280050  lw $8, 80($1)
+      149 [0x80000bcc]	0x00a8082a  slt $1, $5, $8                  ; smart_spimbot.s:1292: bgt	$t0, $a1, od_process_asap_done
+      149 [0x80000bd0]	0x1420000a  bne $1, $0, 40 [od_process_asap_done-0x80000bd0]
+      125 [0x80000bd4]	0x3c01ffff  lui $1, -1                      ; smart_spimbot.s:1293: lw	$t0, GET_MONEY
+      125 [0x80000bd8]	0x8c2800e4  lw $8, 228($1)
+      125 [0x80000bdc]	0x2901000f  slti $1, $8, 15                 ; smart_spimbot.s:1294: blt	$t0, 15, od_no
+      125 [0x80000be0]	0x14200012  bne $1, $0, 72 [od_no-0x80000be0]
+       90 [0x80000be4]	0x3c019000  lui $1, -28672                  ; smart_spimbot.s:1295: lw	$t0, started_slow_process
+       90 [0x80000be8]	0x8c280958  lw $8, 2392($1)
+       90 [0x80000bec]	0x1500000f  bne $8, $0, 60 [od_no-0x80000bec]; smart_spimbot.s:1296: bne	$t0, $zero, od_no
+       88 [0x80000bf0]	0x3c01ffff  lui $1, -1                      ; smart_spimbot.s:1297: sw	$zero, FINISH_APPLIANCE_INSTANT
+       88 [0x80000bf4]	0xac200078  sw $0, 120($1)
+      112 [0x80000bf8]	0x3c019000  lui $1, -28672                  ; smart_spimbot.s:1301: sw	$zero, started_slow_process
+      112 [0x80000bfc]	0xac200958  sw $0, 2392($1)
+      112 [0x80000c00]	0x08000308  j 0x00000c20 [od_yes]           ; smart_spimbot.s:1302: j	od_yes
+       93 [0x80000c04]	0x3c01ffff  lui $1, -1                      ; smart_spimbot.s:1305: lw	$t0, BOT_Y
+       93 [0x80000c08]	0x8c280024  lw $8, 36($1)
+       93 [0x80000c0c]	0x34010115  ori $1, $0, 277                 ; smart_spimbot.s:1306: sgt	$v0, $t0, 277
+       93 [0x80000c10]	0x0028102a  slt $2, $1, $8
+       93 [0x80000c14]	0x0800030b  j 0x00000c2c [od_done]          ; smart_spimbot.s:1307: j	od_done
+       89 [0x80000c18]	0x0c000444  jal 0x00001110 [make_sandwiches]; smart_spimbot.s:1310: jal	make_sandwiches
+       89 [0x80000c1c]	0x08000308  j 0x00000c20 [od_yes]           ; smart_spimbot.s:1311: j	od_yes
+      595 [0x80000c20]	0x34020001  ori $2, $0, 1                   ; smart_spimbot.s:1314: li	$v0, 1
+      595 [0x80000c24]	0x0800030b  j 0x00000c2c [od_done]          ; smart_spimbot.s:1315: j	od_done
+      241 [0x80000c28]	0x34020000  ori $2, $0, 0                   ; smart_spimbot.s:1318: li	$v0, 0
+     1001 [0x80000c2c]	0x8fbf0000  lw $31, 0($29)                  ; smart_spimbot.s:1322: lw	$ra, 0($sp)
+     1001 [0x80000c30]	0x23bd0004  addi $29, $29, 4                ; smart_spimbot.s:1323: add	$sp, $sp, 4
+     1001 [0x80000c34]	0x03e00008  jr $31                          ; smart_spimbot.s:1324: jr	$ra
+      281 [0x80000c38]	0x23bdfffc  addi $29, $29, -4               ; smart_spimbot.s:1333: sub	$sp, $sp, 4
+      281 [0x80000c3c]	0xafbf0000  sw $31, 0($29)                  ; smart_spimbot.s:1334: sw	$ra, 0($sp)
+      281 [0x80000c40]	0x3c019000  lui $1, -28672 [po_jump_table]  ; smart_spimbot.s:1336: la	$t0, po_jump_table
+      281 [0x80000c44]	0x342808cc  ori $8, $1, 2252 [po_jump_table]
+      281 [0x80000c48]	0x00044880  sll $9, $4, 2                   ; smart_spimbot.s:1337: sll	$t1, $a0, 2	# [i]
+      281 [0x80000c4c]	0x01094020  add $8, $8, $9                  ; smart_spimbot.s:1338: add	$t0, $t0, $t1	# address in jump table to load
+      281 [0x80000c50]	0x8d080000  lw $8, 0($8)                    ; smart_spimbot.s:1339: lw	$t0, 0($t0)	# subfunction address
+      281 [0x80000c54]	0x01000008  jr $8                           ; smart_spimbot.s:1340: jr	$t0
+        1 [0x80000c58]	0x3408000a  ori $8, $0, 10                  ; smart_spimbot.s:1343: li	$t0, 10
+        1 [0x80000c5c]	0x3c01ffff  lui $1, -1                      ; smart_spimbot.s:1344: sw	$t0, VELOCITY	# start moving
+        1 [0x80000c60]	0xac280010  sw $8, 16($1)
+        1 [0x80000c64]	0x3c01ffff  lui $1, -1                      ; smart_spimbot.s:1345: lw	$t0, TIMER
+        1 [0x80000c68]	0x8c28001c  lw $8, 28($1)
+        1 [0x80000c6c]	0x34091388  ori $9, $0, 5000                ; smart_spimbot.s:1346: li	$t1, 5000
+        1 [0x80000c70]	0x00094880  sll $9, $9, 2                   ; smart_spimbot.s:1347: sll	$t1, $t1, 2	# cycles = 20000
+        1 [0x80000c74]	0x01094020  add $8, $8, $9                  ; smart_spimbot.s:1348: add	$t0, $t0, $t1
+        1 [0x80000c78]	0x3c01ffff  lui $1, -1                      ; smart_spimbot.s:1349: sw	$t0, TIMER
+        1 [0x80000c7c]	0xac28001c  sw $8, 28($1)
+        1 [0x80000c80]	0x0c0004a9  jal 0x000012a4 [request_ingredients]; smart_spimbot.s:1350: jal	request_ingredients
+        1 [0x80000c84]	0x0800039a  j 0x00000e68 [po_done]          ; smart_spimbot.s:1351: j	po_done
+        1 [0x80000c88]	0x3c011003  lui $1, 4099                    ; smart_spimbot.s:1354: lw	$t0, bot_on_left
+        1 [0x80000c8c]	0x8c281300  lw $8, 4864($1)
+        1 [0x80000c90]	0x00084080  sll $8, $8, 2                   ; smart_spimbot.s:1355: sll	$t0, $t0, 2
+        1 [0x80000c94]	0x3c019000  lui $1, -28672 [entry_angles]   ; smart_spimbot.s:1356: la	$t1, entry_angles
+        1 [0x80000c98]	0x34290918  ori $9, $1, 2328 [entry_angles]
+        1 [0x80000c9c]	0x01284820  add $9, $9, $8                  ; smart_spimbot.s:1357: add	$t1, $t1, $t0	# &entry_angles[bot_on_left]
+        1 [0x80000ca0]	0x8d290000  lw $9, 0($9)                    ; smart_spimbot.s:1358: lw	$t1, 0($t1)
+        1 [0x80000ca4]	0x3c01ffff  lui $1, -1                      ; smart_spimbot.s:1359: sw	$t1, ANGLE
+        1 [0x80000ca8]	0xac290014  sw $9, 20($1)
+        1 [0x80000cac]	0x34080001  ori $8, $0, 1                   ; smart_spimbot.s:1360: li	$t0, 1		# turn
+        1 [0x80000cb0]	0x3c01ffff  lui $1, -1                      ; smart_spimbot.s:1361: sw	$t0, ANGLE_CONTROL
+        1 [0x80000cb4]	0xac280018  sw $8, 24($1)
+        1 [0x80000cb8]	0x3408000a  ori $8, $0, 10                  ; smart_spimbot.s:1362: li	$t0, 10
+        1 [0x80000cbc]	0x3c01ffff  lui $1, -1                      ; smart_spimbot.s:1363: sw	$t0, VELOCITY
+        1 [0x80000cc0]	0xac280010  sw $8, 16($1)
+        1 [0x80000cc4]	0x3c01ffff  lui $1, -1                      ; smart_spimbot.s:1364: lw	$t0, TIMER
+        1 [0x80000cc8]	0x8c28001c  lw $8, 28($1)
+        1 [0x80000ccc]	0x34092328  ori $9, $0, 9000                ; smart_spimbot.s:1365: li	$t1, 9000
+        1 [0x80000cd0]	0x00094880  sll $9, $9, 2                   ; smart_spimbot.s:1366: sll	$t1, $t1, 2	# cycles = 36000
+        1 [0x80000cd4]	0x01094020  add $8, $8, $9                  ; smart_spimbot.s:1367: add	$t0, $t0, $t1
+        1 [0x80000cd8]	0x3c01ffff  lui $1, -1                      ; smart_spimbot.s:1368: sw	$t0, TIMER
+        1 [0x80000cdc]	0xac28001c  sw $8, 28($1)
+        1 [0x80000ce0]	0x0800039a  j 0x00000e68 [po_done]          ; smart_spimbot.s:1369: j	po_done
+      204 [0x80000ce4]	0x3c011003  lui $1, 4099 [useful_locations] ; smart_spimbot.s:1372: la	$t0, useful_locations
+      204 [0x80000ce8]	0x34281304  ori $8, $1, 4868 [useful_locations]
+      204 [0x80000cec]	0x01054020  add $8, $8, $5                  ; smart_spimbot.s:1373: add	$t0, $t0, $a1	# &useful_locations[type]
+      204 [0x80000cf0]	0x91080000  lbu $8, 0($8)                   ; smart_spimbot.s:1374: lbu	$t0, 0($t0)	# useful_locations[type]
+      204 [0x80000cf4]	0x3409000f  ori $9, $0, 15                  ; smart_spimbot.s:1375: li	$t1, 15		# width = 15
+      204 [0x80000cf8]	0x340a0014  ori $10, $0, 20                 ; smart_spimbot.s:1376: li	$t2, 20		# 20 px per tile
+      204 [0x80000cfc]	0x0109001a  div $8, $9                      ; smart_spimbot.s:1377: div	$t0, $t1
+      204 [0x80000d00]	0x00002812  mflo $5                         ; smart_spimbot.s:1378: mflo	$a1		# target_y
+      204 [0x80000d04]	0x00002010  mfhi $4                         ; smart_spimbot.s:1379: mfhi	$a0		# target_x
+      204 [0x80000d08]	0x70aa2802  mul $5, $5, $10                 ; smart_spimbot.s:1380: mul	$a1, $a1, $t2
+      204 [0x80000d0c]	0x34010028  ori $1, $0, 40                  ; smart_spimbot.s:1381: beq	$a1, 40, pb_goto_tile_appliance
+      204 [0x80000d10]	0x1025000a  beq $1, $5, 40 [pb_goto_tile_appliance-0x80000d10]
+      120 [0x80000d14]	0x3c019000  lui $1, -28672 [bin_xs]         ; smart_spimbot.s:1383: la	$t0, bin_xs
+      120 [0x80000d18]	0x34280920  ori $8, $1, 2336 [bin_xs]
+      120 [0x80000d1c]	0x3c011003  lui $1, 4099                    ; smart_spimbot.s:1384: lw	$t1, bot_on_left
+      120 [0x80000d20]	0x8c291300  lw $9, 4864($1)
+      120 [0x80000d24]	0x00094880  sll $9, $9, 2                   ; smart_spimbot.s:1385: sll	$t1, $t1, 2
+      120 [0x80000d28]	0x01094020  add $8, $8, $9                  ; smart_spimbot.s:1386: add	$t0, $t0, $t1	# &bin_xs[bot_on_left]
+      120 [0x80000d2c]	0x8d040000  lw $4, 0($8)                    ; smart_spimbot.s:1387: lw	$a0, 0($t0)	# bin_xs[bot_on_left]
+      120 [0x80000d30]	0x20a5000a  addi $5, $5, 10                 ; smart_spimbot.s:1388: add	$a1, $a1, 10	# target the middle (not the top)
+      120 [0x80000d34]	0x08000351  j 0x00000d44 [pb_goto_tile_go]  ; smart_spimbot.s:1389: j	pb_goto_tile_go
+       84 [0x80000d38]	0x3405003e  ori $5, $0, 62                  ; smart_spimbot.s:1392: li	$a1, 62		# target the bottom of the appliance (not the top)
+       84 [0x80000d3c]	0x708a2002  mul $4, $4, $10                 ; smart_spimbot.s:1393: mul	$a0, $a0, $t2
+       84 [0x80000d40]	0x2084000a  addi $4, $4, 10                 ; smart_spimbot.s:1394: add	$a0, $a0, 10	# target the middle (not the left)
+      204 [0x80000d44]	0x0c00039d  jal 0x00000e74 [set_move_point_target]; smart_spimbot.s:1397: jal	set_move_point_target
+      204 [0x80000d48]	0x3408000a  ori $8, $0, 10                  ; smart_spimbot.s:1398: li	$t0, 10
+      204 [0x80000d4c]	0x3c01ffff  lui $1, -1                      ; smart_spimbot.s:1399: sw	$t0, VELOCITY
+      204 [0x80000d50]	0xac280010  sw $8, 16($1)
+      204 [0x80000d54]	0x28413a98  slti $1, $2, 15000              ; smart_spimbot.s:1400: blt	$v0, 15000, pb_goto_tile_short
+      204 [0x80000d58]	0x14200015  bne $1, $0, 84 [pb_goto_tile_short-0x80000d58]
+      164 [0x80000d5c]	0x00021042  srl $2, $2, 1                   ; smart_spimbot.s:1401: srl	$v0, $v0, 1	# "checkpoint" halfway in the middle to correct for arctan inaccuracy
+      164 [0x80000d60]	0x28417530  slti $1, $2, 30000              ; smart_spimbot.s:1402: blt	$v0, 30000, pb_goto_tile_short
+      164 [0x80000d64]	0x14200012  bne $1, $0, 72 [pb_goto_tile_short-0x80000d64]
+       68 [0x80000d68]	0x3c019000  lui $1, -28672                  ; smart_spimbot.s:1403: lw	$t0, used_boost	# only boost once per trip to save money
+       68 [0x80000d6c]	0x8c280954  lw $8, 2388($1)
+       68 [0x80000d70]	0x1500000f  bne $8, $0, 60 [pb_goto_tile_short-0x80000d70]; smart_spimbot.s:1404: bne	$t0, $zero, pb_goto_tile_short
+       68 [0x80000d74]	0x3c01ffff  lui $1, -1                      ; smart_spimbot.s:1405: lw	$t0, GET_MONEY	# boost a bit if we have enough money
+       68 [0x80000d78]	0x8c2800e4  lw $8, 228($1)
+       68 [0x80000d7c]	0x290100f0  slti $1, $8, 240                ; smart_spimbot.s:1406: blt	$t0, 240, pb_goto_tile_short
+       68 [0x80000d80]	0x1420000b  bne $1, $0, 44 [pb_goto_tile_short-0x80000d80]
+        6 [0x80000d84]	0x3c01ffff  lui $1, -1                      ; smart_spimbot.s:1407: sw	$zero, GET_BOOST
+        6 [0x80000d88]	0xac200070  sw $0, 112($1)
+        6 [0x80000d8c]	0x3c01ffff  lui $1, -1                      ; smart_spimbot.s:1408: sw	$zero, GET_BOOST
+        6 [0x80000d90]	0xac200070  sw $0, 112($1)
+        6 [0x80000d94]	0x3c01ffff  lui $1, -1                      ; smart_spimbot.s:1409: sw	$zero, GET_BOOST
+        6 [0x80000d98]	0xac200070  sw $0, 112($1)
+        6 [0x80000d9c]	0x3c01ffff  lui $1, -1                      ; smart_spimbot.s:1410: sw	$zero, GET_BOOST
+        6 [0x80000da0]	0xac200070  sw $0, 112($1)
+        6 [0x80000da4]	0x3c019000  lui $1, -28672                  ; smart_spimbot.s:1411: sw	$t0, used_boost	# anything nonzero will work
+        6 [0x80000da8]	0xac280954  sw $8, 2388($1)
+      204 [0x80000dac]	0x3c01ffff  lui $1, -1                      ; smart_spimbot.s:1413: lw	$t0, TIMER
+      204 [0x80000db0]	0x8c28001c  lw $8, 28($1)
+      204 [0x80000db4]	0x01024020  add $8, $8, $2                  ; smart_spimbot.s:1414: add	$t0, $t0, $v0
+      204 [0x80000db8]	0x3c01ffff  lui $1, -1                      ; smart_spimbot.s:1415: sw	$t0, TIMER	# request timer when arrived
+      204 [0x80000dbc]	0xac28001c  sw $8, 28($1)
+      204 [0x80000dc0]	0x0800039a  j 0x00000e68 [po_done]          ; smart_spimbot.s:1416: j	po_done
+        0 [0x80000dc4]	0x0800039a  j 0x00000e68 [po_done]          ; smart_spimbot.s:1420: j	po_done
+        0 [0x80000dc8]	0x3c01ffff  lui $1, -1                      ; smart_spimbot.s:1423: lw	$t0, TIMER
+        0 [0x80000dcc]	0x8c28001c  lw $8, 28($1)
+        0 [0x80000dd0]	0x01055020  add $10, $8, $5                 ; smart_spimbot.s:1424: add	$t2, $t0, $a1	# desired end time
+        0 [0x80000dd4]	0x3c019000  lui $1, -28672                  ; smart_spimbot.s:1425: lw	$t1, boost_end_time
+        0 [0x80000dd8]	0x8c290948  lw $9, 2376($1)
+        0 [0x80000ddc]	0x012a082a  slt $1, $9, $10                 ; smart_spimbot.s:1426: bge	$t1, $t2, po_boost_loop_top
+        0 [0x80000de0]	0x10200002  beq $1, $0, 8 [po_boost_loop_top-0x80000de0]
+        0 [0x80000de4]	0x00084821  addu $9, $0, $8                 ; smart_spimbot.s:1427: move	$t1, $t0	# set end time to now (if it was in the past)
+        0 [0x80000de8]	0x0149082a  slt $1, $10, $9                 ; smart_spimbot.s:1429: blt	$t2, $t1, po_boost_loop_done
+        0 [0x80000dec]	0x14200005  bne $1, $0, 20 [po_boost_loop_done-0x80000dec]
+        0 [0x80000df0]	0x21292710  addi $9, $9, 10000              ; smart_spimbot.s:1430: add	$t1, $t1, 10000	# assumes we have enough money
+        0 [0x80000df4]	0x3c01ffff  lui $1, -1                      ; smart_spimbot.s:1431: sw	$zero, GET_BOOST
+        0 [0x80000df8]	0xac200070  sw $0, 112($1)
+        0 [0x80000dfc]	0x0800037a  j 0x00000de8 [po_boost_loop_top]; smart_spimbot.s:1432: j	po_boost_loop_top
+        0 [0x80000e00]	0x3c019000  lui $1, -28672                  ; smart_spimbot.s:1434: sw	$t1, boost_end_time
+        0 [0x80000e04]	0xac290948  sw $9, 2376($1)
+        0 [0x80000e08]	0x0800039a  j 0x00000e68 [po_done]          ; smart_spimbot.s:1435: j	po_done
+       34 [0x80000e0c]	0x3408000a  ori $8, $0, 10                  ; smart_spimbot.s:1439: li	$t0, 10
+       34 [0x80000e10]	0x3c01ffff  lui $1, -1                      ; smart_spimbot.s:1440: sw	$t0, VELOCITY
+       34 [0x80000e14]	0xac280010  sw $8, 16($1)
+       34 [0x80000e18]	0x0800039a  j 0x00000e68 [po_done]          ; smart_spimbot.s:1441: j	po_done
+       37 [0x80000e1c]	0x34080001  ori $8, $0, 1                   ; smart_spimbot.s:1444: li	$t0, 1
+       37 [0x80000e20]	0x3c019000  lui $1, -28672                  ; smart_spimbot.s:1445: sw	$t0, started_slow_process
+       37 [0x80000e24]	0xac280958  sw $8, 2392($1)
+       37 [0x80000e28]	0x3c01ffff  lui $1, -1                      ; smart_spimbot.s:1449: lw	$t0, TIMER
+       37 [0x80000e2c]	0x8c28001c  lw $8, 28($1)
+       37 [0x80000e30]	0x21084e20  addi $8, $8, 20000              ; smart_spimbot.s:1450: add	$t0, $t0, 20000
+       37 [0x80000e34]	0x3c01ffff  lui $1, -1                      ; smart_spimbot.s:1451: sw	$t0, TIMER
+       37 [0x80000e38]	0xac28001c  sw $8, 28($1)
+       37 [0x80000e3c]	0x0800039a  j 0x00000e68 [po_done]          ; smart_spimbot.s:1452: j	po_done
+        4 [0x80000e40]	0x3408005a  ori $8, $0, 90                  ; smart_spimbot.s:1455: li	$t0, 90
+        4 [0x80000e44]	0x3c01ffff  lui $1, -1                      ; smart_spimbot.s:1456: sw	$t0, ANGLE
+        4 [0x80000e48]	0xac280014  sw $8, 20($1)
+        4 [0x80000e4c]	0x34080001  ori $8, $0, 1                   ; smart_spimbot.s:1457: li	$t0, 1	# absolute
+        4 [0x80000e50]	0x3c01ffff  lui $1, -1                      ; smart_spimbot.s:1458: sw	$t0, ANGLE_CONTROL
+        4 [0x80000e54]	0xac280018  sw $8, 24($1)
+        4 [0x80000e58]	0x3408000a  ori $8, $0, 10                  ; smart_spimbot.s:1459: li	$t0, 10
+        4 [0x80000e5c]	0x3c01ffff  lui $1, -1                      ; smart_spimbot.s:1460: sw	$t0, VELOCITY
+        4 [0x80000e60]	0xac280010  sw $8, 16($1)
+        4 [0x80000e64]	0x0800039a  j 0x00000e68 [po_done]          ; smart_spimbot.s:1461: j	po_done
+      281 [0x80000e68]	0x8fbf0000  lw $31, 0($29)                  ; smart_spimbot.s:1464: lw	$ra, 0($sp)
+      281 [0x80000e6c]	0x23bd0004  addi $29, $29, 4                ; smart_spimbot.s:1465: add	$sp, $sp, 4
+      281 [0x80000e70]	0x03e00008  jr $31                          ; smart_spimbot.s:1466: jr	$ra
+      204 [0x80000e74]	0x23bdfff0  addi $29, $29, -16              ; smart_spimbot.s:1476: sub         $sp, $sp, 16
+      204 [0x80000e78]	0xafbf0000  sw $31, 0($29)                  ; smart_spimbot.s:1477: sw          $ra, 0($sp)
+      204 [0x80000e7c]	0xafb00004  sw $16, 4($29)                  ; smart_spimbot.s:1478: sw          $s0, 4($sp)
+      204 [0x80000e80]	0xafb10008  sw $17, 8($29)                  ; smart_spimbot.s:1479: sw          $s1, 8($sp)
+      204 [0x80000e84]	0xafb2000c  sw $18, 12($29)                 ; smart_spimbot.s:1480: sw          $s2, 12($sp)
+      204 [0x80000e88]	0x3c01ffff  lui $1, -1                      ; smart_spimbot.s:1482: lw          $a2, BOT_X
+      204 [0x80000e8c]	0x8c260020  lw $6, 32($1)
+      204 [0x80000e90]	0x3c01ffff  lui $1, -1                      ; smart_spimbot.s:1483: lw          $a3, BOT_Y
+      204 [0x80000e94]	0x8c270024  lw $7, 36($1)
+      204 [0x80000e98]	0x00868022  sub $16, $4, $6                 ; smart_spimbot.s:1485: TURNIN_ORDER
+      204 [0x80000e9c]	0x00a78822  sub $17, $5, $7                 ; smart_spimbot.s:1486: sub         $s1, $a1, $a3   # $s1 = current_y - target_y
+      204 [0x80000ea0]	0x0c0003e7  jal 0x00000f9c [euc_dist]       ; smart_spimbot.s:1488: jal         euc_dist
+      204 [0x80000ea4]	0x00029021  addu $18, $0, $2                ; smart_spimbot.s:1489: move        $s2, $v0        # s2 = distance
+      204 [0x80000ea8]	0x00102021  addu $4, $0, $16                ; smart_spimbot.s:1491: move        $a0, $s0
+      204 [0x80000eac]	0x00112821  addu $5, $0, $17                ; smart_spimbot.s:1492: move        $a1, $s1
+      204 [0x80000eb0]	0x0c0003ba  jal 0x00000ee8 [sb_arctan]      ; smart_spimbot.s:1493: jal         sb_arctan       # $v0 = angle to rotate to.
+      204 [0x80000eb4]	0x3c01ffff  lui $1, -1                      ; smart_spimbot.s:1495: sw          $v0, ANGLE      # set target angle
+      204 [0x80000eb8]	0xac220014  sw $2, 20($1)
+      204 [0x80000ebc]	0x34080001  ori $8, $0, 1                   ; smart_spimbot.s:1496: li          $t0, 1
+      204 [0x80000ec0]	0x3c01ffff  lui $1, -1                      ; smart_spimbot.s:1497: sw          $t0, ANGLE_CONTROL  # and set angle control to absolute
+      204 [0x80000ec4]	0xac280018  sw $8, 24($1)
+      204 [0x80000ec8]	0x340803e8  ori $8, $0, 1000                ; smart_spimbot.s:1499: li	$t0, 1000	# cycles to move one pixel
+      204 [0x80000ecc]	0x72481002  mul $2, $18, $8                 ; smart_spimbot.s:1500: mul	$v0, $s2, $t0
+      204 [0x80000ed0]	0x8fbf0000  lw $31, 0($29)                  ; smart_spimbot.s:1502: lw          $ra, 0($sp)     #cleanup
+      204 [0x80000ed4]	0x8fb00004  lw $16, 4($29)                  ; smart_spimbot.s:1503: lw          $s0, 4($sp)
+      204 [0x80000ed8]	0x8fb10008  lw $17, 8($29)                  ; smart_spimbot.s:1504: lw          $s1, 8($sp)
+      204 [0x80000edc]	0x8fb2000c  lw $18, 12($29)                 ; smart_spimbot.s:1505: lw          $s2, 12($sp)
+      204 [0x80000ee0]	0x23bd0010  addi $29, $29, 16               ; smart_spimbot.s:1506: add         $sp, $sp, 16
+      204 [0x80000ee4]	0x03e00008  jr $31                          ; smart_spimbot.s:1507: jr          $ra
+      204 [0x80000ee8]	0x34020000  ori $2, $0, 0                   ; smart_spimbot.s:1516: li          $v0, 0           # angle = 0;
+      204 [0x80000eec]	0x00044021  addu $8, $0, $4                 ; smart_spimbot.s:1518: abs         $t0, $a0         # get absolute values
+      204 [0x80000ef0]	0x04810002  bgez $4 8
+      165 [0x80000ef4]	0x00044022  sub $8, $0, $4
+      204 [0x80000ef8]	0x00054821  addu $9, $0, $5                 ; smart_spimbot.s:1519: abs         $t1, $a1
+      204 [0x80000efc]	0x04a10002  bgez $5 8
+       80 [0x80000f00]	0x00054822  sub $9, $0, $5
+      204 [0x80000f04]	0x0109082a  slt $1, $8, $9                  ; smart_spimbot.s:1520: ble         $t1, $t0, at_no_turn_90
+      204 [0x80000f08]	0x10200005  beq $1, $0, 20 [at_no_turn_90-0x80000f08]
+       19 [0x80000f0c]	0x00054021  addu $8, $0, $5                 ; smart_spimbot.s:1523: move        $t0, $a1         # int temp = y;
+       19 [0x80000f10]	0x00042822  sub $5, $0, $4                  ; smart_spimbot.s:1524: neg         $a1, $a0         # y = -x;
+       19 [0x80000f14]	0x00082021  addu $4, $0, $8                 ; smart_spimbot.s:1525: move        $a0, $t0         # x = temp;
+       19 [0x80000f18]	0x3402005a  ori $2, $0, 90                  ; smart_spimbot.s:1526: li          $v0, 90          # angle = 90;
+      204 [0x80000f1c]	0x04810002  bgez $4 8 [at_pos_x-0x80000f1c] ; smart_spimbot.s:1529: bgez        $a0, at_pos_x    # skip if (x >= 0)
+      161 [0x80000f20]	0x204200b4  addi $2, $2, 180                ; smart_spimbot.s:1532: add         $v0, $v0, 180    # angle += 180;
+      204 [0x80000f24]	0x44840000  mtc1 $4, $f0                    ; smart_spimbot.s:1535: mtc1        $a0, $f0
+      204 [0x80000f28]	0x44850800  mtc1 $5, $f1                    ; smart_spimbot.s:1536: mtc1        $a1, $f1
+      204 [0x80000f2c]	0x46800020  cvt.s.w $f0, $f0                ; smart_spimbot.s:1537: cvt.s.w     $f0, $f0         # convert from ints to floats
+      204 [0x80000f30]	0x46800860  cvt.s.w $f1, $f1                ; smart_spimbot.s:1538: cvt.s.w     $f1, $f1
+      204 [0x80000f34]	0x46000803  div.s $f0, $f1, $f0             ; smart_spimbot.s:1540: div.s       $f0, $f1, $f0    # float v = (float) y / (float) x;
+      204 [0x80000f38]	0x46000042  mul.s $f1, $f0, $f0             ; smart_spimbot.s:1542: mul.s       $f1, $f0, $f0    # v^^2
+      204 [0x80000f3c]	0x46000882  mul.s $f2, $f1, $f0             ; smart_spimbot.s:1543: mul.s       $f2, $f1, $f0    # v^^3
+      204 [0x80000f40]	0x3c019000  lui $1, -28672                  ; smart_spimbot.s:1544: l.s         $f3, three       # load 3.0
+      204 [0x80000f44]	0xc42309c4  lwc1 $f3, 2500($1)
+      204 [0x80000f48]	0x460310c3  div.s $f3, $f2, $f3             ; smart_spimbot.s:1545: div.s       $f3, $f2, $f3    # v^^3/3
+      204 [0x80000f4c]	0x46030181  sub.s $f6, $f0, $f3             ; smart_spimbot.s:1546: sub.s       $f6, $f0, $f3    # v - v^^3/3
+      204 [0x80000f50]	0x46020902  mul.s $f4, $f1, $f2             ; smart_spimbot.s:1548: mul.s       $f4, $f1, $f2    # v^^5
+      204 [0x80000f54]	0x3c019000  lui $1, -28672                  ; smart_spimbot.s:1549: l.s         $f5, five        # load 5.0
+      204 [0x80000f58]	0xc42509c8  lwc1 $f5, 2504($1)
+      204 [0x80000f5c]	0x46052143  div.s $f5, $f4, $f5             ; smart_spimbot.s:1550: div.s       $f5, $f4, $f5    # v^^5/5
+      204 [0x80000f60]	0x46053180  add.s $f6, $f6, $f5             ; smart_spimbot.s:1551: add.s       $f6, $f6, $f5    # value = v - v^^3/3 + v^^5/5
+      204 [0x80000f64]	0x3c019000  lui $1, -28672                  ; smart_spimbot.s:1553: l.s         $f8, PI          # load PI
+      204 [0x80000f68]	0xc42809c0  lwc1 $f8, 2496($1)
+      204 [0x80000f6c]	0x46083183  div.s $f6, $f6, $f8             ; smart_spimbot.s:1554: div.s       $f6, $f6, $f8    # value / PI
+      204 [0x80000f70]	0x3c019000  lui $1, -28672                  ; smart_spimbot.s:1555: l.s         $f7, F180        # load 180.0
+      204 [0x80000f74]	0xc42709cc  lwc1 $f7, 2508($1)
+      204 [0x80000f78]	0x46073182  mul.s $f6, $f6, $f7             ; smart_spimbot.s:1556: mul.s       $f6, $f6, $f7    # 180.0 * value / PI
+      204 [0x80000f7c]	0x460031a4  cvt.w.s $f6, $f6                ; smart_spimbot.s:1558: cvt.w.s     $f6, $f6         # convert "delta" back to integer
+      204 [0x80000f80]	0x44083000  mfc1 $8, $f6                    ; smart_spimbot.s:1559: mfc1        $t0, $f6
+      204 [0x80000f84]	0x00481020  add $2, $2, $8                  ; smart_spimbot.s:1560: add         $v0, $v0, $t0    # angle += delta
+      204 [0x80000f88]	0x28410000  slti $1, $2, 0                  ; smart_spimbot.s:1562: bge         $v0, 0, at_end
+      204 [0x80000f8c]	0x10200003  beq $1, $0, 12 [at_end-0x80000f8c]
+       39 [0x80000f90]	0x34080168  ori $8, $0, 360                 ; smart_spimbot.s:1564: li          $t0, 360
+       39 [0x80000f94]	0x01021020  add $2, $8, $2                  ; smart_spimbot.s:1565: add         $v0, $t0, $v0
+      204 [0x80000f98]	0x03e00008  jr $31                          ; smart_spimbot.s:1568: jr          $ra
+      204 [0x80000f9c]	0x00c42022  sub $4, $6, $4                  ; smart_spimbot.s:1579: sub         $a0, $a2, $a0   # $a0 = (x2 - x1)
+      204 [0x80000fa0]	0x70842002  mul $4, $4, $4                  ; smart_spimbot.s:1580: mul         $a0, $a0, $a0   # $a0 = (x2 - x1)^2
+      204 [0x80000fa4]	0x00e52822  sub $5, $7, $5                  ; smart_spimbot.s:1581: sub         $a1, $a3, $a1   # $a1 = (y2 - y1)
+      204 [0x80000fa8]	0x70a52802  mul $5, $5, $5                  ; smart_spimbot.s:1582: mul         $a1, $a1, $a1   # $a1 = (y2 - y1)^2
+      204 [0x80000fac]	0x00851020  add $2, $4, $5                  ; smart_spimbot.s:1584: add         $v0, $a0, $a1   # $v0 = (x2 - x1)^2 + (y2 - y1)^2
+      204 [0x80000fb0]	0x44826000  mtc1 $2, $f12                   ; smart_spimbot.s:1586: mtc1        $v0, $f12       # $f12 = $v0
+      204 [0x80000fb4]	0x46806320  cvt.s.w $f12, $f12              ; smart_spimbot.s:1587: cvt.s.w     $f12, $f12      # cast $f12 to a float
+      204 [0x80000fb8]	0x46006304  sqrt.s $f12, $f12               ; smart_spimbot.s:1588: sqrt.s      $f12, $f12      # $f12 = sqrt($f12)
+      204 [0x80000fbc]	0x46006324  cvt.w.s $f12, $f12              ; smart_spimbot.s:1589: cvt.w.s     $f12, $f12      # cast $f12 to an int
+      204 [0x80000fc0]	0x44026000  mfc1 $2, $f12                   ; smart_spimbot.s:1590: mfc1        $v0, $f12       # $v0 = $f12
+      204 [0x80000fc4]	0x03e00008  jr $31                          ; smart_spimbot.s:1591: jr          $ra
+      257 [0x80000fc8]	0x3c011001  lui $1, 4097 [inventory]        ; smart_spimbot.s:1598: la          $t0, inventory
+      257 [0x80000fcc]	0x34281090  ori $8, $1, 4240 [inventory]
+      257 [0x80000fd0]	0x3c01ffff  lui $1, -1                      ; smart_spimbot.s:1599: sw          $t0, GET_INVENTORY
+      257 [0x80000fd4]	0xac280040  sw $8, 64($1)
+      257 [0x80000fd8]	0x03e00008  jr $31                          ; smart_spimbot.s:1600: jr          $ra
+      799 [0x80000fdc]	0x34080000  ori $8, $0, 0                   ; smart_spimbot.s:1613: li	$t0, 0
+     5593 [0x80000fe0]	0x29010006  slti $1, $8, 6                  ; smart_spimbot.s:1616: bge	$t0, 6, dr_intermediate_bits
+     5593 [0x80000fe4]	0x10200009  beq $1, $0, 36 [dr_intermediate_bits-0x80000fe4]
+     4794 [0x80000fe8]	0x3089001f  andi $9, $4, 31                 ; smart_spimbot.s:1617: and	$t1, $a0, 0x1f		# array[i] = lo & 0x0000001f;
+     4794 [0x80000fec]	0x34010004  ori $1, $0, 4                   ; smart_spimbot.s:1618: mul	$t2, $t0, 4		# Calculate array[i]
+     4794 [0x80000ff0]	0x71015002  mul $10, $8, $1
+     4794 [0x80000ff4]	0x00ca5820  add $11, $6, $10                ; smart_spimbot.s:1619: add	$t3, $a2, $t2
+     4794 [0x80000ff8]	0xad690000  sw $9, 0($11)                   ; smart_spimbot.s:1620: sw	$t1, 0($t3)		# Save array[i]
+     4794 [0x80000ffc]	0x00042142  srl $4, $4, 5                   ; smart_spimbot.s:1621: srl	$a0, $a0, 5		# lo = lo >> 5;
+     4794 [0x80001000]	0x21080001  addi $8, $8, 1                  ; smart_spimbot.s:1622: add	$t0, $t0, 1
+     4794 [0x80001004]	0x080003f8  j 0x00000fe0 [dr_first_loop]    ; smart_spimbot.s:1623: j	dr_first_loop
+      799 [0x80001008]	0x00054080  sll $8, $5, 2                   ; smart_spimbot.s:1626: sll	$t0, $a1, 2		# unsigned upper_three_bits = (hi << 2) & 0x0000001f;
+      799 [0x8000100c]	0x3108001f  andi $8, $8, 31                 ; smart_spimbot.s:1627: and	$t0, $t0, 0x1f
+      799 [0x80001010]	0x01044025  or $8, $8, $4                   ; smart_spimbot.s:1628: or	$t0, $t0, $a0		# array[6] = upper_three_bits | lo;
+      799 [0x80001014]	0xacc80018  sw $8, 24($6)                   ; smart_spimbot.s:1629: sw	$t0, 24($a2)
+      799 [0x80001018]	0x000528c2  srl $5, $5, 3                   ; smart_spimbot.s:1630: srl	$a1, $a1, 3		# hi = hi >> 3;
+      799 [0x8000101c]	0x34080007  ori $8, $0, 7                   ; smart_spimbot.s:1632: li	$t0, 7
+     4794 [0x80001020]	0x2901000c  slti $1, $8, 12                 ; smart_spimbot.s:1635: bge 	$t0, 12, dr_end		# for (int i = 7; i < 12; ++i)
+     4794 [0x80001024]	0x10200009  beq $1, $0, 36 [dr_end-0x80001024]
+     3995 [0x80001028]	0x30a9001f  andi $9, $5, 31                 ; smart_spimbot.s:1636: and	$t1, $a1, 0x1f		# array[i] = hi & 0x0000001f;
+     3995 [0x8000102c]	0x34010004  ori $1, $0, 4                   ; smart_spimbot.s:1637: mul	$t2, $t0, 4		# Calculate array[i]
+     3995 [0x80001030]	0x71015002  mul $10, $8, $1
+     3995 [0x80001034]	0x00ca5820  add $11, $6, $10                ; smart_spimbot.s:1638: add	$t3, $a2, $t2
+     3995 [0x80001038]	0xad690000  sw $9, 0($11)                   ; smart_spimbot.s:1639: sw	$t1, 0($t3)		# Save array[i]
+     3995 [0x8000103c]	0x00052942  srl $5, $5, 5                   ; smart_spimbot.s:1640: srl	$a1, $a1, 5		# hi = hi >> 5;
+     3995 [0x80001040]	0x21080001  addi $8, $8, 1                  ; smart_spimbot.s:1641: add	$t0, $t0, 1
+     3995 [0x80001044]	0x08000408  j 0x00001020 [dr_second_loop]   ; smart_spimbot.s:1642: j	dr_second_loop
+      799 [0x80001048]	0x03e00008  jr $31                          ; smart_spimbot.s:1645: jr	$ra
+      799 [0x8000104c]	0x00053021  addu $6, $0, $5                 ; smart_spimbot.s:1653: move	$a2, $a1	# result address
+      799 [0x80001050]	0x8c850004  lw $5, 4($4)                    ; smart_spimbot.s:1654: lw	$a1, 4($a0)	# high - documentation is a lie
+      799 [0x80001054]	0x8c840000  lw $4, 0($4)                    ; smart_spimbot.s:1655: lw	$a0, 0($a0)	# low
+      799 [0x80001058]	0x080003f7  j 0x00000fdc [decode_request]   ; smart_spimbot.s:1656: j	decode_request	# will use current $ra
+        1 [0x8000105c]	0x8c820018  lw $2, 24($4)                   ; smart_spimbot.s:1665: lw	$v0, 24($a0)	# unsigned lo = ((array[6] << 30) >> 30);
+        1 [0x80001060]	0x00021780  sll $2, $2, 30                  ; smart_spimbot.s:1666: sll	$v0, $v0, 30
+        1 [0x80001064]	0x00021782  srl $2, $2, 30                  ; smart_spimbot.s:1667: srl	$v0, $v0, 30
+        1 [0x80001068]	0x34080005  ori $8, $0, 5                   ; smart_spimbot.s:1669: li	$t0, 5
+        7 [0x8000106c]	0x29010000  slti $1, $8, 0                  ; smart_spimbot.s:1671: blt 	$t0, 0, cr_second_loop_start	# for (int i = 5; i >= 0; --i) {
+        7 [0x80001070]	0x14200009  bne $1, $0, 36 [cr_second_loop_start-0x80001070]
+        6 [0x80001074]	0x00021140  sll $2, $2, 5                   ; smart_spimbot.s:1672: sll	$v0, $v0, 5	# lo = lo << 5;
+        6 [0x80001078]	0x34010004  ori $1, $0, 4                   ; smart_spimbot.s:1673: mul	$t1, $t0, 4	# Calculate array[i]
+        6 [0x8000107c]	0x71014802  mul $9, $8, $1
+        6 [0x80001080]	0x00895020  add $10, $4, $9                 ; smart_spimbot.s:1674: add	$t2, $a0, $t1	
+        6 [0x80001084]	0x8d490000  lw $9, 0($10)                   ; smart_spimbot.s:1675: lw	$t1, 0($t2)	# Load array[i]
+        6 [0x80001088]	0x00491025  or $2, $2, $9                   ; smart_spimbot.s:1676: or	$v0, $v0, $t1	# lo |= array[i];
+        6 [0x8000108c]	0x2108ffff  addi $8, $8, -1                 ; smart_spimbot.s:1677: sub	$t0, $t0, 1
+        6 [0x80001090]	0x0800041b  j 0x0000106c [cr_first_loop]    ; smart_spimbot.s:1678: j	cr_first_loop
+        1 [0x80001094]	0x3408000c  ori $8, $0, 12                  ; smart_spimbot.s:1681: li	$t0, 12
+        1 [0x80001098]	0x34030000  ori $3, $0, 0                   ; smart_spimbot.s:1682: li	$v1, 0
+        6 [0x8000109c]	0x29010008  slti $1, $8, 8                  ; smart_spimbot.s:1685: ble 	$t0, 7, cr_intermediate_bits	# for (int i = 12; i > 7; --i) {
+        6 [0x800010a0]	0x14200009  bne $1, $0, 36 [cr_intermediate_bits-0x800010a0]
+        5 [0x800010a4]	0x34010004  ori $1, $0, 4                   ; smart_spimbot.s:1686: mul	$t1, $t0, 4	# Calculate array[i]
+        5 [0x800010a8]	0x71014802  mul $9, $8, $1
+        5 [0x800010ac]	0x00895020  add $10, $4, $9                 ; smart_spimbot.s:1687: add	$t2, $a0, $t1	
+        5 [0x800010b0]	0x8d490000  lw $9, 0($10)                   ; smart_spimbot.s:1688: lw	$t1, 0($t2)	# Load array[i]
+        5 [0x800010b4]	0x00691825  or $3, $3, $9                   ; smart_spimbot.s:1689: or	$v1, $v1, $t1	# hi |= array[i];
+        5 [0x800010b8]	0x00031940  sll $3, $3, 5                   ; smart_spimbot.s:1690: sll	$v1, $v1, 5	# hi = hi << 5;
+        5 [0x800010bc]	0x2108ffff  addi $8, $8, -1                 ; smart_spimbot.s:1692: sub	$t0, $t0, 1
+        5 [0x800010c0]	0x08000427  j 0x0000109c [cr_second_loop]   ; smart_spimbot.s:1693: j	cr_second_loop
+        1 [0x800010c4]	0x8c89001c  lw $9, 28($4)                   ; smart_spimbot.s:1696: lw	$t1, 28($a0)	# Load array[7]
+        1 [0x800010c8]	0x00691825  or $3, $3, $9                   ; smart_spimbot.s:1697: or	$v1, $v1, $t1	# hi |= array[i];
+        1 [0x800010cc]	0x000318c0  sll $3, $3, 3                   ; smart_spimbot.s:1698: sll	$v1, $v1, 3	# hi = hi << 3;
+        1 [0x800010d0]	0x8c890018  lw $9, 24($4)                   ; smart_spimbot.s:1699: lw	$t1, 24($a0)	# Load array[6]
+        1 [0x800010d4]	0x00094882  srl $9, $9, 2                   ; smart_spimbot.s:1700: srl	$t1, $t1, 2	# (array[6] >> 2)
+        1 [0x800010d8]	0x00691825  or $3, $3, $9                   ; smart_spimbot.s:1701: or	$v1, $v1, $t1	# hi |= (array[6] >> 2);
+        1 [0x800010dc]	0x03e00008  jr $31                          ; smart_spimbot.s:1704: jr	$ra
+        1 [0x800010e0]	0x23bdfff8  addi $29, $29, -8               ; smart_spimbot.s:1712: sub	$sp, $sp, 8
+        1 [0x800010e4]	0xafbf0000  sw $31, 0($29)                  ; smart_spimbot.s:1713: sw	$ra, 0($sp)
+        1 [0x800010e8]	0xafb00004  sw $16, 4($29)                  ; smart_spimbot.s:1714: sw	$s0, 4($sp)	# saves $a0
+        1 [0x800010ec]	0x00048021  addu $16, $0, $4                ; smart_spimbot.s:1716: move	$s0, $a0
+        1 [0x800010f0]	0x00052021  addu $4, $0, $5                 ; smart_spimbot.s:1717: move	$a0, $a1
+        1 [0x800010f4]	0x0c000417  jal 0x0000105c [create_request] ; smart_spimbot.s:1718: jal	create_request
+        1 [0x800010f8]	0xae020000  sw $2, 0($16)                   ; smart_spimbot.s:1719: sw	$v0, 0($s0)	# low
+        1 [0x800010fc]	0xae030004  sw $3, 4($16)                   ; smart_spimbot.s:1720: sw	$v1, 4($s0)	# high
+        1 [0x80001100]	0x8fbf0000  lw $31, 0($29)                  ; smart_spimbot.s:1722: lw	$ra, 0($sp)
+        1 [0x80001104]	0x8fb00004  lw $16, 4($29)                  ; smart_spimbot.s:1723: lw	$s0, 4($sp)
+        1 [0x80001108]	0x23bd0008  addi $29, $29, 8                ; smart_spimbot.s:1724: add	$sp, $sp, 8
+        1 [0x8000110c]	0x03e00008  jr $31                          ; smart_spimbot.s:1725: jr	$ra
+       89 [0x80001110]	0x23bdffe0  addi $29, $29, -32              ; smart_spimbot.s:1733: sub	$sp, $sp, 32
+       89 [0x80001114]	0xafbf0000  sw $31, 0($29)                  ; smart_spimbot.s:1734: sw	$ra, 0($sp)
+       89 [0x80001118]	0xafb00004  sw $16, 4($29)                  ; smart_spimbot.s:1735: sw	$s0, 4($sp)	# ingr
+       89 [0x8000111c]	0xafb10008  sw $17, 8($29)                  ; smart_spimbot.s:1736: sw	$s1, 8($sp)	# &decoded_order
+       89 [0x80001120]	0xafb2000c  sw $18, 12($29)                 ; smart_spimbot.s:1737: sw	$s2, 12($sp)	# &decoded_progress
+       89 [0x80001124]	0xafb30010  sw $19, 16($29)                 ; smart_spimbot.s:1738: sw	$s3, 16($sp)	# food_req_positions[ingr]
+       89 [0x80001128]	0xafb40014  sw $20, 20($29)                 ; smart_spimbot.s:1739: sw	$s4, 20($sp)	# decoded_order[ingr]
+       89 [0x8000112c]	0xafb50018  sw $21, 24($29)                 ; smart_spimbot.s:1740: sw	$s5, 24($sp)	# food_pickup_ids[ingr]
+       89 [0x80001130]	0xafb6001c  sw $22, 28($29)                 ; smart_spimbot.s:1741: sw	$s6, 28($sp)	# angle to face counter
+       89 [0x80001134]	0x3c011001  lui $1, 4097 [decoded_order]    ; smart_spimbot.s:1743: la	$s1, decoded_order
+       89 [0x80001138]	0x34311030  ori $17, $1, 4144 [decoded_order]
+       89 [0x8000113c]	0x3c011001  lui $1, 4097 [decoded_progress] ; smart_spimbot.s:1744: la	$s2, decoded_progress
+       89 [0x80001140]	0x34321000  ori $18, $1, 4096 [decoded_progress]
+       89 [0x80001144]	0x3c019000  lui $1, -28672 [face_counter_angles]; smart_spimbot.s:1745: la	$t0, face_counter_angles
+       89 [0x80001148]	0x34280930  ori $8, $1, 2352 [face_counter_angles]
+       89 [0x8000114c]	0x3c011003  lui $1, 4099                    ; smart_spimbot.s:1746: lw	$t2, bot_on_left
+       89 [0x80001150]	0x8c2a1300  lw $10, 4864($1)
+       89 [0x80001154]	0x000a5080  sll $10, $10, 2                 ; smart_spimbot.s:1747: sll	$t2, $t2, 2
+       89 [0x80001158]	0x010a4020  add $8, $8, $10                 ; smart_spimbot.s:1748: add	$t0, $t0, $t2	# &face_counter_angles[bot_on_left]
+       89 [0x8000115c]	0x8d160000  lw $22, 0($8)                   ; smart_spimbot.s:1749: lw	$s6, 0($t0)	# face_counter_angles[bot_on_left]
+      101 [0x80001160]	0x3c011001  lui $1, 4097 [encoded_request]  ; smart_spimbot.s:1752: la	$a0, encoded_request
+      101 [0x80001164]	0x34240f40  ori $4, $1, 3904 [encoded_request]
+      101 [0x80001168]	0x3c01ffff  lui $1, -1                      ; smart_spimbot.s:1753: sw	$a0, GET_TURNIN_ORDER
+      101 [0x8000116c]	0xac240044  sw $4, 68($1)
+      101 [0x80001170]	0x00112821  addu $5, $0, $17                ; smart_spimbot.s:1754: move	$a1, $s1
+      101 [0x80001174]	0x0c000413  jal 0x0000104c [decode_request_in_mem]; smart_spimbot.s:1755: jal	decode_request_in_mem
+      101 [0x80001178]	0x34100005  ori $16, $0, 5                  ; smart_spimbot.s:1757: li	$s0, 5		# ingr = 5 (goes down)
+      605 [0x8000117c]	0x06000036  bltz $16 216 [ms_ingr_loop_done-0x8000117c]; smart_spimbot.s:1759: bltz	$s0, ms_ingr_loop_done
+      593 [0x80001180]	0x0c0004a2  jal 0x00001288 [update_corner_progress]; smart_spimbot.s:1760: jal	update_corner_progress
+      593 [0x80001184]	0x3c019000  lui $1, -28672 [food_req_positions]; smart_spimbot.s:1761: la	$s3, food_req_positions
+      593 [0x80001188]	0x3433097c  ori $19, $1, 2428 [food_req_positions]
+      593 [0x8000118c]	0x02709820  add $19, $19, $16               ; smart_spimbot.s:1762: add	$s3, $s3, $s0	# &food_req_positions[ingr]
+      593 [0x80001190]	0x92730000  lbu $19, 0($19)                 ; smart_spimbot.s:1763: lbu	$s3, 0($s3)	# food_req_positions[ingr]
+      593 [0x80001194]	0x0233a020  add $20, $17, $19               ; smart_spimbot.s:1764: add	$s4, $s1, $s3	# &decoded_order[ingrPos]
+      593 [0x80001198]	0x8e940000  lw $20, 0($20)                  ; smart_spimbot.s:1765: lw	$s4, 0($s4)	# decoded_order[ingr]
+      593 [0x8000119c]	0x3c019000  lui $1, -28672 [food_pickup_ids]; smart_spimbot.s:1766: la	$s5, food_pickup_ids
+      593 [0x800011a0]	0x34350964  ori $21, $1, 2404 [food_pickup_ids]
+      593 [0x800011a4]	0x00104080  sll $8, $16, 2                  ; smart_spimbot.s:1767: sll	$t0, $s0, 2
+      593 [0x800011a8]	0x02a8a820  add $21, $21, $8                ; smart_spimbot.s:1768: add	$s5, $s5, $t0	# &food_pickup_ids[ingr]
+      593 [0x800011ac]	0x8eb50000  lw $21, 0($21)                  ; smart_spimbot.s:1769: lw	$s5, 0($s5)	# food_pickup_ids[ingr]
+      660 [0x800011b0]	0x02534020  add $8, $18, $19                ; smart_spimbot.s:1772: add	$t0, $s2, $s3	# &decoded_progress[ingr]
+      660 [0x800011b4]	0x8d080000  lw $8, 0($8)                    ; smart_spimbot.s:1773: lw	$t0, 0($t0)	# decoded_progress[ingr]
+      660 [0x800011b8]	0x02884022  sub $8, $20, $8                 ; smart_spimbot.s:1774: sub	$t0, $s4, $t0	# decoded_order[ingr] - decoded_progress[ingr]
+      660 [0x800011bc]	0x11000024  beq $8, $0, 144 [ms_ingr_loop_next-0x800011bc]; smart_spimbot.s:1775: beq	$t0, $zero, ms_ingr_loop_next
+      156 [0x800011c0]	0x3c01ffff  lui $1, -1                      ; smart_spimbot.s:1778: lw	$t0, GET_MONEY
+      156 [0x800011c4]	0x8c2800e4  lw $8, 228($1)
+      156 [0x800011c8]	0x29010014  slti $1, $8, 20                 ; smart_spimbot.s:1779: blt	$t0, 20, ms_cant_magic
+      156 [0x800011cc]	0x1420000b  bne $1, $0, 44 [ms_cant_magic-0x800011cc]
+       23 [0x800011d0]	0x14100004  bne $0, $16, 16 [ms_not_bread-0x800011d0]; smart_spimbot.s:1780: bne	$s0, IID_BREAD, ms_not_bread
+       10 [0x800011d4]	0x3c01ffff  lui $1, -1                      ; smart_spimbot.s:1783: sw	$zero, GET_INGREDIENT_INSTANT
+       10 [0x800011d8]	0xac200074  sw $0, 116($1)
+       10 [0x800011dc]	0x08000489  j 0x00001224 [ms_add_item]      ; smart_spimbot.s:1784: j	ms_add_item
+       13 [0x800011e0]	0x34010001  ori $1, $0, 1                   ; smart_spimbot.s:1787: bne	$s0, IID_CHEESE, ms_cant_magic
+       13 [0x800011e4]	0x14300005  bne $1, $16, 20 [ms_cant_magic-0x800011e4]
+        1 [0x800011e8]	0x34080001  ori $8, $0, 1                   ; smart_spimbot.s:1790: li	$t0, F_CHEESE
+        1 [0x800011ec]	0x3c01ffff  lui $1, -1                      ; smart_spimbot.s:1791: sw	$t0, GET_INGREDIENT_INSTANT
+        1 [0x800011f0]	0xac280074  sw $8, 116($1)
+        1 [0x800011f4]	0x08000489  j 0x00001224 [ms_add_item]      ; smart_spimbot.s:1792: j	ms_add_item
+      145 [0x800011f8]	0x3c01ffff  lui $1, -1                      ; smart_spimbot.s:1795: sw	$s6, ANGLE	# face the shared counter
+      145 [0x800011fc]	0xac360014  sw $22, 20($1)
+      145 [0x80001200]	0x34080001  ori $8, $0, 1                   ; smart_spimbot.s:1796: li	$t0, 1		# absolute
+      145 [0x80001204]	0x3c01ffff  lui $1, -1                      ; smart_spimbot.s:1797: sw	$t0, ANGLE_CONTROL
+      145 [0x80001208]	0xac280018  sw $8, 24($1)
+      145 [0x8000120c]	0x3c01ffff  lui $1, -1                      ; smart_spimbot.s:1798: sw	$s5, PICKUP	# take from shared counter
+      145 [0x80001210]	0xac3500e0  sw $21, 224($1)
+      145 [0x80001214]	0x0c0003f2  jal 0x00000fc8 [update_inventory]; smart_spimbot.s:1799: jal	update_inventory
+      145 [0x80001218]	0x3c011001  lui $1, 4097                    ; smart_spimbot.s:1800: lw	$t0, inventory	# see what we're now carrying
+      145 [0x8000121c]	0x8c281090  lw $8, 4240($1)
+      145 [0x80001220]	0x15150010  bne $8, $21, 64 [ms_done-0x80001220]; smart_spimbot.s:1801: bne	$t0, $s5, ms_done
+       67 [0x80001224]	0x3408005a  ori $8, $0, 90                  ; smart_spimbot.s:1804: li	$t0, 90		# face the turn-in counter
+       67 [0x80001228]	0x3c01ffff  lui $1, -1                      ; smart_spimbot.s:1805: sw	$t0, ANGLE
+       67 [0x8000122c]	0xac280014  sw $8, 20($1)
+       67 [0x80001230]	0x34080001  ori $8, $0, 1                   ; smart_spimbot.s:1806: li	$t0, 1		# absolute
+       67 [0x80001234]	0x3c01ffff  lui $1, -1                      ; smart_spimbot.s:1807: sw	$t0, ANGLE_CONTROL
+       67 [0x80001238]	0xac280018  sw $8, 24($1)
+       67 [0x8000123c]	0x3c01ffff  lui $1, -1                      ; smart_spimbot.s:1808: sw	$zero, DROPOFF	# drop the item
+       67 [0x80001240]	0xac2000c0  sw $0, 192($1)
+       67 [0x80001244]	0x0c0004a2  jal 0x00001288 [update_corner_progress]; smart_spimbot.s:1809: jal	update_corner_progress
+       67 [0x80001248]	0x0800046c  j 0x000011b0 [ms_item_loop_top] ; smart_spimbot.s:1810: j	ms_item_loop_top
+      504 [0x8000124c]	0x2210ffff  addi $16, $16, -1               ; smart_spimbot.s:1813: sub	$s0, $s0, 1	# ingr--
+      504 [0x80001250]	0x0800045f  j 0x0000117c [ms_ingr_loop_top] ; smart_spimbot.s:1814: j	ms_ingr_loop_top
+       12 [0x80001254]	0x3c01ffff  lui $1, -1                      ; smart_spimbot.s:1817: sw	$zero, SUBMIT_ORDER
+       12 [0x80001258]	0xac2000b0  sw $0, 176($1)
+       12 [0x8000125c]	0x08000458  j 0x00001160 [ms_outer_loop_top]; smart_spimbot.s:1818: j	ms_outer_loop_top
+       89 [0x80001260]	0x8fbf0000  lw $31, 0($29)                  ; smart_spimbot.s:1821: lw	$ra, 0($sp)
+       89 [0x80001264]	0x8fb00004  lw $16, 4($29)                  ; smart_spimbot.s:1822: lw	$s0, 4($sp)
+       89 [0x80001268]	0x8fb10008  lw $17, 8($29)                  ; smart_spimbot.s:1823: lw	$s1, 8($sp)
+       89 [0x8000126c]	0x8fb2000c  lw $18, 12($29)                 ; smart_spimbot.s:1824: lw	$s2, 12($sp)
+       89 [0x80001270]	0x8fb30010  lw $19, 16($29)                 ; smart_spimbot.s:1825: lw	$s3, 16($sp)
+       89 [0x80001274]	0x8fb40014  lw $20, 20($29)                 ; smart_spimbot.s:1826: lw	$s4, 20($sp)
+       89 [0x80001278]	0x8fb50018  lw $21, 24($29)                 ; smart_spimbot.s:1827: lw	$s5, 24($sp)
+       89 [0x8000127c]	0x8fb6001c  lw $22, 28($29)                 ; smart_spimbot.s:1828: lw	$s6, 28($sp)
+       89 [0x80001280]	0x23bd0020  addi $29, $29, 32               ; smart_spimbot.s:1829: add	$sp, $sp, 32
+       89 [0x80001284]	0x03e00008  jr $31                          ; smart_spimbot.s:1830: jr	$ra
+      660 [0x80001288]	0x3c011001  lui $1, 4097 [encoded_progress] ; smart_spimbot.s:1836: la	$a0, encoded_progress
+      660 [0x8000128c]	0x34240fe8  ori $4, $1, 4072 [encoded_progress]
+      660 [0x80001290]	0x3c01ffff  lui $1, -1                      ; smart_spimbot.s:1837: sw	$a0, GET_TURNIN_USERS
+      660 [0x80001294]	0xac240048  sw $4, 72($1)
+      660 [0x80001298]	0x3c011001  lui $1, 4097 [decoded_progress] ; smart_spimbot.s:1838: la	$a1, decoded_progress
+      660 [0x8000129c]	0x34251000  ori $5, $1, 4096 [decoded_progress]
+      660 [0x800012a0]	0x08000413  j 0x0000104c [decode_request_in_mem]; smart_spimbot.s:1839: j	decode_request_in_mem	# uses current $ra
+        1 [0x800012a4]	0x23bdfffc  addi $29, $29, -4               ; smart_spimbot.s:1846: sub	$sp, $sp, 4
+        1 [0x800012a8]	0xafbf0000  sw $31, 0($29)                  ; smart_spimbot.s:1847: sw	$ra, 0($sp)
+        1 [0x800012ac]	0x3c011001  lui $1, 4097 [desired_items]    ; smart_spimbot.s:1849: la	$t2, desired_items
+        1 [0x800012b0]	0x342a1060  ori $10, $1, 4192 [desired_items]
+        1 [0x800012b4]	0x3c011003  lui $1, 4099 [useful_locations] ; smart_spimbot.s:1850: la	$t3, useful_locations
+        1 [0x800012b8]	0x342b1304  ori $11, $1, 4868 [useful_locations]
+        1 [0x800012bc]	0x91680007  lbu $8, 7($11)                  ; smart_spimbot.s:1853: lbu	$t0, T_BIN_BREAD($t3)
+        1 [0x800012c0]	0x15000003  bne $8, $0, 12 [ri_has_bread-0x800012c0]; smart_spimbot.s:1854: bne	$t0, $zero, ri_has_bread
+        1 [0x800012c4]	0x3409001c  ori $9, $0, 28                  ; smart_spimbot.s:1855: li	$t1, DESIRED_BREAD
+        1 [0x800012c8]	0xad49002c  sw $9, 44($10)                  ; smart_spimbot.s:1856: sw	$t1, R_BREAD($t2)
+        1 [0x800012cc]	0x9168000b  lbu $8, 11($11)                 ; smart_spimbot.s:1860: lbu	$t0, T_BIN_CHEESE($t3)
+        1 [0x800012d0]	0x15000003  bne $8, $0, 12 [ri_has_cheese-0x800012d0]; smart_spimbot.s:1861: bne	$t0, $zero, ri_has_cheese
+        0 [0x800012d4]	0x3409000c  ori $9, $0, 12                  ; smart_spimbot.s:1862: li	$t1, DESIRED_CHEESE
+        0 [0x800012d8]	0xad490028  sw $9, 40($10)                  ; smart_spimbot.s:1863: sw	$t1, R_CHEESE($t2)
+        1 [0x800012dc]	0x91680008  lbu $8, 8($11)                  ; smart_spimbot.s:1867: lbu	$t0, T_BIN_MEAT($t3)
+        1 [0x800012e0]	0x15000003  bne $8, $0, 12 [ri_has_raw_meat-0x800012e0]; smart_spimbot.s:1868: bne	$t0, $zero, ri_has_raw_meat
+        0 [0x800012e4]	0x3409001c  ori $9, $0, 28                  ; smart_spimbot.s:1869: li	$t1, DESIRED_MEAT
+        0 [0x800012e8]	0xad490024  sw $9, 36($10)                  ; smart_spimbot.s:1870: sw	$t1, R_UNCOOKED_MEAT($t2)
+        1 [0x800012ec]	0x91680004  lbu $8, 4($11)                  ; smart_spimbot.s:1874: lbu	$t0, T_OVEN($t3)
+        1 [0x800012f0]	0x15000004  bne $8, $0, 16 [ri_has_oven-0x800012f0]; smart_spimbot.s:1875: bne	$t0, $zero, ri_has_oven
+        1 [0x800012f4]	0x3409001c  ori $9, $0, 28                  ; smart_spimbot.s:1876: li	$t1, DESIRED_MEAT
+        1 [0x800012f8]	0xad490020  sw $9, 32($10)                  ; smart_spimbot.s:1877: sw	$t1, R_MEAT($t2)
+        1 [0x800012fc]	0xad400024  sw $0, 36($10)                  ; smart_spimbot.s:1879: sw	$zero, R_UNCOOKED_MEAT($t2)
+        1 [0x80001300]	0x9168000a  lbu $8, 10($11)                 ; smart_spimbot.s:1883: lbu	$t0, T_BIN_TOMATO($t3)
+        1 [0x80001304]	0x15000003  bne $8, $0, 12 [ri_has_raw_tomato-0x80001304]; smart_spimbot.s:1884: bne	$t0, $zero, ri_has_raw_tomato
+        1 [0x80001308]	0x34090018  ori $9, $0, 24                  ; smart_spimbot.s:1885: li	$t1, DESIRED_TOMATO
+        1 [0x8000130c]	0xad490018  sw $9, 24($10)                  ; smart_spimbot.s:1886: sw	$t1, R_UNWASHED_TOMATOES($t2)
+        1 [0x80001310]	0x9168000c  lbu $8, 12($11)                 ; smart_spimbot.s:1890: lbu	$t0, T_BIN_ONION($t3)
+        1 [0x80001314]	0x15000003  bne $8, $0, 12 [ri_has_raw_onion-0x80001314]; smart_spimbot.s:1891: bne	$t0, $zero, ri_has_raw_onion
+        1 [0x80001318]	0x34090014  ori $9, $0, 20                  ; smart_spimbot.s:1892: li	$t1, DESIRED_ONION
+        1 [0x8000131c]	0xad490010  sw $9, 16($10)                  ; smart_spimbot.s:1893: sw	$t1, R_UNCUT_ONIONS($t2)
+        1 [0x80001320]	0x91680009  lbu $8, 9($11)                  ; smart_spimbot.s:1897: lbu	$t0, T_BIN_LETTUCE($t3)
+        1 [0x80001324]	0x15000003  bne $8, $0, 12 [ri_check_apps-0x80001324]; smart_spimbot.s:1898: bne	$t0, $zero, ri_check_apps
+        0 [0x80001328]	0x34090018  ori $9, $0, 24                  ; smart_spimbot.s:1899: li	$t1, DESIRED_LETTUCE
+        0 [0x8000132c]	0xad490008  sw $9, 8($10)                   ; smart_spimbot.s:1900: sw	$t1, R_UNPROCESSED_LETTUCE($t2)
+        1 [0x80001330]	0x916d0005  lbu $13, 5($11)                 ; smart_spimbot.s:1904: lbu	$t5, T_SINK($t3)
+        1 [0x80001334]	0x15a00007  bne $13, $0, 28 [ri_has_sink-0x80001334]; smart_spimbot.s:1905: bne	$t5, $zero, ri_has_sink
+        0 [0x80001338]	0x34090018  ori $9, $0, 24                  ; smart_spimbot.s:1906: li	$t1, DESIRED_TOMATO
+        0 [0x8000133c]	0xad490014  sw $9, 20($10)                  ; smart_spimbot.s:1907: sw	$t1, R_TOMATOES($t2)
+        0 [0x80001340]	0x34090018  ori $9, $0, 24                  ; smart_spimbot.s:1908: li	$t1, DESIRED_LETTUCE
+        0 [0x80001344]	0xad490004  sw $9, 4($10)                   ; smart_spimbot.s:1909: sw	$t1, R_UNCUT_LETTUCE($t2)
+        0 [0x80001348]	0xad400018  sw $0, 24($10)                  ; smart_spimbot.s:1911: sw	$zero, R_UNWASHED_TOMATOES($t2)
+        0 [0x8000134c]	0xad400008  sw $0, 8($10)                   ; smart_spimbot.s:1912: sw	$zero, R_UNPROCESSED_LETTUCE($t2)
+        1 [0x80001350]	0x916c0006  lbu $12, 6($11)                 ; smart_spimbot.s:1916: lbu	$t4, T_CHOPPING_BOARD($t3)
+        1 [0x80001354]	0x15800007  bne $12, $0, 28 [ri_done-0x80001354]; smart_spimbot.s:1917: bne	$t4, $zero, ri_done
+        0 [0x80001358]	0x34090014  ori $9, $0, 20                  ; smart_spimbot.s:1918: li	$t1, DESIRED_ONION
+        0 [0x8000135c]	0xad49000c  sw $9, 12($10)                  ; smart_spimbot.s:1919: sw	$t1, R_ONIONS($t2)
+        0 [0x80001360]	0x34090018  ori $9, $0, 24                  ; smart_spimbot.s:1920: li	$t1, DESIRED_LETTUCE
+        0 [0x80001364]	0xad490000  sw $9, 0($10)                   ; smart_spimbot.s:1921: sw	$t1, R_LETTUCE($t2)
+        0 [0x80001368]	0xad400010  sw $0, 16($10)                  ; smart_spimbot.s:1923: sw	$zero, R_UNCUT_ONIONS($t2)
+        0 [0x8000136c]	0xad400004  sw $0, 4($10)                   ; smart_spimbot.s:1924: sw	$zero, R_UNCUT_LETTUCE($t2)
+        1 [0x80001370]	0x3c011001  lui $1, 4097 [encoded_request]  ; smart_spimbot.s:1927: la	$a0, encoded_request
+        1 [0x80001374]	0x34240f40  ori $4, $1, 3904 [encoded_request]
+        1 [0x80001378]	0x000a2821  addu $5, $0, $10                ; smart_spimbot.s:1928: move	$a1, $t2
+        1 [0x8000137c]	0x0c000438  jal 0x000010e0 [create_request_in_mem]; smart_spimbot.s:1929: jal	create_request_in_mem
+        1 [0x80001380]	0x3c011001  lui $1, 4097 [encoded_request]  ; smart_spimbot.s:1930: la	$t0, encoded_request
+        1 [0x80001384]	0x34280f40  ori $8, $1, 3904 [encoded_request]
+        1 [0x80001388]	0x3c01ffff  lui $1, -1                      ; smart_spimbot.s:1931: sw	$t0, SET_REQUEST
+        1 [0x8000138c]	0xac2800f0  sw $8, 240($1)
+        1 [0x80001390]	0x8fbf0000  lw $31, 0($29)                  ; smart_spimbot.s:1933: lw	$ra, 0($sp)
+        1 [0x80001394]	0x23bd0004  addi $29, $29, 4                ; smart_spimbot.s:1934: add	$sp, $sp, 4
+        1 [0x80001398]	0x03e00008  jr $31                          ; smart_spimbot.s:1935: jr	$ra
+        4 [0x8000139c]	0x34020001  ori $2, $0, 1                   ; smart_spimbot.s:1944: li	$v0, 1
+        4 [0x800013a0]	0x34080005  ori $8, $0, 5                   ; smart_spimbot.s:1946: li	$t0, 5	# ingr = 5 (goes down)
+       25 [0x800013a4]	0x05000012  bltz $8 72 [us_loop_done-0x800013a4]; smart_spimbot.s:1948: bltz	$t0, us_loop_done
+       22 [0x800013a8]	0x3c019000  lui $1, -28672 [food_req_positions]; smart_spimbot.s:1949: la	$t1, food_req_positions
+       22 [0x800013ac]	0x3429097c  ori $9, $1, 2428 [food_req_positions]
+       22 [0x800013b0]	0x01284820  add $9, $9, $8                  ; smart_spimbot.s:1950: add	$t1, $t1, $t0	# &food_req_positions[ingr]
+       22 [0x800013b4]	0x91290000  lbu $9, 0($9)                   ; smart_spimbot.s:1951: lbu	$t1, 0($t1)	# food_req_positions[ingr]
+       22 [0x800013b8]	0x00894820  add $9, $4, $9                  ; smart_spimbot.s:1952: add	$t1, $a0, $t1	# &inventory[food_req_positions[ingr]]
+       22 [0x800013bc]	0x8d290000  lw $9, 0($9)                    ; smart_spimbot.s:1953: lw	$t1, 0($t1)	# present = inventory[food_req_positions[ingr]]
+       22 [0x800013c0]	0x3c019000  lui $1, -28672 [desired_by_iid] ; smart_spimbot.s:1954: la	$t2, desired_by_iid
+       22 [0x800013c4]	0x342a0982  ori $10, $1, 2434 [desired_by_iid]
+       22 [0x800013c8]	0x01485020  add $10, $10, $8                ; smart_spimbot.s:1955: add	$t2, $t2, $t0	# &desired_by_iid[ingr]
+       22 [0x800013cc]	0x914a0000  lbu $10, 0($10)                 ; smart_spimbot.s:1956: lbu	$t2, 0($t2)	# desired = desired_by_iid[ingr]
+       22 [0x800013d0]	0x01494822  sub $9, $10, $9                 ; smart_spimbot.s:1957: sub	$t1, $t2, $t1	# deficit = desired - present
+       22 [0x800013d4]	0x29210009  slti $1, $9, 9                  ; smart_spimbot.s:1958: ble	$t1, 8, us_loop_next
+       22 [0x800013d8]	0x14200003  bne $1, $0, 12 [us_loop_next-0x800013d8]
+        1 [0x800013dc]	0x34020000  ori $2, $0, 0                   ; smart_spimbot.s:1960: li	$v0, 0		# return false
+        1 [0x800013e0]	0x080004fb  j 0x000013ec [us_loop_done]     ; smart_spimbot.s:1961: j	us_loop_done
+       21 [0x800013e4]	0x2108ffff  addi $8, $8, -1                 ; smart_spimbot.s:1964: sub	$t0, $t0, 1
+       21 [0x800013e8]	0x080004e9  j 0x000013a4 [us_loop_top]      ; smart_spimbot.s:1965: j	us_loop_top
+        4 [0x800013ec]	0x03e00008  jr $31                          ; smart_spimbot.s:1968: jr	$ra
+        1 [0x800013f0]	0x34020001  ori $2, $0, 1                   ; smart_spimbot.s:1977: li	$v0, 1
+        1 [0x800013f4]	0x34080005  ori $8, $0, 5                   ; smart_spimbot.s:1979: li	$t0, 5	# ingr = 5 (goes down)
+        7 [0x800013f8]	0x05000010  bltz $8 64 [ss_loop_done-0x800013f8]; smart_spimbot.s:1981: bltz	$t0, ss_loop_done
+        6 [0x800013fc]	0x1008000d  beq $0, $8, 52 [ss_loop_next-0x800013fc]; smart_spimbot.s:1982: beq	$t0, IID_BREAD, ss_loop_next
+        5 [0x80001400]	0x34010001  ori $1, $0, 1                   ; smart_spimbot.s:1983: beq	$t0, IID_CHEESE, ss_loop_next
+        5 [0x80001404]	0x1028000b  beq $1, $8, 44 [ss_loop_next-0x80001404]
+        4 [0x80001408]	0x3c019000  lui $1, -28672 [food_req_positions]; smart_spimbot.s:1984: la	$t1, food_req_positions
+        4 [0x8000140c]	0x3429097c  ori $9, $1, 2428 [food_req_positions]
+        4 [0x80001410]	0x01284820  add $9, $9, $8                  ; smart_spimbot.s:1985: add	$t1, $t1, $t0	# &food_req_positions[ingr]
+        4 [0x80001414]	0x91290000  lbu $9, 0($9)                   ; smart_spimbot.s:1986: lbu	$t1, 0($t1)	# food_req_positions[ingr]
+        4 [0x80001418]	0x00894820  add $9, $4, $9                  ; smart_spimbot.s:1987: add	$t1, $a0, $t1	# &inventory[food_req_positions[ingr]]
+        4 [0x8000141c]	0x8d290000  lw $9, 0($9)                    ; smart_spimbot.s:1988: lw	$t1, 0($t1)	# present = inventory[food_req_positions[ingr]]
+        4 [0x80001420]	0x29210004  slti $1, $9, 4                  ; smart_spimbot.s:1989: bge	$t1, 4, ss_loop_next
+        4 [0x80001424]	0x10200003  beq $1, $0, 12 [ss_loop_next-0x80001424]
+        0 [0x80001428]	0x34020000  ori $2, $0, 0                   ; smart_spimbot.s:1991: li	$v0, 0		# return false
+        0 [0x8000142c]	0x0800050e  j 0x00001438 [ss_loop_done]     ; smart_spimbot.s:1992: j	ss_loop_done
+        6 [0x80001430]	0x2108ffff  addi $8, $8, -1                 ; smart_spimbot.s:1995: sub	$t0, $t0, 1
+        6 [0x80001434]	0x080004fe  j 0x000013f8 [ss_loop_top]      ; smart_spimbot.s:1996: j	ss_loop_top
+        1 [0x80001438]	0x03e00008  jr $31                          ; smart_spimbot.s:1999: jr	$ra	
