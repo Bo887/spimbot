@@ -84,12 +84,12 @@ R_CHEESE		= 40
 R_BREAD			= 44
 
 # amount of each kind of food to prepare/request
-DESIRED_BREAD		= 26
-DESIRED_CHEESE		= 6
-DESIRED_MEAT		= 22
-DESIRED_ONION		= 12
-DESIRED_TOMATO		= 18
-DESIRED_LETTUCE		= 18
+DESIRED_BREAD		= 28
+DESIRED_CHEESE		= 12
+DESIRED_MEAT		= 28
+DESIRED_ONION		= 20
+DESIRED_TOMATO		= 24
+DESIRED_LETTUCE		= 24
 
 puzzle1:		.space 1832     # space allocated for the puzzle
 puzzle2:		.space 1832
@@ -1955,7 +1955,7 @@ us_loop_top:
 	add	$t2, $t2, $t0	# &desired_by_iid[ingr]
 	lbu	$t2, 0($t2)	# desired = desired_by_iid[ingr]
 	sub	$t1, $t2, $t1	# deficit = desired - present
-	ble	$t1, 4, us_loop_next
+	ble	$t1, 8, us_loop_next
 	
 	li	$v0, 0		# return false
 	j	us_loop_done
